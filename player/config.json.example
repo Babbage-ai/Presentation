@@ -1,0 +1,7 @@
+{
+    "api_base_url": "https://your-domain.example",
+    "screen_token": "replace-with-screen-token",
+    "refresh_interval_seconds": 300,
+    "heartbeat_interval_seconds": 60,
+    "cache_namespace": "screen-main"
+}

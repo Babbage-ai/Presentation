@@ -1,0 +1,42 @@
+version: "3.3"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cloud-signage-app
+    ports:
+      - "8088:80"
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: cloud_signage
+      DB_USER: cloud_signage
+      DB_PASS: cloud_signage_change_me
+      APP_URL: http://217.114.217.119:8088
+      APP_BASE_PATH: ""
+    depends_on:
+      - db
+    restart: unless-stopped
+    volumes:
+      - uploads_data:/var/www/html/uploads/media
+
+  db:
+    image: mariadb:10.11
+    container_name: cloud-signage-db
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MARIADB_DATABASE: cloud_signage
+      MARIADB_USER: cloud_signage
+      MARIADB_PASSWORD: cloud_signage_change_me
+      MARIADB_ROOT_PASSWORD: root_change_me_now
+    restart: unless-stopped
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./sql/seed_admin.sql:/docker-entrypoint-initdb.d/02-seed-admin.sql:ro
+
+volumes:
+  db_data:
+  uploads_data:

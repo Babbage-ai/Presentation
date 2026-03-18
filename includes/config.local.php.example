@@ -1,0 +1,10 @@
+<?php
+declare(strict_types=1);
+
+define('DB_HOST', '127.0.0.1');
+define('DB_PORT', 3306);
+define('DB_NAME', 'cloud_signage');
+define('DB_USER', 'cloud_signage');
+define('DB_PASS', 'change_me');
+define('APP_URL', 'https://example.com/Present');
+define('APP_BASE_PATH', '/Present');
