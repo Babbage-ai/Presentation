@@ -98,14 +98,35 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
         .dense-form .pt-4 { padding-top: 1.6rem !important; }
         .panel-note { color: var(--admin-text-soft); font-size: 0.8rem; }
         .page-table td .badge { font-size: 0.72rem; }
+        .summary-list { display: grid; gap: 0.55rem; }
+        .summary-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.55rem 0.7rem; border-radius: 0.7rem; background: rgba(248, 250, 252, 0.92); border: 1px solid rgba(15, 23, 42, 0.05); }
+        .summary-label { font-size: 0.76rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--admin-text-soft); }
+        .summary-value { font-weight: 600; text-align: right; }
+        .screen-list { display: grid; gap: 0.7rem; }
+        .screen-card { border: 1px solid var(--admin-border); border-radius: var(--admin-radius); background: rgba(255, 255, 255, 0.96); overflow: hidden; }
+        .screen-card-head { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.75rem 0.85rem; border-bottom: 1px solid rgba(15, 23, 42, 0.05); background: #fcfdff; }
+        .screen-card-title { display: flex; flex-direction: column; gap: 0.12rem; min-width: 0; }
+        .screen-card-title strong { font-size: 0.95rem; }
+        .screen-card-title span { color: var(--admin-text-soft); font-size: 0.8rem; }
+        .screen-card-body { padding: 0.8rem 0.85rem; }
+        .metric-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.7rem; }
+        .metric-chip { padding: 0.52rem 0.62rem; border-radius: 0.72rem; background: rgba(248, 250, 252, 0.9); border: 1px solid rgba(15, 23, 42, 0.05); }
+        .metric-chip-label { display: block; margin-bottom: 0.16rem; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--admin-text-soft); }
+        .metric-chip-value { font-size: 0.88rem; font-weight: 600; }
+        .attention-list { display: grid; gap: 0.55rem; }
+        .attention-item { padding: 0.6rem 0.7rem; border-radius: 0.75rem; background: rgba(248, 250, 252, 0.94); border: 1px solid rgba(15, 23, 42, 0.05); }
+        .attention-item strong { display: block; font-size: 0.9rem; }
+        .attention-item span { color: var(--admin-text-soft); font-size: 0.8rem; }
         @media (max-width: 1199px) {
             main.container-fluid { width: 100%; padding-left: 0.8rem; padding-right: 0.8rem; }
+            .metric-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
         @media (max-width: 991px) {
             .info-grid { grid-template-columns: 1fr; }
             .section-heading { align-items: flex-start; flex-direction: column; }
             .navbar .d-flex.align-items-center.gap-3 { gap: 0.6rem !important; }
             .admin-side-panel { position: static; }
+            .metric-row { grid-template-columns: 1fr; }
         }
     </style>
 </head>

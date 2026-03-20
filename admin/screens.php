@@ -169,7 +169,7 @@ $sql = "SELECT s.*, p.name AS playlist_name
         FROM screens s
         LEFT JOIN playlists p ON p.id = s.playlist_id AND p.owner_admin_id = s.owner_admin_id
         WHERE s.owner_admin_id = ?
-        ORDER BY s.created_at DESC, s.id DESC";
+        ORDER BY s.status = 'online' DESC, s.last_seen IS NULL ASC, s.last_seen DESC, s.name ASC, s.id DESC";
 $statement = $db->prepare($sql);
 $statement->bind_param('i', $adminId);
 $statement->execute();
@@ -179,6 +179,26 @@ while ($row = $result->fetch_assoc()) {
 }
 $statement->close();
 
+$screenCounts = [
+    'total' => count($screens),
+    'online' => 0,
+    'offline' => 0,
+    'unassigned' => 0,
+];
+
+foreach ($screens as $screen) {
+    $isOnline = screen_is_online($screen['last_seen']);
+    if ($isOnline) {
+        $screenCounts['online']++;
+    } else {
+        $screenCounts['offline']++;
+    }
+
+    if (empty($screen['playlist_id'])) {
+        $screenCounts['unassigned']++;
+    }
+}
+
 $pageTitle = 'Screens';
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -186,6 +206,44 @@ require_once __DIR__ . '/../includes/header.php';
     <div>
         <h1 class="h3">Screens</h1>
         <div class="section-subtitle">Assign playlists, launch previews, and push sync updates with less clutter.</div>
+    </div>
+</div>
+<div class="row g-3 mb-3">
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-label">Total</div>
+                <div class="stat-value"><?= $screenCounts['total'] ?></div>
+                <div class="stat-meta">Registered screens</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-label">Online</div>
+                <div class="stat-value"><?= $screenCounts['online'] ?></div>
+                <div class="stat-meta">Heartbeat seen recently</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-label">Offline</div>
+                <div class="stat-value"><?= $screenCounts['offline'] ?></div>
+                <div class="stat-meta">Needs attention</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-label">Unassigned</div>
+                <div class="stat-value"><?= $screenCounts['unassigned'] ?></div>
+                <div class="stat-meta">No playlist yet</div>
+            </div>
+        </div>
     </div>
 </div>
 <div class="row g-3">
@@ -231,45 +289,45 @@ require_once __DIR__ . '/../includes/header.php';
                 <?php if (!$screens): ?>
                     <p class="text-muted mb-0">No screens created yet.</p>
                 <?php else: ?>
-                    <div class="accordion" id="screenAccordion">
-                        <?php foreach ($screens as $index => $screen): ?>
+                    <div class="screen-list">
+                        <?php foreach ($screens as $screen): ?>
                             <?php $online = screen_is_online($screen['last_seen']); ?>
                             <?php $formId = 'screen-form-' . (int) $screen['id']; ?>
                             <?php $playerUrl = player_launch_url($screen['screen_token']); ?>
                             <?php $browserTestUrl = player_browser_test_url($screen['screen_token']); ?>
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="heading<?= (int) $screen['id'] ?>">
-                                    <button class="accordion-button <?= $index > 0 ? 'collapsed' : '' ?>" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<?= (int) $screen['id'] ?>" aria-expanded="<?= $index === 0 ? 'true' : 'false' ?>" aria-controls="collapse<?= (int) $screen['id'] ?>">
-                                        <span class="status-dot <?= $online ? 'status-online' : 'status-offline' ?>"></span>
-                                        <?= e($screen['name']) ?> <span class="ms-2 text-muted">/ <?= e($screen['location'] ?: 'No location') ?></span>
-                                    </button>
-                                </h2>
-                                <div id="collapse<?= (int) $screen['id'] ?>" class="accordion-collapse collapse <?= $index === 0 ? 'show' : '' ?>" aria-labelledby="heading<?= (int) $screen['id'] ?>" data-bs-parent="#screenAccordion">
-                                    <div class="accordion-body">
-                                        <div class="info-grid mb-3">
-                                            <div class="info-cell">
-                                                <span class="info-label">Assigned Playlist</span>
-                                                <div class="info-value"><?= e($screen['playlist_name'] ?: 'Unassigned') ?></div>
-                                            </div>
-                                            <div class="info-cell">
-                                                <span class="info-label">Status</span>
-                                                <div class="info-value">
-                                                    <span class="status-dot <?= $online ? 'status-online' : 'status-offline' ?>"></span>
-                                                    <?= $online ? 'Online' : 'Offline' ?>
-                                                </div>
-                                            </div>
-                                            <div class="info-cell">
-                                                <span class="info-label">Last Seen</span>
-                                                <div class="info-value"><?= e(format_datetime($screen['last_seen'])) ?></div>
-                                            </div>
-                                            <div class="info-cell">
-                                                <span class="info-label">Last IP</span>
-                                                <div class="info-value"><?= e($screen['last_ip'] ?: '-') ?></div>
-                                            </div>
-                                            <div class="info-cell">
-                                                <span class="info-label">Resolution</span>
-                                                <div class="info-value"><?= e($screen['resolution'] ?: '-') ?></div>
-                                            </div>
+                            <div class="screen-card">
+                                <div class="screen-card-head">
+                                    <div class="screen-card-title">
+                                        <strong><?= e($screen['name']) ?></strong>
+                                        <span><?= e($screen['location'] ?: 'No location') ?></span>
+                                    </div>
+                                    <div class="icon-actions">
+                                        <span class="badge <?= $online ? 'text-bg-success' : 'text-bg-secondary' ?>">
+                                            <?= $online ? 'Online' : 'Offline' ?>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="screen-card-body">
+                                    <div class="metric-row mb-3">
+                                        <div class="metric-chip">
+                                            <span class="metric-chip-label">Playlist</span>
+                                            <div class="metric-chip-value"><?= e($screen['playlist_name'] ?: 'Unassigned') ?></div>
+                                        </div>
+                                        <div class="metric-chip">
+                                            <span class="metric-chip-label">Last Seen</span>
+                                            <div class="metric-chip-value"><?= e(format_datetime($screen['last_seen'])) ?></div>
+                                        </div>
+                                        <div class="metric-chip">
+                                            <span class="metric-chip-label">IP</span>
+                                            <div class="metric-chip-value"><?= e($screen['last_ip'] ?: '-') ?></div>
+                                        </div>
+                                        <div class="metric-chip">
+                                            <span class="metric-chip-label">Resolution</span>
+                                            <div class="metric-chip-value"><?= e($screen['resolution'] ?: '-') ?></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="info-grid mb-3">
                                             <div class="info-cell">
                                                 <span class="info-label">Player Version</span>
                                                 <div class="info-value"><?= e($screen['player_version'] ?: '-') ?></div>
@@ -342,7 +400,6 @@ require_once __DIR__ . '/../includes/header.php';
                                                 </form>
                                             </div>
                                         </div>
-                                    </div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
