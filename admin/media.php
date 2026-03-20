@@ -173,6 +173,12 @@ $statement->close();
 $pageTitle = 'Media';
 require_once __DIR__ . '/../includes/header.php';
 ?>
+<div class="section-heading">
+    <div>
+        <h1 class="h3">Media</h1>
+        <div class="section-subtitle">Upload assets, preview them quickly, and keep the library clean.</div>
+    </div>
+</div>
 <div class="row g-4">
     <div class="col-lg-4">
         <div class="card">
@@ -194,7 +200,10 @@ require_once __DIR__ . '/../includes/header.php';
                     <div id="uploadProgressWrap" class="progress mb-3 d-none" aria-hidden="true">
                         <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">0%</div>
                     </div>
-                    <button id="uploadSubmitButton" class="btn btn-primary" type="submit">Upload</button>
+                    <button id="uploadSubmitButton" class="btn btn-primary" type="submit">
+                        <i class="bi bi-upload"></i>
+                        <span class="ms-1">Upload</span>
+                    </button>
                 </form>
             </div>
         </div>
@@ -209,7 +218,7 @@ require_once __DIR__ . '/../includes/header.php';
                     </div>
                 <?php endif; ?>
                 <div class="table-responsive">
-                    <table class="table table-striped mb-0">
+                    <table class="table table-sm page-table mb-0">
                         <thead>
                             <tr>
                                 <th>Title</th>
@@ -241,18 +250,20 @@ require_once __DIR__ . '/../includes/header.php';
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <div class="d-flex flex-wrap gap-2">
+                                        <div class="icon-actions">
                                             <?php if ($item['file_exists']): ?>
                                                 <button
-                                                    class="btn btn-sm btn-outline-secondary js-preview-media"
+                                                    class="btn btn-sm btn-outline-secondary js-preview-media icon-btn icon-btn-sm"
                                                     type="button"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#mediaPreviewModal"
                                                     data-media-type="<?= e($item['media_type']) ?>"
                                                     data-media-title="<?= e($item['title']) ?>"
                                                     data-media-url="<?= e(media_file_url($item['filename'])) ?>"
+                                                    title="Preview media"
+                                                    aria-label="Preview media"
                                                 >
-                                                    Preview
+                                                    <i class="bi bi-eye"></i>
                                                 </button>
                                             <?php endif; ?>
                                             <form method="post" class="m-0">
@@ -260,15 +271,17 @@ require_once __DIR__ . '/../includes/header.php';
                                                 <input type="hidden" name="action" value="toggle_active">
                                                 <input type="hidden" name="media_id" value="<?= (int) $item['id'] ?>">
                                                 <input type="hidden" name="active" value="<?= (int) $item['active'] === 1 ? 0 : 1 ?>">
-                                                <button class="btn btn-sm btn-outline-primary" type="submit">
-                                                    <?= (int) $item['active'] === 1 ? 'Deactivate' : 'Activate' ?>
+                                                <button class="btn btn-sm btn-outline-primary icon-btn icon-btn-sm" type="submit" title="<?= (int) $item['active'] === 1 ? 'Deactivate media' : 'Activate media' ?>" aria-label="<?= (int) $item['active'] === 1 ? 'Deactivate media' : 'Activate media' ?>">
+                                                    <i class="bi <?= (int) $item['active'] === 1 ? 'bi-pause-circle' : 'bi-play-circle' ?>"></i>
                                                 </button>
                                             </form>
                                             <form method="post" class="m-0" onsubmit="return confirm('Delete this media item?');">
                                                 <?= csrf_field() ?>
                                                 <input type="hidden" name="action" value="delete_media">
                                                 <input type="hidden" name="media_id" value="<?= (int) $item['id'] ?>">
-                                                <button class="btn btn-sm btn-outline-danger" type="submit" <?= (int) $item['usage_count'] > 0 ? 'disabled' : '' ?>>Delete</button>
+                                                <button class="btn btn-sm btn-outline-danger icon-btn icon-btn-sm" type="submit" <?= (int) $item['usage_count'] > 0 ? 'disabled' : '' ?> title="Delete media" aria-label="Delete media">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
                                             </form>
                                             <?php if ((int) $item['usage_count'] > 0): ?>
                                                 <span class="small text-muted">Used in playlist(s)</span>

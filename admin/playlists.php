@@ -484,6 +484,12 @@ $statement->close();
 $pageTitle = 'Playlists';
 require_once __DIR__ . '/../includes/header.php';
 ?>
+<div class="section-heading">
+    <div>
+        <h1 class="h3">Playlists</h1>
+        <div class="section-subtitle">Build sequences faster with cleaner forms and compact item actions.</div>
+    </div>
+</div>
 <div class="row g-4">
     <div class="col-lg-4">
         <div class="card mb-4">
@@ -500,7 +506,10 @@ require_once __DIR__ . '/../includes/header.php';
                         <input class="form-check-input" id="playlist_active" name="active" type="checkbox" checked>
                         <label class="form-check-label" for="playlist_active">Playlist active</label>
                     </div>
-                    <button class="btn btn-primary" type="submit">Create</button>
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-plus-circle"></i>
+                        <span class="ms-1">Create</span>
+                    </button>
                 </form>
             </div>
         </div>
@@ -549,13 +558,19 @@ require_once __DIR__ . '/../includes/header.php';
                                 </div>
                             </div>
                         </div>
-                        <button class="btn btn-primary mt-3" type="submit">Save Playlist</button>
+                        <button class="btn btn-primary mt-3" type="submit">
+                            <i class="bi bi-check2"></i>
+                            <span class="ms-1">Save Playlist</span>
+                        </button>
                     </form>
                     <form method="post" class="mt-3" onsubmit="return confirm('Delete this playlist? Assigned screens will become unassigned and playlist items will be removed.');">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="delete_playlist">
                         <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
-                        <button class="btn btn-outline-danger" type="submit">Delete Playlist</button>
+                        <button class="btn btn-outline-danger" type="submit">
+                            <i class="bi bi-trash"></i>
+                            <span class="ms-1">Delete Playlist</span>
+                        </button>
                     </form>
                 </div>
             </div>
@@ -589,7 +604,10 @@ require_once __DIR__ . '/../includes/header.php';
                                     <div class="form-text">Videos ignore image duration and play until completion.</div>
                                 </div>
                                 <div class="col-12">
-                                    <button class="btn btn-primary" type="submit">Add Media Item</button>
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="bi bi-plus-circle"></i>
+                                        <span class="ms-1">Add Media Item</span>
+                                    </button>
                                 </div>
                             </form>
                         </div>
@@ -627,7 +645,10 @@ require_once __DIR__ . '/../includes/header.php';
                                     <div class="form-text pt-4">New quiz items are added to the end of the playlist automatically.</div>
                                 </div>
                                 <div class="col-12">
-                                    <button class="btn btn-primary" type="submit">Add Quiz Item</button>
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="bi bi-plus-circle"></i>
+                                        <span class="ms-1">Add Quiz Item</span>
+                                    </button>
                                 </div>
                             </form>
                         </div>
@@ -639,7 +660,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <div class="card-header"><h2 class="h5 mb-0">Playlist Items</h2></div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-striped mb-0">
+                        <table class="table table-sm page-table mb-0">
                             <thead>
                                 <tr>
                                     <th>Item</th>
@@ -699,7 +720,7 @@ require_once __DIR__ . '/../includes/header.php';
                                             </div>
                                         </td>
                                         <td>
-                                            <div class="d-flex gap-2">
+                                            <div class="icon-actions">
                                                 <form method="post" id="<?= e($formId) ?>" class="m-0">
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="action" value="update_playlist_item">
@@ -711,14 +732,18 @@ require_once __DIR__ . '/../includes/header.php';
                                                     <input type="hidden" name="action" value="duplicate_playlist_item">
                                                     <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
                                                     <input type="hidden" name="item_id" value="<?= (int) $item['id'] ?>">
-                                                    <button class="btn btn-sm btn-outline-secondary" type="submit">Duplicate</button>
+                                                    <button class="btn btn-sm btn-outline-secondary icon-btn icon-btn-sm" type="submit" title="Duplicate item" aria-label="Duplicate item">
+                                                        <i class="bi bi-copy"></i>
+                                                    </button>
                                                 </form>
                                                 <form method="post" class="m-0" onsubmit="return confirm('Remove this item from the playlist?');">
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="action" value="delete_playlist_item">
                                                     <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
                                                     <input type="hidden" name="item_id" value="<?= (int) $item['id'] ?>">
-                                                    <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+                                                    <button class="btn btn-sm btn-outline-danger icon-btn icon-btn-sm" type="submit" title="Remove item" aria-label="Remove item">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
                                                 </form>
                                             </div>
                                         </td>

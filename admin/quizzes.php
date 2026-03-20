@@ -115,6 +115,12 @@ if ($selectedQuizId > 0) {
 $pageTitle = 'Quizzes';
 require_once __DIR__ . '/../includes/header.php';
 ?>
+<div class="section-heading">
+    <div>
+        <h1 class="h3">Quizzes</h1>
+        <div class="section-subtitle">Build question banks and manage the quiz timing in one place.</div>
+    </div>
+</div>
 <div class="row g-4">
     <div class="col-lg-4">
         <div class="card mb-4">
@@ -166,7 +172,10 @@ require_once __DIR__ . '/../includes/header.php';
                         <input class="form-check-input" id="quiz_active" name="active" type="checkbox" checked>
                         <label class="form-check-label" for="quiz_active">Quiz active</label>
                     </div>
-                    <button class="btn btn-primary mt-3" type="submit">Create Quiz</button>
+                    <button class="btn btn-primary mt-3" type="submit">
+                        <i class="bi bi-plus-circle"></i>
+                        <span class="ms-1">Create Quiz</span>
+                    </button>
                 </form>
             </div>
         </div>
@@ -244,13 +253,19 @@ require_once __DIR__ . '/../includes/header.php';
                             <input class="form-check-input" id="selected_quiz_active" name="active" type="checkbox" <?= (int) $selectedQuiz['active'] === 1 ? 'checked' : '' ?>>
                             <label class="form-check-label" for="selected_quiz_active">Quiz active</label>
                         </div>
-                        <button class="btn btn-primary mt-3" type="submit">Save Quiz</button>
+                        <button class="btn btn-primary mt-3" type="submit">
+                            <i class="bi bi-check2"></i>
+                            <span class="ms-1">Save Quiz</span>
+                        </button>
                     </form>
                     <form method="post" class="mt-2" onsubmit="return confirm('Delete this quiz question?');">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="delete_quiz">
                         <input type="hidden" name="quiz_id" value="<?= (int) $selectedQuiz['id'] ?>">
-                        <button class="btn btn-outline-danger" type="submit">Delete Quiz</button>
+                        <button class="btn btn-outline-danger" type="submit">
+                            <i class="bi bi-trash"></i>
+                            <span class="ms-1">Delete Quiz</span>
+                        </button>
                     </form>
                 </div>
             </div>
