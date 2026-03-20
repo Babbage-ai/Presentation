@@ -188,12 +188,13 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="section-subtitle">Assign playlists, launch previews, and push sync updates with less clutter.</div>
     </div>
 </div>
-<div class="row g-4">
-    <div class="col-lg-4">
+<div class="row g-3">
+    <div class="col-xl-3 col-lg-4">
+        <div class="admin-side-panel panel-stack">
         <div class="card">
             <div class="card-header"><h1 class="h5 mb-0">Create Screen</h1></div>
             <div class="card-body">
-                <form method="post">
+                <form class="dense-form" method="post">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="create_screen">
                     <div class="mb-3">
@@ -220,9 +221,10 @@ require_once __DIR__ . '/../includes/header.php';
                 </form>
             </div>
         </div>
+        </div>
     </div>
 
-    <div class="col-lg-8">
+    <div class="col-xl-9 col-lg-8">
         <div class="card">
             <div class="card-header"><h2 class="h5 mb-0">Screens</h2></div>
             <div class="card-body">

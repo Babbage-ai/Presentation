@@ -121,12 +121,13 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="section-subtitle">Build question banks and manage the quiz timing in one place.</div>
     </div>
 </div>
-<div class="row g-4">
-    <div class="col-lg-4">
-        <div class="card mb-4">
+<div class="row g-3">
+    <div class="col-xl-3 col-lg-4">
+        <div class="admin-side-panel panel-stack">
+        <div class="card">
             <div class="card-header"><h1 class="h5 mb-0">Create Quiz Question</h1></div>
             <div class="card-body">
-                <form method="post">
+                <form class="dense-form" method="post">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="create_quiz">
                     <div class="mb-3">
@@ -196,9 +197,10 @@ require_once __DIR__ . '/../includes/header.php';
                 <?php endif; ?>
             </div>
         </div>
+        </div>
     </div>
 
-    <div class="col-lg-8">
+    <div class="col-xl-9 col-lg-8">
         <?php if (!$selectedQuiz): ?>
             <div class="card">
                 <div class="card-body text-muted">Select a quiz question to edit it.</div>
@@ -207,7 +209,7 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="card">
                 <div class="card-header"><h2 class="h5 mb-0">Edit Quiz Question</h2></div>
                 <div class="card-body">
-                    <form method="post">
+                    <form class="dense-form" method="post">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="update_quiz">
                         <input type="hidden" name="quiz_id" value="<?= (int) $selectedQuiz['id'] ?>">
@@ -258,7 +260,7 @@ require_once __DIR__ . '/../includes/header.php';
                             <span class="ms-1">Save Quiz</span>
                         </button>
                     </form>
-                    <form method="post" class="mt-2" onsubmit="return confirm('Delete this quiz question?');">
+                    <form method="post" class="mt-2 dense-form" onsubmit="return confirm('Delete this quiz question?');">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="delete_quiz">
                         <input type="hidden" name="quiz_id" value="<?= (int) $selectedQuiz['id'] ?>">

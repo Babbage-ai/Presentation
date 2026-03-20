@@ -179,12 +179,13 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="section-subtitle">Upload assets, preview them quickly, and keep the library clean.</div>
     </div>
 </div>
-<div class="row g-4">
-    <div class="col-lg-4">
+<div class="row g-3">
+    <div class="col-xl-3 col-lg-4">
+        <div class="admin-side-panel panel-stack">
         <div class="card">
-            <div class="card-header"><h1 class="h5 mb-0">Upload Media</h1></div>
+            <div class="card-header"><div class="compact-card-title"><h1 class="h5 mb-0">Upload Media</h1></div></div>
             <div class="card-body">
-                <form id="uploadMediaForm" method="post" enctype="multipart/form-data">
+                <form id="uploadMediaForm" class="dense-form" method="post" enctype="multipart/form-data">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="upload_media">
                     <div class="mb-3">
@@ -207,8 +208,9 @@ require_once __DIR__ . '/../includes/header.php';
                 </form>
             </div>
         </div>
+        </div>
     </div>
-    <div class="col-lg-8">
+    <div class="col-xl-9 col-lg-8">
         <div class="card">
             <div class="card-header"><h2 class="h5 mb-0">Media Library</h2></div>
             <div class="card-body p-0">

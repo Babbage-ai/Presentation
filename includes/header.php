@@ -89,6 +89,15 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
         .accordion-item { border: 1px solid var(--admin-border); border-radius: var(--admin-radius) !important; overflow: hidden; margin-bottom: 0.6rem; }
         .accordion-button { gap: 0.5rem; font-weight: 600; padding: 0.75rem 0.9rem; }
         .accordion-button:not(.collapsed) { background: #f8fafc; color: inherit; box-shadow: none; }
+        .admin-side-panel { position: sticky; top: 0.9rem; }
+        .panel-stack { display: flex; flex-direction: column; gap: 0.8rem; }
+        .compact-card-title { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
+        .dense-form .mb-3 { margin-bottom: 0.75rem !important; }
+        .dense-form .mt-3 { margin-top: 0.8rem !important; }
+        .dense-form .mt-2 { margin-top: 0.55rem !important; }
+        .dense-form .pt-4 { padding-top: 1.6rem !important; }
+        .panel-note { color: var(--admin-text-soft); font-size: 0.8rem; }
+        .page-table td .badge { font-size: 0.72rem; }
         @media (max-width: 1199px) {
             main.container-fluid { width: 100%; padding-left: 0.8rem; padding-right: 0.8rem; }
         }
@@ -96,6 +105,7 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
             .info-grid { grid-template-columns: 1fr; }
             .section-heading { align-items: flex-start; flex-direction: column; }
             .navbar .d-flex.align-items-center.gap-3 { gap: 0.6rem !important; }
+            .admin-side-panel { position: static; }
         }
     </style>
 </head>

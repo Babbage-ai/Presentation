@@ -490,12 +490,13 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="section-subtitle">Build sequences faster with cleaner forms and compact item actions.</div>
     </div>
 </div>
-<div class="row g-4">
-    <div class="col-lg-4">
-        <div class="card mb-4">
+<div class="row g-3">
+    <div class="col-xl-3 col-lg-4">
+        <div class="admin-side-panel panel-stack">
+        <div class="card">
             <div class="card-header"><h1 class="h5 mb-0">Create Playlist</h1></div>
             <div class="card-body">
-                <form method="post">
+                <form class="dense-form" method="post">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="create_playlist">
                     <div class="mb-3">
@@ -531,9 +532,10 @@ require_once __DIR__ . '/../includes/header.php';
                 <?php endif; ?>
             </div>
         </div>
+        </div>
     </div>
 
-    <div class="col-lg-8">
+    <div class="col-xl-9 col-lg-8">
         <?php if (!$selectedPlaylist): ?>
             <div class="card">
                 <div class="card-body text-muted">Select a playlist to edit it.</div>
@@ -542,7 +544,7 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="card mb-4">
                 <div class="card-header"><h2 class="h5 mb-0">Edit Playlist</h2></div>
                 <div class="card-body">
-                    <form method="post">
+                    <form class="dense-form" method="post">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="update_playlist">
                         <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
@@ -563,7 +565,7 @@ require_once __DIR__ . '/../includes/header.php';
                             <span class="ms-1">Save Playlist</span>
                         </button>
                     </form>
-                    <form method="post" class="mt-3" onsubmit="return confirm('Delete this playlist? Assigned screens will become unassigned and playlist items will be removed.');">
+                    <form method="post" class="mt-3 dense-form" onsubmit="return confirm('Delete this playlist? Assigned screens will become unassigned and playlist items will be removed.');">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="delete_playlist">
                         <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
@@ -575,12 +577,12 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
             </div>
 
-            <div class="row g-4">
+            <div class="row g-3">
                 <div class="col-xl-6">
-                    <div class="card mb-4 h-100">
+                    <div class="card h-100">
                         <div class="card-header"><h2 class="h5 mb-0">Add Media To Playlist</h2></div>
                         <div class="card-body">
-                            <form method="post" class="row g-3">
+                            <form method="post" class="row g-3 dense-form">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="action" value="add_playlist_media_item">
                                 <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
@@ -615,10 +617,10 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
 
                 <div class="col-xl-6">
-                    <div class="card mb-4 h-100">
+                    <div class="card h-100">
                         <div class="card-header"><h2 class="h5 mb-0">Add Quiz To Playlist</h2></div>
                         <div class="card-body">
-                            <form method="post" class="row g-3">
+                            <form method="post" class="row g-3 dense-form">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="action" value="add_playlist_quiz_item">
                                 <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
