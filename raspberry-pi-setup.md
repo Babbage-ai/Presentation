@@ -135,3 +135,47 @@ sudo systemctl start cloud-signage-player.service
 If the Pi has not booted yet and the SD card is still in your PC, use the first-boot method documented in [`raspberry-pi-firstboot.md`](/workspaces/Presentation/raspberry-pi-firstboot.md).
 
 That workflow lets you place the player files and provisioning script onto the boot partition first, then have the Pi install the kiosk stack automatically during its initial boot.
+
+## 10. Auto-Update Player On Boot
+
+If you want each Pi to refresh its local player files from the live website before Chromium launches:
+
+1. Copy [`raspberry-pi-player-update.sh`](/workspaces/Presentation/raspberry-pi-player-update.sh) to the Pi, for example:
+
+```bash
+sudo cp raspberry-pi-player-update.sh /usr/local/bin/cloud-signage-player-update.sh
+sudo chmod 755 /usr/local/bin/cloud-signage-player-update.sh
+```
+
+2. Create a `systemd` oneshot service:
+
+```bash
+sudo nano /etc/systemd/system/cloud-signage-player-update.service
+```
+
+Use:
+
+```ini
+[Unit]
+Description=Update Cloud Signage Player Files
+After=network-online.target
+Wants=network-online.target
+Before=cloud-signage-player.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/bin/cloud-signage-player-update.sh https://babbage-ai.co.uk/Present
+
+[Install]
+WantedBy=multi-user.target
+```
+
+3. Enable it:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable cloud-signage-player-update.service
+```
+
+This updates `player.html`, `player.js`, and `player.css` on each boot. It does not overwrite the Pi's local `config.json`.

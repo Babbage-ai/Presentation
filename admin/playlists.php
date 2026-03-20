@@ -7,6 +7,19 @@ require_login();
 $db = get_db();
 $adminId = current_admin_id();
 
+$nextPlaylistSortOrder = static function (mysqli $db, int $playlistId, int $adminId): int {
+    $statement = $db->prepare("SELECT COALESCE(MAX(pi.sort_order), 0) AS max_sort_order
+        FROM playlist_items pi
+        INNER JOIN playlists p ON p.id = pi.playlist_id
+        WHERE pi.playlist_id = ? AND p.owner_admin_id = ?");
+    $statement->bind_param('ii', $playlistId, $adminId);
+    $statement->execute();
+    $nextSortOrder = ((int) $statement->get_result()->fetch_assoc()['max_sort_order']) + 1;
+    $statement->close();
+
+    return max(1, $nextSortOrder);
+};
+
 if (is_post_request()) {
     require_valid_csrf();
     $action = (string) ($_POST['action'] ?? '');
@@ -53,7 +66,6 @@ if (is_post_request()) {
     if ($action === 'add_playlist_media_item') {
         $playlistId = (int) ($_POST['playlist_id'] ?? 0);
         $mediaId = (int) ($_POST['media_id'] ?? 0);
-        $sortOrder = max(1, normalize_int($_POST['sort_order'] ?? null, 1));
         $imageDuration = max(1, normalize_int($_POST['image_duration'] ?? null, 10));
 
         if ($playlistId < 1 || $mediaId < 1) {
@@ -75,6 +87,8 @@ if (is_post_request()) {
             redirect('/admin/playlists.php?playlist_id=' . $playlistId);
         }
 
+        $sortOrder = $nextPlaylistSortOrder($db, $playlistId, $adminId);
+
         $statement = $db->prepare("INSERT INTO playlist_items (playlist_id, item_type, media_id, quiz_question_id, sort_order, image_duration, active, created_at)
             VALUES (?, 'media', ?, NULL, ?, ?, 1, UTC_TIMESTAMP())");
         $statement->bind_param('iiii', $playlistId, $mediaId, $sortOrder, $imageDuration);
@@ -90,7 +104,6 @@ if (is_post_request()) {
         $playlistId = (int) ($_POST['playlist_id'] ?? 0);
         $quizSelectionMode = (string) ($_POST['quiz_selection_mode'] ?? 'fixed');
         $quizId = (int) ($_POST['quiz_question_id'] ?? 0);
-        $sortOrder = max(1, normalize_int($_POST['sort_order'] ?? null, 1));
 
         if (!in_array($quizSelectionMode, ['fixed', 'random'], true)) {
             $quizSelectionMode = 'fixed';
@@ -149,6 +162,8 @@ if (is_post_request()) {
             $quizId = 0;
         }
 
+        $sortOrder = $nextPlaylistSortOrder($db, $playlistId, $adminId);
+
         if ($quizSelectionMode === 'random') {
             $statement = $db->prepare("INSERT INTO playlist_items (playlist_id, item_type, quiz_selection_mode, media_id, quiz_question_id, sort_order, image_duration, active, created_at)
                 VALUES (?, 'quiz', 'random', NULL, NULL, ?, 10, 1, UTC_TIMESTAMP())");
@@ -172,23 +187,96 @@ if (is_post_request()) {
         $sortOrder = max(1, normalize_int($_POST['sort_order'] ?? null, 1));
         $imageDuration = max(1, normalize_int($_POST['image_duration'] ?? null, 10));
         $active = isset($_POST['active']) ? 1 : 0;
+        $ajaxRequest = is_ajax_request();
 
         if ($playlistId < 1 || $itemId < 1) {
+            if ($ajaxRequest) {
+                json_response(false, 'Invalid playlist item update.', [], 400);
+            }
             set_flash('danger', 'Invalid playlist item update.');
             redirect('/admin/playlists.php');
         }
 
-        $statement = $db->prepare("UPDATE playlist_items pi
+        $statement = $db->prepare("SELECT pi.id, pi.sort_order
+            FROM playlist_items pi
             INNER JOIN playlists p ON p.id = pi.playlist_id
-            SET pi.sort_order = ?, pi.image_duration = ?, pi.active = ?
-            WHERE pi.id = ? AND pi.playlist_id = ? AND p.owner_admin_id = ?");
-        $statement->bind_param('iiiiii', $sortOrder, $imageDuration, $active, $itemId, $playlistId, $adminId);
+            WHERE pi.id = ? AND pi.playlist_id = ? AND p.owner_admin_id = ?
+            LIMIT 1");
+        $statement->bind_param('iii', $itemId, $playlistId, $adminId);
         $statement->execute();
+        $currentItem = $statement->get_result()->fetch_assoc() ?: null;
         $statement->close();
+
+        if (!$currentItem) {
+            if ($ajaxRequest) {
+                json_response(false, 'Playlist item not found.', [], 404);
+            }
+            set_flash('danger', 'Playlist item not found.');
+            redirect('/admin/playlists.php?playlist_id=' . $playlistId);
+        }
+
+        $currentSortOrder = (int) $currentItem['sort_order'];
+
+        $db->begin_transaction();
+
+        $swappedItemId = null;
+
+        try {
+            if ($sortOrder !== $currentSortOrder) {
+                $statement = $db->prepare("SELECT pi.id
+                    FROM playlist_items pi
+                    INNER JOIN playlists p ON p.id = pi.playlist_id
+                    WHERE pi.playlist_id = ? AND pi.sort_order = ? AND pi.id <> ? AND p.owner_admin_id = ?
+                    ORDER BY pi.id ASC
+                    LIMIT 1");
+                $statement->bind_param('iiii', $playlistId, $sortOrder, $itemId, $adminId);
+                $statement->execute();
+                $swapItem = $statement->get_result()->fetch_assoc() ?: null;
+                $statement->close();
+
+                if ($swapItem) {
+                    $swapItemId = (int) $swapItem['id'];
+                    $swappedItemId = $swapItemId;
+                    $statement = $db->prepare("UPDATE playlist_items pi
+                        INNER JOIN playlists p ON p.id = pi.playlist_id
+                        SET pi.sort_order = ?
+                        WHERE pi.id = ? AND pi.playlist_id = ? AND p.owner_admin_id = ?");
+                    $statement->bind_param('iiii', $currentSortOrder, $swapItemId, $playlistId, $adminId);
+                    $statement->execute();
+                    $statement->close();
+                }
+            }
+
+            $statement = $db->prepare("UPDATE playlist_items pi
+                INNER JOIN playlists p ON p.id = pi.playlist_id
+                SET pi.sort_order = ?, pi.image_duration = ?, pi.active = ?
+                WHERE pi.id = ? AND pi.playlist_id = ? AND p.owner_admin_id = ?");
+            $statement->bind_param('iiiiii', $sortOrder, $imageDuration, $active, $itemId, $playlistId, $adminId);
+            $statement->execute();
+            $statement->close();
+
+            $db->commit();
+        } catch (Throwable $exception) {
+            $db->rollback();
+            throw $exception;
+        }
+
         bump_playlist_screen_sync_revision($db, $playlistId, $adminId);
 
+        if ($ajaxRequest) {
+            json_response(true, 'Playlist item updated.', [
+                'playlist_id' => $playlistId,
+                'item_id' => $itemId,
+                'sort_order' => $sortOrder,
+                'image_duration' => $imageDuration,
+                'active' => $active === 1,
+                'previous_sort_order' => $currentSortOrder,
+                'swapped_item_id' => $swappedItemId,
+            ]);
+        }
+
         set_flash('success', 'Playlist item updated.');
-        redirect('/admin/playlists.php?playlist_id=' . $playlistId);
+        redirect('/admin/playlists.php?playlist_id=' . $playlistId . '#playlist-item-row-' . $itemId);
     }
 
     if ($action === 'delete_playlist_item') {
@@ -237,14 +325,7 @@ if (is_post_request()) {
             redirect('/admin/playlists.php?playlist_id=' . $playlistId);
         }
 
-        $statement = $db->prepare("SELECT COALESCE(MAX(pi.sort_order), 0) AS max_sort_order
-            FROM playlist_items pi
-            INNER JOIN playlists p ON p.id = pi.playlist_id
-            WHERE pi.playlist_id = ? AND p.owner_admin_id = ?");
-        $statement->bind_param('ii', $playlistId, $adminId);
-        $statement->execute();
-        $newSortOrder = ((int) $statement->get_result()->fetch_assoc()['max_sort_order']) + 1;
-        $statement->close();
+        $newSortOrder = $nextPlaylistSortOrder($db, $playlistId, $adminId);
 
         $statement = $db->prepare("INSERT INTO playlist_items
             (playlist_id, item_type, quiz_selection_mode, media_id, quiz_question_id, sort_order, image_duration, active, created_at)
@@ -438,12 +519,11 @@ require_once __DIR__ . '/../includes/header.php';
                                     </select>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label" for="media_sort_order">Sort Order</label>
-                                    <input class="form-control" id="media_sort_order" name="sort_order" type="number" min="1" value="1" required>
-                                </div>
-                                <div class="col-md-6">
                                     <label class="form-label" for="image_duration">Image Duration</label>
                                     <input class="form-control" id="image_duration" name="image_duration" type="number" min="1" value="10" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-text pt-4">New media items are added to the end of the playlist automatically.</div>
                                 </div>
                                 <div class="col-12">
                                     <div class="form-text">Videos ignore image duration and play until completion.</div>
@@ -481,11 +561,10 @@ require_once __DIR__ . '/../includes/header.php';
                                     </select>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label" for="quiz_sort_order">Sort Order</label>
-                                    <input class="form-control" id="quiz_sort_order" name="sort_order" type="number" min="1" value="1" required>
+                                    <div class="form-text pt-4">Random markers pull from your active quiz bank when the player syncs.</div>
                                 </div>
                                 <div class="col-md-6">
-                                    <div class="form-text pt-4">Random markers pull from your active quiz bank when the player syncs.</div>
+                                    <div class="form-text pt-4">New quiz items are added to the end of the playlist automatically.</div>
                                 </div>
                                 <div class="col-12">
                                     <button class="btn btn-primary" type="submit">Add Quiz Item</button>
@@ -518,7 +597,7 @@ require_once __DIR__ . '/../includes/header.php';
                             <?php else: ?>
                                 <?php foreach ($playlistItems as $item): ?>
                                     <?php $formId = 'playlist-item-form-' . (int) $item['id']; ?>
-                                    <tr>
+                                    <tr id="playlist-item-row-<?= (int) $item['id'] ?>">
                                         <td>
                                             <?php if ($item['item_type'] === 'quiz'): ?>
                                                 <?= $item['quiz_selection_mode'] === 'random' ? 'Random quiz marker' : e($item['question_text']) ?>
@@ -566,7 +645,6 @@ require_once __DIR__ . '/../includes/header.php';
                                                     <input type="hidden" name="action" value="update_playlist_item">
                                                     <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
                                                     <input type="hidden" name="item_id" value="<?= (int) $item['id'] ?>">
-                                                    <button class="btn btn-sm btn-outline-primary" type="submit">Save</button>
                                                 </form>
                                                 <form method="post" class="m-0">
                                                     <?= csrf_field() ?>
@@ -595,4 +673,122 @@ require_once __DIR__ . '/../includes/header.php';
         <?php endif; ?>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const itemForms = document.querySelectorAll('form[id^="playlist-item-form-"]');
+    const tableBody = document.querySelector('.table tbody');
+
+    function reorderRows() {
+        if (!tableBody) {
+            return;
+        }
+
+        const rows = Array.from(tableBody.querySelectorAll('tr[id^="playlist-item-row-"]'));
+        rows.sort(function (rowA, rowB) {
+            const inputA = rowA.querySelector('input[name="sort_order"]');
+            const inputB = rowB.querySelector('input[name="sort_order"]');
+            const orderA = inputA ? Number.parseInt(inputA.value, 10) || 0 : 0;
+            const orderB = inputB ? Number.parseInt(inputB.value, 10) || 0 : 0;
+            if (orderA !== orderB) {
+                return orderA - orderB;
+            }
+
+            const idA = Number.parseInt(rowA.id.replace('playlist-item-row-', ''), 10) || 0;
+            const idB = Number.parseInt(rowB.id.replace('playlist-item-row-', ''), 10) || 0;
+            return idA - idB;
+        });
+
+        rows.forEach(function (row) {
+            tableBody.appendChild(row);
+        });
+    }
+
+    itemForms.forEach(function (form) {
+        const controls = document.querySelectorAll('[form="' + form.id + '"]');
+        let isSaving = false;
+
+        function setControlsDisabled(disabled) {
+            controls.forEach(function (control) {
+                control.disabled = disabled;
+            });
+        }
+
+        async function submitForm() {
+            if (isSaving) {
+                return;
+            }
+
+            try {
+                const payload = new URLSearchParams();
+                const formControls = Array.from(form.elements);
+                const associatedControls = Array.from(controls);
+                const allControls = formControls.concat(associatedControls);
+                const seenNames = new Set();
+
+                allControls.forEach(function (control) {
+                    if (!control.name || control.disabled || seenNames.has(control.name)) {
+                        return;
+                    }
+
+                    seenNames.add(control.name);
+
+                    if ((control.type === 'checkbox' || control.type === 'radio') && !control.checked) {
+                        return;
+                    }
+
+                    payload.append(control.name, control.value);
+                });
+
+                isSaving = true;
+                setControlsDisabled(true);
+
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    body: payload.toString(),
+                    credentials: 'same-origin'
+                });
+
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error((result && result.message) || 'Playlist item save failed.');
+                }
+
+                const data = result.data || {};
+                const sortOrderInput = document.querySelector('input[name="sort_order"][form="' + form.id + '"]');
+                if (sortOrderInput && typeof data.sort_order !== 'undefined') {
+                    sortOrderInput.value = data.sort_order;
+                }
+
+                if (data.swapped_item_id) {
+                    const swappedFormId = 'playlist-item-form-' + data.swapped_item_id;
+                    const swappedSortOrderInput = document.querySelector('input[name="sort_order"][form="' + swappedFormId + '"]');
+                    if (swappedSortOrderInput && typeof data.previous_sort_order !== 'undefined') {
+                        swappedSortOrderInput.value = data.previous_sort_order;
+                    }
+                }
+
+                reorderRows();
+            } catch (error) {
+                console.error(error);
+                window.alert(error.message || 'Playlist item save failed.');
+            } finally {
+                setControlsDisabled(false);
+                isSaving = false;
+            }
+        }
+
+        controls.forEach(function (control) {
+            const eventName = control.type === 'checkbox' || control.tagName === 'SELECT' ? 'change' : 'change';
+            control.addEventListener(eventName, function () {
+                void submitForm();
+            });
+        });
+    });
+});
+</script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

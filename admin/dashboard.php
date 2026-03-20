@@ -31,7 +31,20 @@ foreach ([
 }
 
 $recentActivity = [];
+$latestActivePlaylist = null;
+
+$statement = $db->prepare("SELECT id, name, updated_at
+    FROM playlists
+    WHERE owner_admin_id = ? AND active = 1
+    ORDER BY updated_at DESC, id DESC
+    LIMIT 1");
+$statement->bind_param('i', $adminId);
+$statement->execute();
+$latestActivePlaylist = $statement->get_result()->fetch_assoc() ?: null;
+$statement->close();
+
 $sql = "SELECT s.name, s.location, s.last_seen, s.status, s.last_ip, s.resolution, p.name AS playlist_name
+        , s.playlist_id
         FROM screens s
         LEFT JOIN playlists p ON p.id = s.playlist_id AND p.owner_admin_id = s.owner_admin_id
         WHERE s.owner_admin_id = ?
@@ -103,7 +116,9 @@ require_once __DIR__ . '/../includes/header.php';
                     <tr>
                         <th>Screen</th>
                         <th>Location</th>
-                        <th>Playlist</th>
+                        <th>Assigned</th>
+                        <th>Latest Active</th>
+                        <th>Sync</th>
                         <th>Status</th>
                         <th>Last Seen</th>
                         <th>Last IP</th>
@@ -112,14 +127,34 @@ require_once __DIR__ . '/../includes/header.php';
                 </thead>
                 <tbody>
                 <?php if (!$recentActivity): ?>
-                    <tr><td colspan="7" class="text-center py-4 text-muted">No screens created yet.</td></tr>
+                    <tr><td colspan="9" class="text-center py-4 text-muted">No screens created yet.</td></tr>
                 <?php else: ?>
                     <?php foreach ($recentActivity as $screen): ?>
                         <?php $online = screen_is_online($screen['last_seen']); ?>
+                        <?php $assignedPlaylistId = (int) ($screen['playlist_id'] ?? 0); ?>
+                        <?php $latestPlaylistId = (int) ($latestActivePlaylist['id'] ?? 0); ?>
+                        <?php $isLatestAssigned = $latestPlaylistId > 0 && $assignedPlaylistId === $latestPlaylistId; ?>
                         <tr>
                             <td><?= e($screen['name']) ?></td>
                             <td><?= e($screen['location']) ?></td>
                             <td><?= e($screen['playlist_name'] ?: 'Unassigned') ?></td>
+                            <td>
+                                <?php if ($latestActivePlaylist): ?>
+                                    <div><?= e($latestActivePlaylist['name']) ?></div>
+                                    <div class="small text-muted"><?= e(format_datetime($latestActivePlaylist['updated_at'])) ?></div>
+                                <?php else: ?>
+                                    <span class="text-muted">No active playlist</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if (!$latestActivePlaylist): ?>
+                                    <span class="badge text-bg-secondary">No Active Playlist</span>
+                                <?php elseif ($isLatestAssigned): ?>
+                                    <span class="badge text-bg-success">Using Latest</span>
+                                <?php else: ?>
+                                    <span class="badge text-bg-warning">Out Of Date</span>
+                                <?php endif; ?>
+                            </td>
                             <td>
                                 <span class="status-dot <?= $online ? 'status-online' : 'status-offline' ?>"></span>
                                 <?= $online ? 'Online' : 'Offline' ?>
