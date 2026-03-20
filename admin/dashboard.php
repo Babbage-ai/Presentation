@@ -62,44 +62,56 @@ $statement->close();
 $pageTitle = 'Dashboard';
 require_once __DIR__ . '/../includes/header.php';
 ?>
+<div class="section-heading">
+    <div>
+        <h1 class="h3">Dashboard</h1>
+        <div class="section-subtitle">Fast view of screens, playlists, and sync status.</div>
+    </div>
+</div>
+
 <div class="row g-3 mb-4">
     <div class="col-6 col-xl-2">
-        <div class="card">
+        <div class="card stat-card">
             <div class="card-body">
-                <div class="text-muted small">Total Media</div>
-                <div class="display-6"><?= $counts['media'] ?></div>
+                <div class="stat-label">Media</div>
+                <div class="stat-value"><?= $counts['media'] ?></div>
+                <div class="stat-meta">Library items</div>
             </div>
         </div>
     </div>
     <div class="col-6 col-xl-2">
-        <div class="card">
+        <div class="card stat-card">
             <div class="card-body">
-                <div class="text-muted small">Total Quizzes</div>
-                <div class="display-6"><?= $counts['quizzes'] ?></div>
+                <div class="stat-label">Quizzes</div>
+                <div class="stat-value"><?= $counts['quizzes'] ?></div>
+                <div class="stat-meta">Question sets</div>
             </div>
         </div>
     </div>
     <div class="col-6 col-xl-2">
-        <div class="card">
+        <div class="card stat-card">
             <div class="card-body">
-                <div class="text-muted small">Total Playlists</div>
-                <div class="display-6"><?= $counts['playlists'] ?></div>
+                <div class="stat-label">Playlists</div>
+                <div class="stat-value"><?= $counts['playlists'] ?></div>
+                <div class="stat-meta">Managed feeds</div>
             </div>
         </div>
     </div>
     <div class="col-6 col-xl-3">
-        <div class="card">
+        <div class="card stat-card">
             <div class="card-body">
-                <div class="text-muted small">Total Screens</div>
-                <div class="display-6"><?= $counts['screens'] ?></div>
+                <div class="stat-label">Screens</div>
+                <div class="stat-value"><?= $counts['screens'] ?></div>
+                <div class="stat-meta">Registered endpoints</div>
             </div>
         </div>
     </div>
     <div class="col-6 col-xl-3">
-        <div class="card">
+        <div class="card stat-card">
             <div class="card-body">
-                <div class="text-muted small">Online Screens</div>
-                <div class="display-6"><?= $counts['online_screens'] ?></div>
+                <div class="stat-label">Online</div>
+                <div class="stat-value"><?= $counts['online_screens'] ?></div>
+                <div class="stat-meta"><?= max(0, $counts['screens'] - $counts['online_screens']) ?> offline</div>
             </div>
         </div>
     </div>
@@ -107,11 +119,17 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="card">
     <div class="card-header">
-        <h2 class="h5 mb-0">Recent Screen Activity</h2>
+        <div class="section-heading mb-0">
+            <h2 class="h5">Recent Screen Activity</h2>
+            <a class="btn btn-outline-dark btn-sm" href="<?= e(app_path('/admin/screens.php')) ?>">
+                <i class="bi bi-display"></i>
+                <span class="ms-1">Open Screens</span>
+            </a>
+        </div>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-striped mb-0">
+            <table class="table table-sm page-table mb-0">
                 <thead>
                     <tr>
                         <th>Screen</th>
@@ -135,13 +153,19 @@ require_once __DIR__ . '/../includes/header.php';
                         <?php $latestPlaylistId = (int) ($latestActivePlaylist['id'] ?? 0); ?>
                         <?php $isLatestAssigned = $latestPlaylistId > 0 && $assignedPlaylistId === $latestPlaylistId; ?>
                         <tr>
-                            <td><?= e($screen['name']) ?></td>
-                            <td><?= e($screen['location']) ?></td>
+                            <td>
+                                <div class="muted-stack">
+                                    <strong><?= e($screen['name']) ?></strong>
+                                </div>
+                            </td>
+                            <td><?= e($screen['location'] ?: 'No location') ?></td>
                             <td><?= e($screen['playlist_name'] ?: 'Unassigned') ?></td>
                             <td>
                                 <?php if ($latestActivePlaylist): ?>
-                                    <div><?= e($latestActivePlaylist['name']) ?></div>
-                                    <div class="small text-muted"><?= e(format_datetime($latestActivePlaylist['updated_at'])) ?></div>
+                                    <div class="muted-stack">
+                                        <strong><?= e($latestActivePlaylist['name']) ?></strong>
+                                        <span class="small"><?= e(format_datetime($latestActivePlaylist['updated_at'])) ?></span>
+                                    </div>
                                 <?php else: ?>
                                     <span class="text-muted">No active playlist</span>
                                 <?php endif; ?>
