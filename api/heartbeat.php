@@ -42,4 +42,5 @@ json_response(true, 'Heartbeat recorded.', [
     'screen_id' => (int) $screen['id'],
     'last_seen' => gmdate('Y-m-d H:i:s'),
     'status' => 'online',
+    'sync_revision' => (int) $screen['sync_revision'],
 ]);

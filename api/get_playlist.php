@@ -25,6 +25,7 @@ if (empty($screen['playlist_id'])) {
             'id' => (int) $screen['id'],
             'name' => $screen['name'],
             'location' => $screen['location'],
+            'sync_revision' => (int) $screen['sync_revision'],
         ],
         'playlist' => null,
         'items' => [],
@@ -37,7 +38,9 @@ $formattedItems = [];
 foreach ($items as $item) {
     if ($item['item_type'] === 'quiz') {
         $formattedItems[] = [
+            'playlist_item_id' => (int) $item['id'],
             'quiz_question_id' => (int) $item['quiz_question_id'],
+            'quiz_selection_mode' => $item['quiz_selection_mode'],
             'title' => $item['question_text'],
             'type' => 'quiz',
             'question' => $item['question_text'],
@@ -56,6 +59,7 @@ foreach ($items as $item) {
     }
 
     $formattedItems[] = [
+        'playlist_item_id' => (int) $item['id'],
         'media_id' => (int) $item['media_id'],
         'title' => $item['title'],
         'type' => $item['media_type'],
@@ -72,6 +76,7 @@ json_response(true, 'Playlist loaded.', [
         'id' => (int) $screen['id'],
         'name' => $screen['name'],
         'location' => $screen['location'],
+        'sync_revision' => (int) $screen['sync_revision'],
     ],
     'playlist' => [
         'id' => (int) $screen['playlist_id'],

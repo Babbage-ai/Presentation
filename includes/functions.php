@@ -406,6 +406,79 @@ function find_screen_by_token(mysqli $db, string $token): ?array
     return $row;
 }
 
+function bump_screen_sync_revision(mysqli $db, int $screenId, int $adminId): bool
+{
+    $statement = $db->prepare("UPDATE screens
+        SET sync_revision = sync_revision + 1
+        WHERE id = ? AND owner_admin_id = ?");
+    $statement->bind_param('ii', $screenId, $adminId);
+    $statement->execute();
+    $updated = $statement->affected_rows > 0;
+    $statement->close();
+
+    return $updated;
+}
+
+function bump_playlist_screen_sync_revision(mysqli $db, int $playlistId, int $adminId): int
+{
+    $statement = $db->prepare("UPDATE screens
+        SET sync_revision = sync_revision + 1
+        WHERE playlist_id = ? AND owner_admin_id = ?");
+    $statement->bind_param('ii', $playlistId, $adminId);
+    $statement->execute();
+    $updated = $statement->affected_rows;
+    $statement->close();
+
+    return $updated;
+}
+
+function fetch_active_quiz_bank(mysqli $db, int $adminId): array
+{
+    $statement = $db->prepare("SELECT
+            id,
+            question_text,
+            option_a,
+            option_b,
+            option_c,
+            option_d,
+            correct_option,
+            countdown_seconds,
+            reveal_duration
+        FROM quiz_questions
+        WHERE owner_admin_id = ? AND active = 1
+        ORDER BY id ASC");
+    $statement->bind_param('i', $adminId);
+    $statement->execute();
+    $result = $statement->get_result();
+    $questions = [];
+
+    while ($row = $result->fetch_assoc()) {
+        $row['id'] = (int) $row['id'];
+        $row['countdown_seconds'] = (int) $row['countdown_seconds'];
+        $row['reveal_duration'] = (int) $row['reveal_duration'];
+        $questions[] = $row;
+    }
+
+    $statement->close();
+
+    return $questions;
+}
+
+function randomize_quiz_bank(array $questions): array
+{
+    $shuffled = array_values($questions);
+    $count = count($shuffled);
+
+    for ($index = $count - 1; $index > 0; $index--) {
+        $swapIndex = random_int(0, $index);
+        $current = $shuffled[$index];
+        $shuffled[$index] = $shuffled[$swapIndex];
+        $shuffled[$swapIndex] = $current;
+    }
+
+    return $shuffled;
+}
+
 function screen_is_online(?string $lastSeen, int $onlineThresholdSeconds = 120): bool
 {
     if (!$lastSeen) {
@@ -427,11 +500,13 @@ function fetch_playlist_items(mysqli $db, int $playlistId): array
                 pi.id,
                 pi.playlist_id,
                 pi.item_type,
+                pi.quiz_selection_mode,
                 pi.media_id,
                 pi.quiz_question_id,
                 pi.sort_order,
                 pi.image_duration,
                 pi.active,
+                p.owner_admin_id,
                 m.title AS media_title,
                 m.filename,
                 m.mime_type,
@@ -454,7 +529,13 @@ function fetch_playlist_items(mysqli $db, int $playlistId): array
               AND (
                     (pi.item_type = 'media' AND m.id IS NOT NULL AND m.active = 1)
                     OR
-                    (pi.item_type = 'quiz' AND q.id IS NOT NULL AND q.active = 1)
+                    (
+                        pi.item_type = 'quiz'
+                        AND (
+                            (pi.quiz_selection_mode = 'fixed' AND q.id IS NOT NULL AND q.active = 1)
+                            OR pi.quiz_selection_mode = 'random'
+                        )
+                    )
                   )
             ORDER BY pi.sort_order ASC, pi.id ASC";
 
@@ -463,21 +544,54 @@ function fetch_playlist_items(mysqli $db, int $playlistId): array
     $statement->execute();
     $result = $statement->get_result();
     $items = [];
+    $quizBank = null;
+    $randomQuizCursor = 0;
 
     while ($row = $result->fetch_assoc()) {
         $row['media_id'] = $row['media_id'] !== null ? (int) $row['media_id'] : null;
         $row['quiz_question_id'] = $row['quiz_question_id'] !== null ? (int) $row['quiz_question_id'] : null;
+        $row['owner_admin_id'] = (int) $row['owner_admin_id'];
         $row['sort_order'] = (int) $row['sort_order'];
         $row['image_duration'] = (int) $row['image_duration'];
         $row['countdown_seconds'] = isset($row['countdown_seconds']) ? (int) $row['countdown_seconds'] : 0;
         $row['reveal_duration'] = isset($row['reveal_duration']) ? (int) $row['reveal_duration'] : 0;
         $row['file_size'] = $row['file_size'] !== null ? (int) $row['file_size'] : 0;
+
+        if ($row['item_type'] === 'quiz' && $row['quiz_selection_mode'] === 'random') {
+            if ($quizBank === null) {
+                $quizBank = randomize_quiz_bank(fetch_active_quiz_bank($db, $row['owner_admin_id']));
+            }
+
+            if (!$quizBank) {
+                continue;
+            }
+
+            if ($randomQuizCursor >= count($quizBank)) {
+                $quizBank = randomize_quiz_bank($quizBank);
+                $randomQuizCursor = 0;
+            }
+
+            $selectedQuiz = $quizBank[$randomQuizCursor];
+            $randomQuizCursor++;
+
+            $row['quiz_question_id'] = (int) $selectedQuiz['id'];
+            $row['question_text'] = $selectedQuiz['question_text'];
+            $row['option_a'] = $selectedQuiz['option_a'];
+            $row['option_b'] = $selectedQuiz['option_b'];
+            $row['option_c'] = $selectedQuiz['option_c'];
+            $row['option_d'] = $selectedQuiz['option_d'];
+            $row['correct_option'] = $selectedQuiz['correct_option'];
+            $row['countdown_seconds'] = (int) $selectedQuiz['countdown_seconds'];
+            $row['reveal_duration'] = (int) $selectedQuiz['reveal_duration'];
+        }
+
         $row['title'] = $row['item_type'] === 'quiz'
             ? $row['question_text']
             : (string) ($row['media_title'] ?? '');
         $row['full_url'] = $row['item_type'] === 'media' && !empty($row['filename'])
             ? media_file_url($row['filename'])
             : null;
+        unset($row['owner_admin_id']);
         $items[] = $row;
     }
 

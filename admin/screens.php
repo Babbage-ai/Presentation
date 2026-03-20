@@ -85,8 +85,27 @@ if (is_post_request()) {
         }
         $statement->execute();
         $statement->close();
+        bump_screen_sync_revision($db, $screenId, $adminId);
 
         set_flash('success', 'Screen updated.');
+        redirect('/admin/screens.php');
+    }
+
+    if ($action === 'force_sync') {
+        $screenId = (int) ($_POST['screen_id'] ?? 0);
+
+        if ($screenId < 1) {
+            set_flash('danger', 'Invalid screen update request.');
+            redirect('/admin/screens.php');
+        }
+
+        if (!bump_screen_sync_revision($db, $screenId, $adminId)) {
+            set_flash('danger', 'Screen not found.');
+            redirect('/admin/screens.php');
+        }
+
+        log_screen_event($db, $screenId, 'force_sync', 'Cloud update requested by admin.');
+        set_flash('success', 'Update sent to screen. The player will switch to the latest playlist on its next heartbeat.');
         redirect('/admin/screens.php');
     }
 
@@ -195,6 +214,7 @@ require_once __DIR__ . '/../includes/header.php';
                                             <div class="col-md-6"><strong>Last IP:</strong> <?= e($screen['last_ip'] ?: '-') ?></div>
                                             <div class="col-md-6"><strong>Resolution:</strong> <?= e($screen['resolution'] ?: '-') ?></div>
                                             <div class="col-md-6"><strong>Player version:</strong> <?= e($screen['player_version'] ?: '-') ?></div>
+                                            <div class="col-md-6"><strong>Sync revision:</strong> <?= (int) $screen['sync_revision'] ?></div>
                                             <div class="col-md-6"><strong>Status:</strong> <?= $online ? 'Online' : 'Offline' ?></div>
                                             <div class="col-12">
                                                 <strong>Token:</strong>
@@ -239,6 +259,12 @@ require_once __DIR__ . '/../includes/header.php';
                                                     <input type="hidden" name="action" value="regenerate_token">
                                                     <input type="hidden" name="screen_id" value="<?= (int) $screen['id'] ?>">
                                                     <button class="btn btn-outline-warning" type="submit">Regenerate Token</button>
+                                                </form>
+                                                <form method="post" class="m-0" onsubmit="return confirm('Send an update command so this screen reloads the latest playlist on the next heartbeat?');">
+                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="action" value="force_sync">
+                                                    <input type="hidden" name="screen_id" value="<?= (int) $screen['id'] ?>">
+                                                    <button class="btn btn-outline-success" type="submit">Send Update Screen</button>
                                                 </form>
                                             </div>
                                         </div>

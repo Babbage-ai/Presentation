@@ -11,9 +11,10 @@ This repository contains a deployable Phase 1 MVP for a cloud-managed digital si
 - Media upload for JPG, JPEG, PNG, WEBP, and MP4
 - Quiz question management with countdown and answer reveal
 - Playlist creation and item ordering
-- Mixed playlists containing both media and quiz items
+- Mixed playlists containing media, fixed quiz items, and random quiz markers
 - Screen registration with unique tokens
 - Screen-to-playlist assignment
+- Admin-triggered screen update push on the next player heartbeat
 - Heartbeat logging and online/offline visibility
 - JSON APIs for screen config, playlist retrieval, heartbeat, and controlled media download
 - Raspberry Pi kiosk player with local cache fallback
@@ -92,6 +93,12 @@ To add quiz-question support to an existing install, also run:
 
 ```bash
 mysql -u your_db_user -p < sql/migrations/20260320_add_quiz_questions.sql
+```
+
+To add admin-pushed screen updates and random quiz markers to an existing install, also run:
+
+```bash
+mysql -u your_db_user -p < sql/migrations/20260320_add_screen_sync_and_random_quiz_markers.sql
 ```
 
 ## Default Admin Creation

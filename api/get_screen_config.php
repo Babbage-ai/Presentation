@@ -39,6 +39,7 @@ json_response(true, 'Screen configuration loaded.', [
         'last_seen' => $screen['last_seen'],
         'resolution' => $screen['resolution'],
         'player_version' => $screen['player_version'],
+        'sync_revision' => (int) $screen['sync_revision'],
     ],
     'playlist' => $playlistSummary,
 ]);

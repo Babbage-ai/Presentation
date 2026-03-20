@@ -20,7 +20,10 @@
         heartbeatTimer: null,
         playbackStarted: false,
         idb: null,
-        currentObjectUrl: null
+        currentObjectUrl: null,
+        syncRevision: 0,
+        syncPromise: null,
+        playbackToken: 0
     };
 
     function setStatus(message, keepVisible = true) {
@@ -175,20 +178,69 @@
         }
     }
 
-    async function syncPlaylist() {
-        const query = '?token=' + encodeURIComponent(state.config.screen_token);
-        const data = await fetchApiJson('/api/get_playlist.php' + query);
-        state.playlist = Array.isArray(data.items) ? data.items : [];
-        state.currentIndex = Math.min(state.currentIndex, Math.max(0, state.playlist.length - 1));
-
-        if (state.playlist.length === 0) {
-            setStatus('No playlist assigned or playlist is empty.');
-        } else {
-            setStatus('Playlist synced: ' + state.playlist.length + ' item(s).');
+    function playlistIdentity(item) {
+        if (!item) {
+            return '';
         }
 
-        window.setTimeout(() => overlayEl.classList.add('hidden'), 4000);
-        void prefetchMissingMedia();
+        if (item.type === 'quiz') {
+            return [
+                item.playlist_item_id || '',
+                item.quiz_question_id || '',
+                item.quiz_selection_mode || 'fixed'
+            ].join(':');
+        }
+
+        return [
+            item.playlist_item_id || '',
+            item.media_id || '',
+            item.filename || '',
+            item.duration || ''
+        ].join(':');
+    }
+
+    async function syncPlaylist(options = {}) {
+        const shouldRestartPlayback = Boolean(options.restartPlayback);
+
+        if (state.syncPromise) {
+            return state.syncPromise;
+        }
+
+        state.syncPromise = (async () => {
+            const query = '?token=' + encodeURIComponent(state.config.screen_token);
+            const data = await fetchApiJson('/api/get_playlist.php' + query);
+            const nextPlaylist = Array.isArray(data.items) ? data.items : [];
+            const currentItemIdentity = playlistIdentity(state.playlist[state.currentIndex]);
+
+            state.playlist = nextPlaylist;
+            state.syncRevision = Number.parseInt(data.screen && data.screen.sync_revision, 10) || 0;
+
+            if (state.playlist.length === 0) {
+                state.currentIndex = 0;
+                setStatus('No playlist assigned or playlist is empty.');
+            } else {
+                const matchingIndex = state.playlist.findIndex((item) => playlistIdentity(item) === currentItemIdentity);
+                state.currentIndex = matchingIndex >= 0
+                    ? matchingIndex
+                    : Math.min(state.currentIndex, Math.max(0, state.playlist.length - 1));
+                setStatus('Playlist synced: ' + state.playlist.length + ' item(s).');
+            }
+
+            window.setTimeout(() => overlayEl.classList.add('hidden'), 4000);
+            void prefetchMissingMedia();
+
+            if (shouldRestartPlayback && state.playbackStarted) {
+                restartPlayback();
+            }
+
+            return data;
+        })();
+
+        try {
+            return await state.syncPromise;
+        } finally {
+            state.syncPromise = null;
+        }
     }
 
     async function prefetchMissingMedia() {
@@ -224,6 +276,15 @@
             state.currentObjectUrl = null;
         }
 
+        const videos = stage.querySelectorAll('video');
+        videos.forEach((video) => {
+            try {
+                video.pause();
+            } catch (error) {
+                console.warn('Video pause failed during stage clear.', error);
+            }
+        });
+
         stage.innerHTML = '';
     }
 
@@ -256,11 +317,21 @@
         }, delayMs);
     }
 
-    async function playImage(item, sourceUrl) {
+    function restartPlayback() {
+        state.currentIndex = 0;
+        clearStage();
+        void playCurrentItem();
+    }
+
+    async function playImage(item, sourceUrl, playbackToken) {
         return new Promise((resolve, reject) => {
             const img = document.createElement('img');
             img.alt = item.title || '';
             img.onload = () => {
+                if (playbackToken !== state.playbackToken) {
+                    resolve();
+                    return;
+                }
                 stage.appendChild(img);
                 scheduleNext((item.duration || 10) * 1000);
                 resolve();
@@ -270,7 +341,7 @@
         });
     }
 
-    async function playVideo(item, sourceUrl) {
+    async function playVideo(item, sourceUrl, playbackToken) {
         return new Promise((resolve, reject) => {
             const video = document.createElement('video');
             video.autoplay = true;
@@ -287,6 +358,12 @@
             };
 
             video.onloadeddata = async () => {
+                if (playbackToken !== state.playbackToken) {
+                    cleanup();
+                    resolve();
+                    return;
+                }
+
                 try {
                     stage.appendChild(video);
                     await video.play();
@@ -298,6 +375,10 @@
             };
 
             video.onended = () => {
+                if (playbackToken !== state.playbackToken) {
+                    cleanup();
+                    return;
+                }
                 cleanup();
                 state.currentIndex = nextIndex();
                 void playCurrentItem();
@@ -310,7 +391,7 @@
         });
     }
 
-    async function playQuiz(item) {
+    async function playQuiz(item, playbackToken) {
         return new Promise((resolve) => {
             let remainingSeconds = Math.max(1, Number.parseInt(item.countdown_seconds || 10, 10));
             const revealDuration = Math.max(1, Number.parseInt(item.reveal_duration || 5, 10));
@@ -353,6 +434,12 @@
             wrapper.appendChild(countdown);
             wrapper.appendChild(answersList);
             wrapper.appendChild(footer);
+
+            if (playbackToken !== state.playbackToken) {
+                resolve();
+                return;
+            }
+
             stage.appendChild(wrapper);
 
             const updateCountdown = () => {
@@ -362,6 +449,13 @@
             updateCountdown();
 
             state.currentInterval = window.setInterval(() => {
+                if (playbackToken !== state.playbackToken) {
+                    window.clearInterval(state.currentInterval);
+                    state.currentInterval = null;
+                    resolve();
+                    return;
+                }
+
                 remainingSeconds -= 1;
                 if (remainingSeconds <= 0) {
                     window.clearInterval(state.currentInterval);
@@ -399,6 +493,7 @@
         }
 
         const item = state.playlist[state.currentIndex];
+        const playbackToken = ++state.playbackToken;
         if (!item) {
             state.currentIndex = 0;
             state.currentTimer = window.setTimeout(() => void playCurrentItem(), 1000);
@@ -409,11 +504,11 @@
             const sourceUrl = await resolvePlayableSource(item);
 
             if (item.type === 'quiz') {
-                await playQuiz(item);
+                await playQuiz(item, playbackToken);
             } else if (item.type === 'video') {
-                await playVideo(item, sourceUrl);
+                await playVideo(item, sourceUrl, playbackToken);
             } else {
-                await playImage(item, sourceUrl);
+                await playImage(item, sourceUrl, playbackToken);
             }
         } catch (error) {
             console.error('Playback failed for', item, error);
@@ -431,11 +526,16 @@
         };
 
         try {
-            await fetchApiJson('/api/heartbeat.php', {
+            const response = await fetchApiJson('/api/heartbeat.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
+
+            const latestRevision = Number.parseInt(response.sync_revision, 10) || 0;
+            if (latestRevision > state.syncRevision) {
+                await syncPlaylist({ restartPlayback: true });
+            }
         } catch (error) {
             console.error('Heartbeat failed', error);
         }
