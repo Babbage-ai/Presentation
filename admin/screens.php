@@ -213,7 +213,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card stat-card">
             <div class="card-body">
                 <div class="stat-label">Total</div>
-                <div class="stat-value"><?= $screenCounts['total'] ?></div>
+                <div class="stat-number-box"><div class="stat-value"><?= $screenCounts['total'] ?></div></div>
                 <div class="stat-meta">Registered screens</div>
             </div>
         </div>
@@ -222,7 +222,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card stat-card">
             <div class="card-body">
                 <div class="stat-label">Online</div>
-                <div class="stat-value"><?= $screenCounts['online'] ?></div>
+                <div class="stat-number-box"><div class="stat-value"><?= $screenCounts['online'] ?></div></div>
                 <div class="stat-meta">Heartbeat seen recently</div>
             </div>
         </div>
@@ -231,7 +231,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card stat-card">
             <div class="card-body">
                 <div class="stat-label">Offline</div>
-                <div class="stat-value"><?= $screenCounts['offline'] ?></div>
+                <div class="stat-number-box"><div class="stat-value"><?= $screenCounts['offline'] ?></div></div>
                 <div class="stat-meta">Needs attention</div>
             </div>
         </div>
@@ -240,7 +240,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card stat-card">
             <div class="card-body">
                 <div class="stat-label">Unassigned</div>
-                <div class="stat-value"><?= $screenCounts['unassigned'] ?></div>
+                <div class="stat-number-box"><div class="stat-value"><?= $screenCounts['unassigned'] ?></div></div>
                 <div class="stat-meta">No playlist yet</div>
             </div>
         </div>
@@ -249,7 +249,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="row g-3">
     <div class="col-xl-3 col-lg-4">
         <div class="admin-side-panel panel-stack">
-        <div class="card">
+        <div class="card hero-card">
             <div class="card-header"><h1 class="h5 mb-0">Create Screen</h1></div>
             <div class="card-body">
                 <div class="panel-section mb-3">
@@ -294,7 +294,7 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 
     <div class="col-xl-9 col-lg-8">
-        <div class="card">
+        <div class="card table-card">
             <div class="card-header"><h2 class="h5 mb-0">Screens</h2></div>
             <div class="card-body">
                 <?php if (!$screens): ?>

@@ -170,48 +170,101 @@ while ($row = $result->fetch_assoc()) {
 }
 $statement->close();
 
+$activeMediaCount = 0;
+foreach ($mediaItems as $item) {
+    if ((int) $item['active'] === 1) {
+        $activeMediaCount++;
+    }
+}
+
 $pageTitle = 'Media';
 require_once __DIR__ . '/../includes/header.php';
 ?>
+<div class="page-shell">
 <div class="section-heading">
     <div>
         <h1 class="h3">Media</h1>
         <div class="section-subtitle">Upload assets, preview them quickly, and keep the library clean.</div>
     </div>
 </div>
-<div class="row g-3">
-    <div class="col-xl-3 col-lg-4">
-        <div class="admin-side-panel panel-stack">
-        <div class="card">
-            <div class="card-header"><div class="compact-card-title"><h1 class="h5 mb-0">Upload Media</h1></div></div>
+<div class="row g-3 mb-3">
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card">
             <div class="card-body">
-                <form id="uploadMediaForm" class="dense-form" method="post" enctype="multipart/form-data">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="action" value="upload_media">
-                    <div class="mb-3">
-                        <label class="form-label" for="title">Title</label>
-                        <input class="form-control" id="title" name="title" type="text" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="media_file">File</label>
-                        <input class="form-control" id="media_file" name="media_file" type="file" accept=".jpg,.jpeg,.png,.webp,.mp4" required>
-                        <div class="form-text">Supported formats: JPG, JPEG, PNG, WEBP, MP4. Current server upload limit: <?= e(upload_limit_summary()) ?>.</div>
-                    </div>
-                    <div id="uploadStatus" class="alert d-none" role="status" aria-live="polite"></div>
-                    <div id="uploadProgressWrap" class="progress mb-3 d-none" aria-hidden="true">
-                        <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">0%</div>
-                    </div>
-                    <button id="uploadSubmitButton" class="btn btn-primary" type="submit">
-                        <i class="bi bi-upload"></i>
-                        <span class="ms-1">Upload</span>
-                    </button>
-                </form>
+                <div class="stat-label">Library</div>
+                <div class="stat-number-box"><div class="stat-value"><?= count($mediaItems) ?></div></div>
+                <div class="stat-meta">Total media items</div>
             </div>
         </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-label">Active</div>
+                <div class="stat-number-box"><div class="stat-value"><?= $activeMediaCount ?></div></div>
+                <div class="stat-meta">Available for playlists</div>
+            </div>
         </div>
     </div>
-    <div class="col-xl-9 col-lg-8">
-        <div class="card">
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-label">Missing Files</div>
+                <div class="stat-number-box"><div class="stat-value"><?= $missingMediaCount ?></div></div>
+                <div class="stat-meta">Need re-upload</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-label">Upload Limit</div>
+                <div class="stat-number-box"><div class="small fw-semibold"><?= e(upload_limit_summary()) ?></div></div>
+                <div class="stat-meta">Current server setting</div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card hero-card mb-3">
+    <div class="card-header">
+        <div class="hero-card-title">
+            <div>
+                <h2 class="h5 mb-0">Add New Media</h2>
+                <div class="hero-card-copy">The upload panel stays at the top, with the library directly below.</div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <form id="uploadMediaForm" class="dense-form" method="post" enctype="multipart/form-data">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="upload_media">
+            <div class="row g-3">
+                <div class="col-lg-4">
+                    <label class="form-label" for="title">Title</label>
+                    <input class="form-control" id="title" name="title" type="text" required>
+                </div>
+                <div class="col-lg-5">
+                    <label class="form-label" for="media_file">File</label>
+                    <input class="form-control" id="media_file" name="media_file" type="file" accept=".jpg,.jpeg,.png,.webp,.mp4" required>
+                    <div class="form-text">Supported: JPG, JPEG, PNG, WEBP, MP4. Limit: <?= e(upload_limit_summary()) ?>.</div>
+                </div>
+                <div class="col-lg-3 d-flex align-items-end">
+                    <button id="uploadSubmitButton" class="btn btn-primary w-100" type="submit">
+                        <i class="bi bi-upload"></i>
+                        <span class="ms-1">Upload Media</span>
+                    </button>
+                </div>
+            </div>
+            <div id="uploadStatus" class="alert d-none mt-3" role="status" aria-live="polite"></div>
+            <div id="uploadProgressWrap" class="progress mt-3 d-none" aria-hidden="true">
+                <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">0%</div>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="row g-3">
+    <div class="col-12">
+        <div class="card table-card">
             <div class="card-header"><h2 class="h5 mb-0">Media Library</h2></div>
             <div class="card-body p-0">
                 <?php if ($missingMediaCount > 0): ?>
@@ -299,6 +352,7 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
         </div>
     </div>
+</div>
 </div>
 <div class="modal fade" id="mediaPreviewModal" tabindex="-1" aria-labelledby="mediaPreviewModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">

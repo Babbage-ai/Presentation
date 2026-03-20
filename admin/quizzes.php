@@ -112,6 +112,17 @@ if ($selectedQuizId > 0) {
     $statement->close();
 }
 
+$activeQuizCount = 0;
+$quizInUseCount = 0;
+foreach ($quizQuestions as $quiz) {
+    if ((int) $quiz['active'] === 1) {
+        $activeQuizCount++;
+    }
+    if ((int) $quiz['usage_count'] > 0) {
+        $quizInUseCount++;
+    }
+}
+
 $pageTitle = 'Quizzes';
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -121,67 +132,112 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="section-subtitle">Build question banks and manage the quiz timing in one place.</div>
     </div>
 </div>
-<div class="row g-3">
-    <div class="col-xl-3 col-lg-4">
-        <div class="admin-side-panel panel-stack">
-        <div class="card">
-            <div class="card-header"><h1 class="h5 mb-0">Create Quiz Question</h1></div>
+<div class="row g-3 mb-3">
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card">
             <div class="card-body">
-                <form class="dense-form" method="post">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="action" value="create_quiz">
-                    <div class="mb-3">
-                        <label class="form-label" for="question_text">Question</label>
-                        <textarea class="form-control" id="question_text" name="question_text" rows="3" required></textarea>
-                    </div>
+                <div class="stat-label">Questions</div>
+                <div class="stat-number-box"><div class="stat-value"><?= count($quizQuestions) ?></div></div>
+                <div class="stat-meta">Total quiz items</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-label">Active</div>
+                <div class="stat-number-box"><div class="stat-value"><?= $activeQuizCount ?></div></div>
+                <div class="stat-meta">Available to play</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-label">In Playlists</div>
+                <div class="stat-number-box"><div class="stat-value"><?= $quizInUseCount ?></div></div>
+                <div class="stat-meta">Currently referenced</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-label">Selected</div>
+                <div class="stat-number-box"><div class="small fw-semibold"><?= $selectedQuiz ? 'Edit' : 'None' ?></div></div>
+                <div class="stat-meta"><?= $selectedQuiz ? 'Question loaded below' : 'Choose one from the list' ?></div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card top-create-card mb-3">
+    <div class="card-header"><h2 class="h5 mb-0">Add New Quiz</h2></div>
+    <div class="card-body">
+        <form class="dense-form" method="post">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="create_quiz">
+            <div class="row g-3">
+                <div class="col-lg-6">
+                    <label class="form-label" for="question_text">Question</label>
+                    <textarea class="form-control" id="question_text" name="question_text" rows="3" required></textarea>
+                </div>
+                <div class="col-lg-6">
                     <div class="row g-3">
-                        <div class="col-12">
+                        <div class="col-6">
                             <label class="form-label" for="option_a">Answer A</label>
                             <input class="form-control" id="option_a" name="option_a" type="text" required>
                         </div>
-                        <div class="col-12">
+                        <div class="col-6">
                             <label class="form-label" for="option_b">Answer B</label>
                             <input class="form-control" id="option_b" name="option_b" type="text" required>
                         </div>
-                        <div class="col-12">
+                        <div class="col-6">
                             <label class="form-label" for="option_c">Answer C</label>
                             <input class="form-control" id="option_c" name="option_c" type="text" required>
                         </div>
-                        <div class="col-12">
+                        <div class="col-6">
                             <label class="form-label" for="option_d">Answer D</label>
                             <input class="form-control" id="option_d" name="option_d" type="text" required>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label" for="correct_option">Correct Answer</label>
-                            <select class="form-select" id="correct_option" name="correct_option">
-                                <option value="A">A</option>
-                                <option value="B">B</option>
-                                <option value="C">C</option>
-                                <option value="D">D</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label" for="countdown_seconds">Countdown</label>
-                            <input class="form-control" id="countdown_seconds" name="countdown_seconds" type="number" min="1" value="10" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label" for="reveal_duration">Reveal Duration</label>
-                            <input class="form-control" id="reveal_duration" name="reveal_duration" type="number" min="1" value="5" required>
-                        </div>
                     </div>
-                    <div class="form-check mt-3">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="correct_option">Correct Answer</label>
+                    <select class="form-select" id="correct_option" name="correct_option">
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="countdown_seconds">Countdown</label>
+                    <input class="form-control" id="countdown_seconds" name="countdown_seconds" type="number" min="1" value="10" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="reveal_duration">Reveal Duration</label>
+                    <input class="form-control" id="reveal_duration" name="reveal_duration" type="number" min="1" value="5" required>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <div class="form-check mb-2">
                         <input class="form-check-input" id="quiz_active" name="active" type="checkbox" checked>
                         <label class="form-check-label" for="quiz_active">Quiz active</label>
                     </div>
-                    <button class="btn btn-primary mt-3" type="submit">
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-primary" type="submit">
                         <i class="bi bi-plus-circle"></i>
                         <span class="ms-1">Create Quiz</span>
                     </button>
-                </form>
+                </div>
             </div>
-        </div>
-
-        <div class="card">
+        </form>
+    </div>
+</div>
+<div class="row g-3">
+    <div class="col-xl-3 col-lg-4">
+        <div class="admin-side-panel panel-stack">
+        <div class="card list-card">
             <div class="card-header"><h2 class="h5 mb-0">Quiz Questions</h2></div>
             <div class="list-group list-group-flush">
                 <?php if (!$quizQuestions): ?>
@@ -202,11 +258,11 @@ require_once __DIR__ . '/../includes/header.php';
 
     <div class="col-xl-9 col-lg-8">
         <?php if (!$selectedQuiz): ?>
-            <div class="card">
+            <div class="card section-card">
                 <div class="card-body text-muted">Select a quiz question to edit it.</div>
             </div>
         <?php else: ?>
-            <div class="card">
+            <div class="card hero-card">
                 <div class="card-header"><h2 class="h5 mb-0">Edit Quiz Question</h2></div>
                 <div class="card-body">
                     <form class="dense-form" method="post">

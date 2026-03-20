@@ -104,7 +104,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card stat-card">
             <div class="card-body">
                 <div class="stat-label">Screens</div>
-                <div class="stat-value"><?= $counts['screens'] ?></div>
+                <div class="stat-number-box"><div class="stat-value"><?= $counts['screens'] ?></div></div>
                 <div class="stat-meta"><?= $counts['online_screens'] ?> online</div>
             </div>
         </div>
@@ -113,7 +113,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card stat-card">
             <div class="card-body">
                 <div class="stat-label">Unassigned</div>
-                <div class="stat-value"><?= $unassignedScreens ?></div>
+                <div class="stat-number-box"><div class="stat-value"><?= $unassignedScreens ?></div></div>
                 <div class="stat-meta">Need playlist</div>
             </div>
         </div>
@@ -122,7 +122,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card stat-card">
             <div class="card-body">
                 <div class="stat-label">Playlists</div>
-                <div class="stat-value"><?= $counts['playlists'] ?></div>
+                <div class="stat-number-box"><div class="stat-value"><?= $counts['playlists'] ?></div></div>
                 <div class="stat-meta"><?= $latestActivePlaylist ? 'Latest: ' . e($latestActivePlaylist['name']) : 'No active playlist' ?></div>
             </div>
         </div>
@@ -131,7 +131,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card stat-card">
             <div class="card-body">
                 <div class="stat-label">Content</div>
-                <div class="stat-value"><?= $counts['media'] + $counts['quizzes'] ?></div>
+                <div class="stat-number-box"><div class="stat-value"><?= $counts['media'] + $counts['quizzes'] ?></div></div>
                 <div class="stat-meta"><?= $counts['media'] ?> media / <?= $counts['quizzes'] ?> quizzes</div>
             </div>
         </div>

@@ -54,11 +54,35 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
         .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; margin-bottom: 0.8rem; }
         .section-heading h1, .section-heading h2 { margin: 0; }
         .section-subtitle { color: var(--admin-text-soft); font-size: 0.84rem; }
-        .stat-card { height: 100%; }
-        .stat-card .card-body { padding: 0.82rem 0.9rem 0.8rem; }
+        .page-shell { display: grid; gap: 1rem; }
+        .hero-card,
+        .table-card,
+        .list-card,
+        .section-card,
+        .stat-card { border-radius: 1.15rem; }
+        .hero-card { background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.98)); }
+        .hero-card .card-header { padding: 0.95rem 1.05rem; background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.96)); }
+        .hero-card .card-body { padding: 1.05rem; }
+        .hero-card-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.9rem; }
+        .hero-card-copy { max-width: 36rem; color: var(--admin-text-soft); font-size: 0.83rem; margin-top: 0.2rem; }
+        .hero-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 1rem; align-items: start; }
+        .hero-side-note { padding: 0.95rem 1rem; border-radius: 1rem; background: rgba(248, 250, 252, 0.9); border: 1px solid rgba(15, 23, 42, 0.06); }
+        .hero-side-note strong { display: block; font-size: 0.86rem; margin-bottom: 0.2rem; }
+        .hero-side-note span { display: block; color: var(--admin-text-soft); font-size: 0.8rem; }
+        .table-card .card-header,
+        .list-card .card-header,
+        .section-card .card-header { padding: 0.82rem 0.95rem; }
+        .table-card .card-body,
+        .list-card .card-body,
+        .section-card .card-body { padding: 0.95rem; }
+        .list-card .list-group-item { background: transparent; }
+        .stat-card { height: 100%; border-radius: 1.15rem; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border: 1px solid rgba(15, 23, 42, 0.06); }
+        .stat-card .card-body { padding: 0.9rem 1rem 0.92rem; }
         .stat-label { font-size: 0.76rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--admin-text-soft); }
-        .stat-value { font-size: clamp(1.3rem, 2.2vw, 2rem); font-weight: 700; line-height: 1; margin-top: 0.28rem; }
-        .stat-meta { margin-top: 0.3rem; color: var(--admin-text-soft); font-size: 0.78rem; }
+        .stat-number-box { display: inline-flex; align-items: center; justify-content: center; min-width: 5rem; padding: 0.55rem 1rem; border-radius: 999px; margin-top: 0.5rem; background: #0f172a; color: #ffffff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08); }
+        .stat-value { font-size: clamp(1.3rem, 2.2vw, 2rem); font-weight: 700; line-height: 1; }
+        .stat-meta { margin-top: 0.45rem; color: var(--admin-text-soft); font-size: 0.78rem; }
+        .top-create-card { border-radius: 1.1rem; }
         .icon-btn {
             width: 2rem;
             height: 2rem;
@@ -143,6 +167,7 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
             main.container-fluid { width: 100%; padding-left: 0.8rem; padding-right: 0.8rem; }
             .panel-grid.two-up { grid-template-columns: 1fr; }
             .metric-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .hero-grid { grid-template-columns: 1fr; }
         }
         @media (max-width: 991px) {
             .info-grid { grid-template-columns: 1fr; }

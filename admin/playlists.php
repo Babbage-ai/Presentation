@@ -481,6 +481,15 @@ while ($row = $result->fetch_assoc()) {
 }
 $statement->close();
 
+$activePlaylistCount = 0;
+$playlistItemTotal = 0;
+foreach ($playlists as $playlist) {
+    if ((int) $playlist['active'] === 1) {
+        $activePlaylistCount++;
+    }
+    $playlistItemTotal += (int) $playlist['item_count'];
+}
+
 $pageTitle = 'Playlists';
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -490,32 +499,75 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="section-subtitle">Build sequences faster with cleaner forms and compact item actions.</div>
     </div>
 </div>
-<div class="row g-3">
-    <div class="col-xl-3 col-lg-4">
-        <div class="admin-side-panel panel-stack">
-        <div class="card">
-            <div class="card-header"><h1 class="h5 mb-0">Create Playlist</h1></div>
+<div class="row g-3 mb-3">
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card">
             <div class="card-body">
-                <form class="dense-form" method="post">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="action" value="create_playlist">
-                    <div class="mb-3">
-                        <label class="form-label" for="playlist_name">Name</label>
-                        <input class="form-control" id="playlist_name" name="name" type="text" required>
-                    </div>
-                    <div class="form-check mb-3">
+                <div class="stat-label">Playlists</div>
+                <div class="stat-number-box"><div class="stat-value"><?= count($playlists) ?></div></div>
+                <div class="stat-meta">Total saved playlists</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-label">Active</div>
+                <div class="stat-number-box"><div class="stat-value"><?= $activePlaylistCount ?></div></div>
+                <div class="stat-meta">Available for screens</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-label">Items</div>
+                <div class="stat-number-box"><div class="stat-value"><?= $playlistItemTotal ?></div></div>
+                <div class="stat-meta">Across all playlists</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-label">Selected</div>
+                <div class="stat-number-box"><div class="small fw-semibold"><?= $selectedPlaylist ? 'Edit' : 'None' ?></div></div>
+                <div class="stat-meta"><?= $selectedPlaylist ? e($selectedPlaylist['name']) : 'Choose a playlist below' ?></div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card top-create-card mb-3">
+    <div class="card-header"><h2 class="h5 mb-0">Add New Playlist</h2></div>
+    <div class="card-body">
+        <form class="dense-form" method="post">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="create_playlist">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-8">
+                    <label class="form-label" for="playlist_name">Name</label>
+                    <input class="form-control" id="playlist_name" name="name" type="text" required>
+                </div>
+                <div class="col-lg-2">
+                    <div class="form-check mb-2">
                         <input class="form-check-input" id="playlist_active" name="active" type="checkbox" checked>
-                        <label class="form-check-label" for="playlist_active">Playlist active</label>
+                        <label class="form-check-label" for="playlist_active">Active</label>
                     </div>
-                    <button class="btn btn-primary" type="submit">
+                </div>
+                <div class="col-lg-2">
+                    <button class="btn btn-primary w-100" type="submit">
                         <i class="bi bi-plus-circle"></i>
                         <span class="ms-1">Create</span>
                     </button>
-                </form>
+                </div>
             </div>
-        </div>
-
-        <div class="card">
+        </form>
+    </div>
+</div>
+<div class="row g-3">
+    <div class="col-xl-3 col-lg-4">
+        <div class="admin-side-panel panel-stack">
+        <div class="card list-card">
             <div class="card-header"><h2 class="h5 mb-0">Existing Playlists</h2></div>
             <div class="list-group list-group-flush">
                 <?php if (!$playlists): ?>
@@ -541,7 +593,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <div class="card-body text-muted">Select a playlist to edit it.</div>
             </div>
         <?php else: ?>
-            <div class="card mb-4">
+            <div class="card hero-card mb-4">
                 <div class="card-header"><h2 class="h5 mb-0">Edit Playlist</h2></div>
                 <div class="card-body">
                     <form class="dense-form" method="post">
@@ -579,7 +631,7 @@ require_once __DIR__ . '/../includes/header.php';
 
             <div class="row g-3">
                 <div class="col-xl-6">
-                    <div class="card h-100">
+                    <div class="card section-card h-100">
                         <div class="card-header"><h2 class="h5 mb-0">Add Media To Playlist</h2></div>
                         <div class="card-body">
                             <form method="post" class="row g-3 dense-form">
@@ -617,7 +669,7 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
 
                 <div class="col-xl-6">
-                    <div class="card h-100">
+                    <div class="card section-card h-100">
                         <div class="card-header"><h2 class="h5 mb-0">Add Quiz To Playlist</h2></div>
                         <div class="card-body">
                             <form method="post" class="row g-3 dense-form">
@@ -658,7 +710,7 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
             </div>
 
-            <div class="card">
+            <div class="card table-card">
                 <div class="card-header"><h2 class="h5 mb-0">Playlist Items</h2></div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
