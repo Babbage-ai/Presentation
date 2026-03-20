@@ -32,7 +32,7 @@ if (empty($screen['playlist_id'])) {
     ]);
 }
 
-$items = fetch_playlist_items($db, (int) $screen['playlist_id']);
+$items = fetch_playlist_items($db, (int) $screen['playlist_id'], (int) $screen['id']);
 $formattedItems = [];
 
 foreach ($items as $item) {
@@ -69,6 +69,12 @@ foreach ($items as $item) {
         'duration' => $item['media_type'] === 'image' ? max(1, (int) $item['image_duration']) : null,
         'sort_order' => (int) $item['sort_order'],
     ];
+}
+
+foreach ($formattedItems as $item) {
+    if (($item['type'] ?? '') === 'quiz' && ($item['quiz_selection_mode'] ?? '') === 'random' && !empty($item['quiz_question_id'])) {
+        log_screen_event($db, (int) $screen['id'], 'random_quiz_served', (string) (int) $item['quiz_question_id']);
+    }
 }
 
 json_response(true, 'Playlist loaded.', [

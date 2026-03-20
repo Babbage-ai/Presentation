@@ -339,6 +339,13 @@ function player_launch_url(string $screenToken): string
         . '&api_base_url=' . rawurlencode(application_base_url());
 }
 
+function player_browser_test_url(string $screenToken): string
+{
+    return player_launch_url($screenToken)
+        . '&refresh_interval_seconds=30'
+        . '&heartbeat_interval_seconds=30';
+}
+
 function set_api_headers(): void
 {
     header('Content-Type: application/json; charset=UTF-8');
@@ -479,6 +486,76 @@ function randomize_quiz_bank(array $questions): array
     return $shuffled;
 }
 
+function fetch_recent_random_quiz_ids(mysqli $db, int $screenId, int $limit): array
+{
+    if ($screenId < 1 || $limit < 1) {
+        return [];
+    }
+
+    $statement = $db->prepare("SELECT message
+        FROM screen_logs
+        WHERE screen_id = ? AND log_type = 'random_quiz_served'
+        ORDER BY created_at DESC, id DESC
+        LIMIT ?");
+    $statement->bind_param('ii', $screenId, $limit);
+    $statement->execute();
+    $result = $statement->get_result();
+    $recentIds = [];
+
+    while ($row = $result->fetch_assoc()) {
+        $quizId = (int) ($row['message'] ?? 0);
+        if ($quizId > 0 && !in_array($quizId, $recentIds, true)) {
+            $recentIds[] = $quizId;
+        }
+    }
+
+    $statement->close();
+
+    return $recentIds;
+}
+
+function build_random_quiz_selection(array $quizBank, array $recentQuizIds, int $selectionCount): array
+{
+    if ($selectionCount < 1 || !$quizBank) {
+        return [];
+    }
+
+    $recentLookup = array_fill_keys(array_map('intval', $recentQuizIds), true);
+    $freshPool = [];
+    $fallbackPool = [];
+
+    foreach ($quizBank as $question) {
+        $questionId = (int) ($question['id'] ?? 0);
+        if ($questionId < 1) {
+            continue;
+        }
+
+        if (isset($recentLookup[$questionId])) {
+            $fallbackPool[] = $question;
+            continue;
+        }
+
+        $freshPool[] = $question;
+    }
+
+    $selected = [];
+    foreach (randomize_quiz_bank($freshPool) as $question) {
+        $selected[] = $question;
+        if (count($selected) >= $selectionCount) {
+            return $selected;
+        }
+    }
+
+    foreach (randomize_quiz_bank($fallbackPool) as $question) {
+        $selected[] = $question;
+        if (count($selected) >= $selectionCount) {
+            return $selected;
+        }
+    }
+
+    return $selected;
+}
+
 function screen_is_online(?string $lastSeen, int $onlineThresholdSeconds = 120): bool
 {
     if (!$lastSeen) {
@@ -494,7 +571,7 @@ function screen_is_online(?string $lastSeen, int $onlineThresholdSeconds = 120):
     }
 }
 
-function fetch_playlist_items(mysqli $db, int $playlistId): array
+function fetch_playlist_items(mysqli $db, int $playlistId, ?int $screenId = null): array
 {
     $sql = "SELECT
                 pi.id,
@@ -543,9 +620,9 @@ function fetch_playlist_items(mysqli $db, int $playlistId): array
     $statement->bind_param('i', $playlistId);
     $statement->execute();
     $result = $statement->get_result();
-    $items = [];
-    $quizBank = null;
-    $randomQuizCursor = 0;
+    $rows = [];
+    $randomMarkerCount = 0;
+    $ownerAdminId = 0;
 
     while ($row = $result->fetch_assoc()) {
         $row['media_id'] = $row['media_id'] !== null ? (int) $row['media_id'] : null;
@@ -556,22 +633,44 @@ function fetch_playlist_items(mysqli $db, int $playlistId): array
         $row['countdown_seconds'] = isset($row['countdown_seconds']) ? (int) $row['countdown_seconds'] : 0;
         $row['reveal_duration'] = isset($row['reveal_duration']) ? (int) $row['reveal_duration'] : 0;
         $row['file_size'] = $row['file_size'] !== null ? (int) $row['file_size'] : 0;
+        $ownerAdminId = $row['owner_admin_id'];
 
         if ($row['item_type'] === 'quiz' && $row['quiz_selection_mode'] === 'random') {
-            if ($quizBank === null) {
-                $quizBank = randomize_quiz_bank(fetch_active_quiz_bank($db, $row['owner_admin_id']));
-            }
+            $randomMarkerCount++;
+        }
 
-            if (!$quizBank) {
+        $rows[] = $row;
+    }
+
+    $statement->close();
+
+    $items = [];
+    $selectedRandomQuizzes = [];
+    $randomQuizCursor = 0;
+
+    if ($randomMarkerCount > 0 && $ownerAdminId > 0) {
+        $quizBank = fetch_active_quiz_bank($db, $ownerAdminId);
+        $quizCount = count($quizBank);
+
+        if ($quizCount > 0) {
+            $historyLimit = min(
+                max(0, $quizCount - 1),
+                max(3, min(10, $randomMarkerCount * 2))
+            );
+            $recentQuizIds = $screenId !== null
+                ? fetch_recent_random_quiz_ids($db, $screenId, $historyLimit)
+                : [];
+            $selectedRandomQuizzes = build_random_quiz_selection($quizBank, $recentQuizIds, $randomMarkerCount);
+        }
+    }
+
+    foreach ($rows as $row) {
+        if ($row['item_type'] === 'quiz' && $row['quiz_selection_mode'] === 'random') {
+            if (!isset($selectedRandomQuizzes[$randomQuizCursor])) {
                 continue;
             }
 
-            if ($randomQuizCursor >= count($quizBank)) {
-                $quizBank = randomize_quiz_bank($quizBank);
-                $randomQuizCursor = 0;
-            }
-
-            $selectedQuiz = $quizBank[$randomQuizCursor];
+            $selectedQuiz = $selectedRandomQuizzes[$randomQuizCursor];
             $randomQuizCursor++;
 
             $row['quiz_question_id'] = (int) $selectedQuiz['id'];
@@ -594,8 +693,6 @@ function fetch_playlist_items(mysqli $db, int $playlistId): array
         unset($row['owner_admin_id']);
         $items[] = $row;
     }
-
-    $statement->close();
 
     return $items;
 }
