@@ -106,6 +106,14 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
         .stack-item { padding: 0.7rem 0.78rem; border-radius: 0.78rem; background: rgba(248, 250, 252, 0.94); border: 1px solid rgba(15, 23, 42, 0.05); }
         .stack-item strong { display: block; font-size: 0.92rem; }
         .stack-item span { display: block; color: var(--admin-text-soft); font-size: 0.8rem; margin-top: 0.18rem; }
+        .panel-grid { display: grid; gap: 0.75rem; }
+        .panel-grid.two-up { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .panel-section { border: 1px solid rgba(15, 23, 42, 0.06); border-radius: 0.8rem; background: rgba(248, 250, 252, 0.92); overflow: hidden; }
+        .panel-section-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.68rem 0.8rem; border-bottom: 1px solid rgba(15, 23, 42, 0.06); background: rgba(255, 255, 255, 0.8); }
+        .panel-section-title { margin: 0; font-size: 0.86rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--admin-text-soft); }
+        .panel-section-copy { margin: 0.18rem 0 0; color: var(--admin-text-soft); font-size: 0.78rem; }
+        .panel-section-body { padding: 0.8rem; }
+        .panel-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
         .screen-list { display: grid; gap: 0.7rem; }
         .screen-card { border: 1px solid var(--admin-border); border-radius: var(--admin-radius); background: rgba(255, 255, 255, 0.96); overflow: hidden; }
         .screen-card-head { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.75rem 0.85rem; border-bottom: 1px solid rgba(15, 23, 42, 0.05); background: #fcfdff; }
@@ -133,6 +141,7 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
         .attention-item span { color: var(--admin-text-soft); font-size: 0.8rem; }
         @media (max-width: 1199px) {
             main.container-fluid { width: 100%; padding-left: 0.8rem; padding-right: 0.8rem; }
+            .panel-grid.two-up { grid-template-columns: 1fr; }
             .metric-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
         @media (max-width: 991px) {

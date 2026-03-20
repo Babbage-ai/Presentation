@@ -252,6 +252,17 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card">
             <div class="card-header"><h1 class="h5 mb-0">Create Screen</h1></div>
             <div class="card-body">
+                <div class="panel-section mb-3">
+                    <div class="panel-section-head">
+                        <div>
+                            <h2 class="panel-section-title">New Screen</h2>
+                            <p class="panel-section-copy">Set the identity and optional starting playlist.</p>
+                        </div>
+                    </div>
+                    <div class="panel-section-body">
+                        <div class="compact-note">A token is generated automatically and the screen starts offline until the player checks in.</div>
+                    </div>
+                </div>
                 <form class="dense-form" method="post">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="create_screen">
@@ -289,6 +300,17 @@ require_once __DIR__ . '/../includes/header.php';
                 <?php if (!$screens): ?>
                     <p class="text-muted mb-0">No screens created yet.</p>
                 <?php else: ?>
+                    <div class="panel-section mb-3">
+                        <div class="panel-section-head">
+                            <div>
+                                <h2 class="panel-section-title">Screen List</h2>
+                                <p class="panel-section-copy">Each screen is split into status, access, and edit panels.</p>
+                            </div>
+                        </div>
+                        <div class="panel-section-body">
+                            <div class="compact-note">Use the top actions for quick launch and sync. Open details only when you need token or diagnostics.</div>
+                        </div>
+                    </div>
                     <div class="screen-list">
                         <?php foreach ($screens as $screen): ?>
                             <?php $online = screen_is_online($screen['last_seen']); ?>
@@ -308,83 +330,109 @@ require_once __DIR__ . '/../includes/header.php';
                                     </div>
                                 </div>
                                 <div class="screen-card-body">
-                                    <div class="screen-card-toolbar">
-                                        <div class="screen-card-meta">
-                                            <span class="badge text-bg-light border"><?= e($screen['playlist_name'] ?: 'Unassigned') ?></span>
-                                            <span class="badge text-bg-light border">Seen <?= e(format_datetime($screen['last_seen'])) ?></span>
-                                            <?php if (!empty($screen['last_ip'])): ?>
-                                                <span class="badge text-bg-light border"><?= e($screen['last_ip']) ?></span>
-                                            <?php endif; ?>
-                                            <?php if (!empty($screen['resolution'])): ?>
-                                                <span class="badge text-bg-light border"><?= e($screen['resolution']) ?></span>
-                                            <?php endif; ?>
-                                        </div>
-                                        <div class="screen-card-actions">
-                                            <a class="btn btn-sm btn-outline-success icon-btn icon-btn-sm" href="<?= e($playerUrl) ?>" target="_blank" rel="noopener noreferrer" title="Open player" aria-label="Open player">
-                                                <i class="bi bi-play-fill"></i>
-                                            </a>
-                                            <a class="btn btn-sm btn-outline-primary icon-btn icon-btn-sm" href="<?= e($browserTestUrl) ?>" target="_blank" rel="noopener noreferrer" title="Open browser test" aria-label="Open browser test">
-                                                <i class="bi bi-laptop"></i>
-                                            </a>
-                                            <form method="post" class="m-0" onsubmit="return confirm('Assign the latest active playlist to this screen and force a reload on the next heartbeat?');">
-                                                <?= csrf_field() ?>
-                                                <input type="hidden" name="action" value="force_sync">
-                                                <input type="hidden" name="screen_id" value="<?= (int) $screen['id'] ?>">
-                                                <button class="btn btn-sm btn-outline-success icon-btn icon-btn-sm" type="submit" title="Send update to screen" aria-label="Send update to screen">
-                                                    <i class="bi bi-arrow-repeat"></i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </div>
+                                    <div class="panel-grid">
+                                        <section class="panel-section">
+                                            <div class="panel-section-head">
+                                                <div>
+                                                    <h2 class="panel-section-title">Status</h2>
+                                                    <p class="panel-section-copy">Current assignment and heartbeat.</p>
+                                                </div>
+                                            </div>
+                                            <div class="panel-section-body">
+                                                <div class="metric-row">
+                                                    <div class="metric-chip">
+                                                        <span class="metric-chip-label">Playlist</span>
+                                                        <div class="metric-chip-value"><?= e($screen['playlist_name'] ?: 'Unassigned') ?></div>
+                                                    </div>
+                                                    <div class="metric-chip">
+                                                        <span class="metric-chip-label">Last Seen</span>
+                                                        <div class="metric-chip-value"><?= e(format_datetime($screen['last_seen'])) ?></div>
+                                                    </div>
+                                                    <div class="metric-chip">
+                                                        <span class="metric-chip-label">IP</span>
+                                                        <div class="metric-chip-value"><?= e($screen['last_ip'] ?: '-') ?></div>
+                                                    </div>
+                                                    <div class="metric-chip">
+                                                        <span class="metric-chip-label">Resolution</span>
+                                                        <div class="metric-chip-value"><?= e($screen['resolution'] ?: '-') ?></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </section>
 
-                                    <div class="metric-row mb-3">
-                                        <div class="metric-chip">
-                                            <span class="metric-chip-label">Playlist</span>
-                                            <div class="metric-chip-value"><?= e($screen['playlist_name'] ?: 'Unassigned') ?></div>
-                                        </div>
-                                        <div class="metric-chip">
-                                            <span class="metric-chip-label">Last Seen</span>
-                                            <div class="metric-chip-value"><?= e(format_datetime($screen['last_seen'])) ?></div>
-                                        </div>
-                                        <div class="metric-chip">
-                                            <span class="metric-chip-label">IP</span>
-                                            <div class="metric-chip-value"><?= e($screen['last_ip'] ?: '-') ?></div>
-                                        </div>
-                                        <div class="metric-chip">
-                                            <span class="metric-chip-label">Resolution</span>
-                                            <div class="metric-chip-value"><?= e($screen['resolution'] ?: '-') ?></div>
-                                        </div>
-                                    </div>
+                                        <section class="panel-section">
+                                            <div class="panel-section-head">
+                                                <div>
+                                                    <h2 class="panel-section-title">Launch And Sync</h2>
+                                                    <p class="panel-section-copy">Open the player or send the latest active playlist.</p>
+                                                </div>
+                                                <div class="panel-actions">
+                                                    <a class="btn btn-sm btn-outline-success icon-btn icon-btn-sm" href="<?= e($playerUrl) ?>" target="_blank" rel="noopener noreferrer" title="Open player" aria-label="Open player">
+                                                        <i class="bi bi-play-fill"></i>
+                                                    </a>
+                                                    <a class="btn btn-sm btn-outline-primary icon-btn icon-btn-sm" href="<?= e($browserTestUrl) ?>" target="_blank" rel="noopener noreferrer" title="Open browser test" aria-label="Open browser test">
+                                                        <i class="bi bi-laptop"></i>
+                                                    </a>
+                                                    <form method="post" class="m-0" onsubmit="return confirm('Assign the latest active playlist to this screen and force a reload on the next heartbeat?');">
+                                                        <?= csrf_field() ?>
+                                                        <input type="hidden" name="action" value="force_sync">
+                                                        <input type="hidden" name="screen_id" value="<?= (int) $screen['id'] ?>">
+                                                        <button class="btn btn-sm btn-outline-success icon-btn icon-btn-sm" type="submit" title="Send update to screen" aria-label="Send update to screen">
+                                                            <i class="bi bi-arrow-repeat"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                            <div class="panel-section-body">
+                                                <div class="screen-card-meta">
+                                                    <span class="badge text-bg-light border"><?= e($screen['playlist_name'] ?: 'Unassigned') ?></span>
+                                                    <span class="badge text-bg-light border">Seen <?= e(format_datetime($screen['last_seen'])) ?></span>
+                                                    <?php if (!empty($screen['last_ip'])): ?>
+                                                        <span class="badge text-bg-light border"><?= e($screen['last_ip']) ?></span>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($screen['resolution'])): ?>
+                                                        <span class="badge text-bg-light border"><?= e($screen['resolution']) ?></span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <details class="details-toggle mt-3">
+                                                    <summary>
+                                                        <span>Details And Tools</span>
+                                                        <span class="compact-note">Token, player URL, and diagnostics</span>
+                                                    </summary>
+                                                    <div class="details-toggle-body">
+                                                        <div class="info-grid">
+                                                            <div class="info-cell">
+                                                                <span class="info-label">Player Version</span>
+                                                                <div class="info-value"><?= e($screen['player_version'] ?: '-') ?></div>
+                                                            </div>
+                                                            <div class="info-cell">
+                                                                <span class="info-label">Sync Revision</span>
+                                                                <div class="info-value"><?= (int) $screen['sync_revision'] ?></div>
+                                                            </div>
+                                                            <div class="info-cell info-cell-wide">
+                                                                <span class="info-label">Token</span>
+                                                                <pre class="token-box bg-light p-2 rounded mt-2"><?= e($screen['screen_token']) ?></pre>
+                                                            </div>
+                                                            <div class="info-cell info-cell-wide">
+                                                                <span class="info-label">Player URL</span>
+                                                                <pre class="token-box bg-light p-2 rounded mt-2"><?= e($playerUrl) ?></pre>
+                                                                <div class="compact-note mt-2">Use Browser Test on any computer to preview this screen in a normal web browser.</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </details>
+                                            </div>
+                                        </section>
 
-                                    <details class="details-toggle mb-3">
-                                        <summary>
-                                            <span>Details And Tools</span>
-                                            <span class="compact-note">Token, player URL, and diagnostics</span>
-                                        </summary>
-                                        <div class="details-toggle-body">
-                                            <div class="info-grid mb-3">
-                                            <div class="info-cell">
-                                                <span class="info-label">Player Version</span>
-                                                <div class="info-value"><?= e($screen['player_version'] ?: '-') ?></div>
+                                        <section class="panel-section">
+                                            <div class="panel-section-head">
+                                                <div>
+                                                    <h2 class="panel-section-title">Edit Screen</h2>
+                                                    <p class="panel-section-copy">Update name, location, playlist, or token.</p>
+                                                </div>
                                             </div>
-                                            <div class="info-cell">
-                                                <span class="info-label">Sync Revision</span>
-                                                <div class="info-value"><?= (int) $screen['sync_revision'] ?></div>
-                                            </div>
-                                            <div class="info-cell info-cell-wide">
-                                                <span class="info-label">Token</span>
-                                                <pre class="token-box bg-light p-2 rounded mt-2"><?= e($screen['screen_token']) ?></pre>
-                                            </div>
-                                            <div class="info-cell info-cell-wide">
-                                                <span class="info-label">Player URL</span>
-                                                <pre class="token-box bg-light p-2 rounded mt-2"><?= e($playerUrl) ?></pre>
-                                                <div class="compact-note mt-2">Use Browser Test on any computer to preview this screen in a normal web browser.</div>
-                                            </div>
-                                            </div>
-                                        </div>
-                                    </details>
-
-                                        <div class="row g-3 mb-3">
+                                            <div class="panel-section-body">
+                                                <div class="row g-3 mb-3">
                                             <div class="col-md-4">
                                                 <label class="form-label">Screen Name</label>
                                                 <input class="form-control" name="name" type="text" value="<?= e($screen['name']) ?>" required form="<?= e($formId) ?>">
@@ -421,6 +469,9 @@ require_once __DIR__ . '/../includes/header.php';
                                                 </form>
                                             </div>
                                         </div>
+                                            </div>
+                                        </section>
+                                    </div>
                                 </div>
                             </div>
                         <?php endforeach; ?>

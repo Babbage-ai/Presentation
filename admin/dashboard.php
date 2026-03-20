@@ -143,33 +143,55 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card h-100">
             <div class="card-header"><h2 class="h5 mb-0">At A Glance</h2></div>
             <div class="card-body">
-                <div class="summary-list">
-                    <div class="summary-row">
-                        <div class="summary-label">Latest Active Playlist</div>
-                        <div class="summary-value"><?= e($latestActivePlaylist['name'] ?? 'None') ?></div>
-                    </div>
-                    <div class="summary-row">
-                        <div class="summary-label">Online Screens</div>
-                        <div class="summary-value"><?= $counts['online_screens'] ?> / <?= $counts['screens'] ?></div>
-                    </div>
-                    <div class="summary-row">
-                        <div class="summary-label">Offline Screens</div>
-                        <div class="summary-value"><?= max(0, $counts['screens'] - $counts['online_screens']) ?></div>
-                    </div>
-                    <div class="summary-row">
-                        <div class="summary-label">Unassigned Screens</div>
-                        <div class="summary-value"><?= $unassignedScreens ?></div>
-                    </div>
-                </div>
-                <div class="stack-list mt-3">
-                    <div class="stack-item">
-                        <strong>Latest playlist</strong>
-                        <span><?= $latestActivePlaylist ? e($latestActivePlaylist['name']) . ' updated ' . e(format_datetime($latestActivePlaylist['updated_at'])) : 'No active playlist is ready for screens.' ?></span>
-                    </div>
-                    <div class="stack-item">
-                        <strong>Next action</strong>
-                        <span><?= $unassignedScreens > 0 ? 'Assign playlists to unassigned screens.' : 'Check any offline screens in the attention list.' ?></span>
-                    </div>
+                <div class="panel-grid">
+                    <section class="panel-section">
+                        <div class="panel-section-head">
+                            <div>
+                                <h3 class="panel-section-title">System</h3>
+                                <p class="panel-section-copy">What is currently live and connected.</p>
+                            </div>
+                        </div>
+                        <div class="panel-section-body">
+                            <div class="summary-list">
+                                <div class="summary-row">
+                                    <div class="summary-label">Latest Active Playlist</div>
+                                    <div class="summary-value"><?= e($latestActivePlaylist['name'] ?? 'None') ?></div>
+                                </div>
+                                <div class="summary-row">
+                                    <div class="summary-label">Online Screens</div>
+                                    <div class="summary-value"><?= $counts['online_screens'] ?> / <?= $counts['screens'] ?></div>
+                                </div>
+                                <div class="summary-row">
+                                    <div class="summary-label">Offline Screens</div>
+                                    <div class="summary-value"><?= max(0, $counts['screens'] - $counts['online_screens']) ?></div>
+                                </div>
+                                <div class="summary-row">
+                                    <div class="summary-label">Unassigned Screens</div>
+                                    <div class="summary-value"><?= $unassignedScreens ?></div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    <section class="panel-section">
+                        <div class="panel-section-head">
+                            <div>
+                                <h3 class="panel-section-title">Recommended Next Step</h3>
+                                <p class="panel-section-copy">The quickest route to a tidier system.</p>
+                            </div>
+                        </div>
+                        <div class="panel-section-body">
+                            <div class="stack-list">
+                                <div class="stack-item">
+                                    <strong>Latest playlist</strong>
+                                    <span><?= $latestActivePlaylist ? e($latestActivePlaylist['name']) . ' updated ' . e(format_datetime($latestActivePlaylist['updated_at'])) : 'No active playlist is ready for screens.' ?></span>
+                                </div>
+                                <div class="stack-item">
+                                    <strong>Next action</strong>
+                                    <span><?= $unassignedScreens > 0 ? 'Assign playlists to unassigned screens.' : 'Check any offline screens in the attention list.' ?></span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
                 </div>
             </div>
         </div>
@@ -232,24 +254,45 @@ require_once __DIR__ . '/../includes/header.php';
                 <?php if (!$recentActivity): ?>
                     <p class="text-muted mb-0">No screens created yet.</p>
                 <?php else: ?>
-                    <div class="stack-list">
+                    <div class="panel-grid">
                         <?php foreach ($recentActivity as $screen): ?>
                             <?php $online = screen_is_online($screen['last_seen']); ?>
                             <?php $assignedPlaylistId = (int) ($screen['playlist_id'] ?? 0); ?>
                             <?php $latestPlaylistId = (int) ($latestActivePlaylist['id'] ?? 0); ?>
                             <?php $isLatestAssigned = $latestPlaylistId > 0 && $assignedPlaylistId === $latestPlaylistId; ?>
-                            <div class="stack-item">
-                                <strong><?= e($screen['name']) ?></strong>
-                                <span><?= e($screen['location'] ?: 'No location') ?> · <?= $online ? 'Online' : 'Offline' ?> · <?= e($screen['playlist_name'] ?: 'Unassigned') ?></span>
-                                <span>
-                                    <?php if ($latestActivePlaylist): ?>
-                                        <?= $isLatestAssigned ? 'Using latest playlist' : 'Not using latest playlist' ?>
-                                    <?php else: ?>
-                                        No active playlist
-                                    <?php endif; ?>
-                                    · Last seen <?= e(format_datetime($screen['last_seen'])) ?>
-                                </span>
-                            </div>
+                            <section class="panel-section">
+                                <div class="panel-section-head">
+                                    <div>
+                                        <h3 class="panel-section-title"><?= e($screen['name']) ?></h3>
+                                        <p class="panel-section-copy"><?= e($screen['location'] ?: 'No location') ?></p>
+                                    </div>
+                                    <span class="badge <?= $online ? 'text-bg-success' : 'text-bg-secondary' ?>">
+                                        <?= $online ? 'Online' : 'Offline' ?>
+                                    </span>
+                                </div>
+                                <div class="panel-section-body">
+                                    <div class="summary-list">
+                                        <div class="summary-row">
+                                            <div class="summary-label">Assigned Playlist</div>
+                                            <div class="summary-value"><?= e($screen['playlist_name'] ?: 'Unassigned') ?></div>
+                                        </div>
+                                        <div class="summary-row">
+                                            <div class="summary-label">Latest Playlist Status</div>
+                                            <div class="summary-value">
+                                                <?php if ($latestActivePlaylist): ?>
+                                                    <?= $isLatestAssigned ? 'Using latest' : 'Out of date' ?>
+                                                <?php else: ?>
+                                                    No active playlist
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <div class="summary-row">
+                                            <div class="summary-label">Last Seen</div>
+                                            <div class="summary-value"><?= e(format_datetime($screen['last_seen'])) ?></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
@@ -260,18 +303,39 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card h-100">
             <div class="card-header"><h2 class="h5 mb-0">Quick Links</h2></div>
             <div class="card-body">
-                <div class="stack-list">
-                    <a class="stack-item text-decoration-none text-reset" href="<?= e(app_path('/admin/screens.php')) ?>">
-                        <strong>Screens</strong>
-                        <span>Assignments, browser tests, tokens, and update pushes.</span>
+                <div class="panel-grid">
+                    <a class="panel-section text-decoration-none text-reset" href="<?= e(app_path('/admin/screens.php')) ?>">
+                        <div class="panel-section-head">
+                            <div>
+                                <h3 class="panel-section-title">Screens</h3>
+                                <p class="panel-section-copy">Assignments and previews.</p>
+                            </div>
+                        </div>
+                        <div class="panel-section-body">
+                            <div class="compact-note">Assignments, browser tests, tokens, and update pushes.</div>
+                        </div>
                     </a>
-                    <a class="stack-item text-decoration-none text-reset" href="<?= e(app_path('/admin/playlists.php')) ?>">
-                        <strong>Playlists</strong>
-                        <span>Update what is live and keep screens on the correct content.</span>
+                    <a class="panel-section text-decoration-none text-reset" href="<?= e(app_path('/admin/playlists.php')) ?>">
+                        <div class="panel-section-head">
+                            <div>
+                                <h3 class="panel-section-title">Playlists</h3>
+                                <p class="panel-section-copy">What screens are running.</p>
+                            </div>
+                        </div>
+                        <div class="panel-section-body">
+                            <div class="compact-note">Update what is live and keep screens on the correct content.</div>
+                        </div>
                     </a>
-                    <a class="stack-item text-decoration-none text-reset" href="<?= e(app_path('/admin/media.php')) ?>">
-                        <strong>Media And Quizzes</strong>
-                        <span>Manage the content library that feeds your playlists.</span>
+                    <a class="panel-section text-decoration-none text-reset" href="<?= e(app_path('/admin/media.php')) ?>">
+                        <div class="panel-section-head">
+                            <div>
+                                <h3 class="panel-section-title">Media And Quizzes</h3>
+                                <p class="panel-section-copy">Content library.</p>
+                            </div>
+                        </div>
+                        <div class="panel-section-body">
+                            <div class="compact-note">Manage the content library that feeds your playlists.</div>
+                        </div>
                     </a>
                 </div>
             </div>
