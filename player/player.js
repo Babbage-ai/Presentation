@@ -9,8 +9,8 @@
     const stage = document.getElementById('stage');
     const statusEl = document.getElementById('status');
     const overlayEl = document.getElementById('overlay');
-    const playlistFlashEl = document.getElementById('playlist-flash');
-    const playlistFlashLabelEl = playlistFlashEl ? playlistFlashEl.querySelector('.playlist-flash-label') : null;
+    const playlistBannerEl = document.getElementById('playlist-banner');
+    const playlistBannerLabelEl = playlistBannerEl ? playlistBannerEl.querySelector('.playlist-banner-label') : null;
 
     const state = {
         config: null,
@@ -27,7 +27,7 @@
         syncPromise: null,
         playbackToken: 0,
         playlistSignature: null,
-        playlistFlashTimer: null
+        playlistBannerTimer: null
     };
 
     function setStatus(message, keepVisible = true) {
@@ -39,31 +39,29 @@
         return new Promise((resolve) => window.setTimeout(resolve, ms));
     }
 
-    function showPlaylistFlash(playlistName) {
-        if (!playlistFlashEl) {
+    function showPlaylistBanner(playlistName) {
+        if (!playlistBannerEl) {
             return;
         }
 
-        if (state.playlistFlashTimer) {
-            window.clearTimeout(state.playlistFlashTimer);
-            state.playlistFlashTimer = null;
+        if (state.playlistBannerTimer) {
+            window.clearTimeout(state.playlistBannerTimer);
+            state.playlistBannerTimer = null;
         }
 
-        if (playlistFlashLabelEl) {
-            playlistFlashLabelEl.textContent = playlistName
-                ? 'Now playing: ' + playlistName
-                : 'Playlist updated';
+        if (playlistBannerLabelEl) {
+            playlistBannerLabelEl.textContent = playlistName || 'No playlist assigned';
         }
 
-        playlistFlashEl.classList.remove('hidden', 'is-active');
-        void playlistFlashEl.offsetWidth;
-        playlistFlashEl.classList.add('is-active');
+        playlistBannerEl.classList.remove('hidden', 'is-active');
+        void playlistBannerEl.offsetWidth;
+        playlistBannerEl.classList.add('is-active');
 
-        state.playlistFlashTimer = window.setTimeout(() => {
-            playlistFlashEl.classList.remove('is-active');
-            playlistFlashEl.classList.add('hidden');
-            state.playlistFlashTimer = null;
-        }, 800);
+        state.playlistBannerTimer = window.setTimeout(() => {
+            playlistBannerEl.classList.remove('is-active');
+            playlistBannerEl.classList.add('hidden');
+            state.playlistBannerTimer = null;
+        }, 5000);
     }
 
     function readUrlConfig() {
@@ -248,8 +246,9 @@
             const data = await fetchApiJson('/api/get_playlist.php' + query);
             const nextPlaylist = Array.isArray(data.items) ? data.items : [];
             const currentItemIdentity = playlistIdentity(state.playlist[state.currentIndex]);
+            const hadPreviousPlaylist = state.playlistSignature !== null;
             const nextPlaylistSignature = buildPlaylistSignature(data.playlist || null, nextPlaylist);
-            const playlistChanged = state.playlistSignature !== null && state.playlistSignature !== nextPlaylistSignature;
+            const playlistChanged = hadPreviousPlaylist && state.playlistSignature !== nextPlaylistSignature;
 
             state.playlist = nextPlaylist;
             state.syncRevision = Number.parseInt(data.screen && data.screen.sync_revision, 10) || 0;
@@ -266,8 +265,8 @@
                 setStatus('Playlist synced: ' + state.playlist.length + ' item(s).');
             }
 
-            if (playlistChanged) {
-                showPlaylistFlash(data.playlist && data.playlist.name ? data.playlist.name : '');
+            if (!hadPreviousPlaylist || playlistChanged) {
+                showPlaylistBanner(data.playlist && data.playlist.name ? data.playlist.name : '');
             }
 
             window.setTimeout(() => overlayEl.classList.add('hidden'), 4000);
