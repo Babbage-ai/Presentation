@@ -102,6 +102,10 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
         .summary-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.55rem 0.7rem; border-radius: 0.7rem; background: rgba(248, 250, 252, 0.92); border: 1px solid rgba(15, 23, 42, 0.05); }
         .summary-label { font-size: 0.76rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--admin-text-soft); }
         .summary-value { font-weight: 600; text-align: right; }
+        .stack-list { display: grid; gap: 0.6rem; }
+        .stack-item { padding: 0.7rem 0.78rem; border-radius: 0.78rem; background: rgba(248, 250, 252, 0.94); border: 1px solid rgba(15, 23, 42, 0.05); }
+        .stack-item strong { display: block; font-size: 0.92rem; }
+        .stack-item span { display: block; color: var(--admin-text-soft); font-size: 0.8rem; margin-top: 0.18rem; }
         .screen-list { display: grid; gap: 0.7rem; }
         .screen-card { border: 1px solid var(--admin-border); border-radius: var(--admin-radius); background: rgba(255, 255, 255, 0.96); overflow: hidden; }
         .screen-card-head { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.75rem 0.85rem; border-bottom: 1px solid rgba(15, 23, 42, 0.05); background: #fcfdff; }
@@ -109,10 +113,20 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
         .screen-card-title strong { font-size: 0.95rem; }
         .screen-card-title span { color: var(--admin-text-soft); font-size: 0.8rem; }
         .screen-card-body { padding: 0.8rem 0.85rem; }
+        .screen-card-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 0.7rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+        .screen-card-meta { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+        .screen-card-actions { display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; }
         .metric-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.7rem; }
         .metric-chip { padding: 0.52rem 0.62rem; border-radius: 0.72rem; background: rgba(248, 250, 252, 0.9); border: 1px solid rgba(15, 23, 42, 0.05); }
         .metric-chip-label { display: block; margin-bottom: 0.16rem; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--admin-text-soft); }
         .metric-chip-value { font-size: 0.88rem; font-weight: 600; }
+        .compact-note { color: var(--admin-text-soft); font-size: 0.78rem; }
+        .details-toggle { border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 0.78rem; background: rgba(248, 250, 252, 0.9); }
+        .details-toggle summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.65rem 0.8rem; font-size: 0.88rem; font-weight: 600; }
+        .details-toggle summary::-webkit-details-marker { display: none; }
+        .details-toggle summary::after { content: "\F282"; font-family: bootstrap-icons; font-size: 0.8rem; color: var(--admin-text-soft); transition: transform 0.2s ease; }
+        .details-toggle[open] summary::after { transform: rotate(180deg); }
+        .details-toggle-body { padding: 0 0.8rem 0.8rem; }
         .attention-list { display: grid; gap: 0.55rem; }
         .attention-item { padding: 0.6rem 0.7rem; border-radius: 0.75rem; background: rgba(248, 250, 252, 0.94); border: 1px solid rgba(15, 23, 42, 0.05); }
         .attention-item strong { display: block; font-size: 0.9rem; }

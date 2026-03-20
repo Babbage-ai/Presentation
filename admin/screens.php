@@ -308,6 +308,35 @@ require_once __DIR__ . '/../includes/header.php';
                                     </div>
                                 </div>
                                 <div class="screen-card-body">
+                                    <div class="screen-card-toolbar">
+                                        <div class="screen-card-meta">
+                                            <span class="badge text-bg-light border"><?= e($screen['playlist_name'] ?: 'Unassigned') ?></span>
+                                            <span class="badge text-bg-light border">Seen <?= e(format_datetime($screen['last_seen'])) ?></span>
+                                            <?php if (!empty($screen['last_ip'])): ?>
+                                                <span class="badge text-bg-light border"><?= e($screen['last_ip']) ?></span>
+                                            <?php endif; ?>
+                                            <?php if (!empty($screen['resolution'])): ?>
+                                                <span class="badge text-bg-light border"><?= e($screen['resolution']) ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="screen-card-actions">
+                                            <a class="btn btn-sm btn-outline-success icon-btn icon-btn-sm" href="<?= e($playerUrl) ?>" target="_blank" rel="noopener noreferrer" title="Open player" aria-label="Open player">
+                                                <i class="bi bi-play-fill"></i>
+                                            </a>
+                                            <a class="btn btn-sm btn-outline-primary icon-btn icon-btn-sm" href="<?= e($browserTestUrl) ?>" target="_blank" rel="noopener noreferrer" title="Open browser test" aria-label="Open browser test">
+                                                <i class="bi bi-laptop"></i>
+                                            </a>
+                                            <form method="post" class="m-0" onsubmit="return confirm('Assign the latest active playlist to this screen and force a reload on the next heartbeat?');">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="action" value="force_sync">
+                                                <input type="hidden" name="screen_id" value="<?= (int) $screen['id'] ?>">
+                                                <button class="btn btn-sm btn-outline-success icon-btn icon-btn-sm" type="submit" title="Send update to screen" aria-label="Send update to screen">
+                                                    <i class="bi bi-arrow-repeat"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+
                                     <div class="metric-row mb-3">
                                         <div class="metric-chip">
                                             <span class="metric-chip-label">Playlist</span>
@@ -327,7 +356,13 @@ require_once __DIR__ . '/../includes/header.php';
                                         </div>
                                     </div>
 
-                                    <div class="info-grid mb-3">
+                                    <details class="details-toggle mb-3">
+                                        <summary>
+                                            <span>Details And Tools</span>
+                                            <span class="compact-note">Token, player URL, and diagnostics</span>
+                                        </summary>
+                                        <div class="details-toggle-body">
+                                            <div class="info-grid mb-3">
                                             <div class="info-cell">
                                                 <span class="info-label">Player Version</span>
                                                 <div class="info-value"><?= e($screen['player_version'] ?: '-') ?></div>
@@ -343,17 +378,11 @@ require_once __DIR__ . '/../includes/header.php';
                                             <div class="info-cell info-cell-wide">
                                                 <span class="info-label">Player URL</span>
                                                 <pre class="token-box bg-light p-2 rounded mt-2"><?= e($playerUrl) ?></pre>
-                                                <div class="mt-2 icon-actions">
-                                                    <a class="btn btn-sm btn-outline-success icon-btn icon-btn-sm" href="<?= e($playerUrl) ?>" target="_blank" rel="noopener noreferrer" title="Open player" aria-label="Open player">
-                                                        <i class="bi bi-play-fill"></i>
-                                                    </a>
-                                                    <a class="btn btn-sm btn-outline-primary icon-btn icon-btn-sm" href="<?= e($browserTestUrl) ?>" target="_blank" rel="noopener noreferrer" title="Open browser test" aria-label="Open browser test">
-                                                        <i class="bi bi-laptop"></i>
-                                                    </a>
-                                                </div>
-                                                <div class="small text-muted mt-2">Use Browser Test on any computer to preview this screen in a normal web browser.</div>
+                                                <div class="compact-note mt-2">Use Browser Test on any computer to preview this screen in a normal web browser.</div>
+                                            </div>
                                             </div>
                                         </div>
+                                    </details>
 
                                         <div class="row g-3 mb-3">
                                             <div class="col-md-4">
@@ -388,14 +417,6 @@ require_once __DIR__ . '/../includes/header.php';
                                                     <input type="hidden" name="screen_id" value="<?= (int) $screen['id'] ?>">
                                                     <button class="btn btn-outline-warning icon-btn" type="submit" title="Regenerate token" aria-label="Regenerate token">
                                                         <i class="bi bi-key"></i>
-                                                    </button>
-                                                </form>
-                                                <form method="post" class="m-0" onsubmit="return confirm('Assign the latest active playlist to this screen and force a reload on the next heartbeat?');">
-                                                    <?= csrf_field() ?>
-                                                    <input type="hidden" name="action" value="force_sync">
-                                                    <input type="hidden" name="screen_id" value="<?= (int) $screen['id'] ?>">
-                                                    <button class="btn btn-outline-success icon-btn" type="submit" title="Send update to screen" aria-label="Send update to screen">
-                                                        <i class="bi bi-arrow-repeat"></i>
                                                     </button>
                                                 </form>
                                             </div>
