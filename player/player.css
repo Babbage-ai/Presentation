@@ -207,10 +207,55 @@ body {
     color: #fff;
 }
 
+@media (max-width: 1600px), (max-height: 1000px) {
+    .quiz-card {
+        width: min(88vw, 1280px);
+        height: min(82vh, 860px);
+        padding: 24px 28px;
+        gap: 16px;
+        border-radius: 18px;
+    }
+
+    .quiz-badge {
+        padding: 8px 14px;
+        font-size: 16px;
+    }
+
+    .quiz-question {
+        font-size: clamp(52px, 5.8vw, 96px);
+    }
+
+    .quiz-countdown,
+    .quiz-footer {
+        font-size: clamp(28px, 3.2vw, 48px);
+    }
+
+    .quiz-answers {
+        gap: 14px;
+    }
+
+    .quiz-answer {
+        min-height: 88px;
+        padding: 18px 20px;
+        border-radius: 18px;
+        gap: 14px;
+    }
+
+    .quiz-answer-key {
+        width: 64px;
+        height: 64px;
+        font-size: 30px;
+    }
+
+    .quiz-answer-text {
+        font-size: clamp(30px, 3.4vw, 52px);
+    }
+}
+
 @media (max-width: 900px) {
     .quiz-card {
-        width: calc(75vw);
-        height: calc(75vh);
+        width: min(92vw, 760px);
+        height: min(88vh, 860px);
         padding: 14px;
         gap: 11px;
         border-radius: 12px;

@@ -99,13 +99,39 @@ if (is_post_request()) {
             redirect('/admin/screens.php');
         }
 
-        if (!bump_screen_sync_revision($db, $screenId, $adminId)) {
+        $statement = $db->prepare("SELECT id, name
+            FROM playlists
+            WHERE owner_admin_id = ? AND active = 1
+            ORDER BY updated_at DESC, id DESC
+            LIMIT 1");
+        $statement->bind_param('i', $adminId);
+        $statement->execute();
+        $latestPlaylist = $statement->get_result()->fetch_assoc() ?: null;
+        $statement->close();
+
+        if (!$latestPlaylist) {
+            set_flash('danger', 'No active playlist is available to send to this screen.');
+            redirect('/admin/screens.php');
+        }
+
+        $latestPlaylistId = (int) $latestPlaylist['id'];
+
+        $statement = $db->prepare("UPDATE screens
+            SET playlist_id = ?
+            WHERE id = ? AND owner_admin_id = ?");
+        $statement->bind_param('iii', $latestPlaylistId, $screenId, $adminId);
+        $statement->execute();
+        $updated = $statement->affected_rows > 0;
+        $statement->close();
+
+        if (!$updated && !bump_screen_sync_revision($db, $screenId, $adminId)) {
             set_flash('danger', 'Screen not found.');
             redirect('/admin/screens.php');
         }
 
-        log_screen_event($db, $screenId, 'force_sync', 'Cloud update requested by admin.');
-        set_flash('success', 'Update sent to screen. The player will switch to the latest playlist on its next heartbeat.');
+        bump_screen_sync_revision($db, $screenId, $adminId);
+        log_screen_event($db, $screenId, 'force_sync', 'Cloud update requested by admin. Latest active playlist assigned to screen.');
+        set_flash('success', 'Update sent to screen. The player will switch to "' . $latestPlaylist['name'] . '" on its next heartbeat.');
         redirect('/admin/screens.php');
     }
 
@@ -199,6 +225,7 @@ require_once __DIR__ . '/../includes/header.php';
                             <?php $online = screen_is_online($screen['last_seen']); ?>
                             <?php $formId = 'screen-form-' . (int) $screen['id']; ?>
                             <?php $playerUrl = player_launch_url($screen['screen_token']); ?>
+                            <?php $browserTestUrl = player_browser_test_url($screen['screen_token']); ?>
                             <div class="accordion-item">
                                 <h2 class="accordion-header" id="heading<?= (int) $screen['id'] ?>">
                                     <button class="accordion-button <?= $index > 0 ? 'collapsed' : '' ?>" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<?= (int) $screen['id'] ?>" aria-expanded="<?= $index === 0 ? 'true' : 'false' ?>" aria-controls="collapse<?= (int) $screen['id'] ?>">
@@ -225,7 +252,9 @@ require_once __DIR__ . '/../includes/header.php';
                                                 <pre class="token-box bg-light p-2 rounded mt-2"><?= e($playerUrl) ?></pre>
                                                 <div class="mt-2 d-flex gap-2 flex-wrap">
                                                     <a class="btn btn-sm btn-outline-success" href="<?= e($playerUrl) ?>" target="_blank" rel="noopener noreferrer">Open Player</a>
+                                                    <a class="btn btn-sm btn-outline-primary" href="<?= e($browserTestUrl) ?>" target="_blank" rel="noopener noreferrer">Open Browser Test</a>
                                                 </div>
+                                                <div class="small text-muted mt-2">Use Browser Test on any computer to preview this screen in a normal web browser.</div>
                                             </div>
                                         </div>
 
@@ -260,7 +289,7 @@ require_once __DIR__ . '/../includes/header.php';
                                                     <input type="hidden" name="screen_id" value="<?= (int) $screen['id'] ?>">
                                                     <button class="btn btn-outline-warning" type="submit">Regenerate Token</button>
                                                 </form>
-                                                <form method="post" class="m-0" onsubmit="return confirm('Send an update command so this screen reloads the latest playlist on the next heartbeat?');">
+                                                <form method="post" class="m-0" onsubmit="return confirm('Assign the latest active playlist to this screen and force a reload on the next heartbeat?');">
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="action" value="force_sync">
                                                     <input type="hidden" name="screen_id" value="<?= (int) $screen['id'] ?>">
