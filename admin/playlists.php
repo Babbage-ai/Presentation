@@ -63,6 +63,60 @@ if (is_post_request()) {
         redirect('/admin/playlists.php?playlist_id=' . $playlistId);
     }
 
+    if ($action === 'delete_playlist') {
+        $playlistId = (int) ($_POST['playlist_id'] ?? 0);
+
+        if ($playlistId < 1) {
+            set_flash('danger', 'Invalid playlist deletion request.');
+            redirect('/admin/playlists.php');
+        }
+
+        $statement = $db->prepare("SELECT id, name
+            FROM playlists
+            WHERE id = ? AND owner_admin_id = ?
+            LIMIT 1");
+        $statement->bind_param('ii', $playlistId, $adminId);
+        $statement->execute();
+        $playlistToDelete = $statement->get_result()->fetch_assoc() ?: null;
+        $statement->close();
+
+        if (!$playlistToDelete) {
+            set_flash('danger', 'Playlist not found.');
+            redirect('/admin/playlists.php');
+        }
+
+        $db->begin_transaction();
+
+        try {
+            $statement = $db->prepare("UPDATE screens
+                SET playlist_id = NULL,
+                    sync_revision = sync_revision + 1
+                WHERE playlist_id = ? AND owner_admin_id = ?");
+            $statement->bind_param('ii', $playlistId, $adminId);
+            $statement->execute();
+            $statement->close();
+
+            $statement = $db->prepare("DELETE FROM playlists
+                WHERE id = ? AND owner_admin_id = ?");
+            $statement->bind_param('ii', $playlistId, $adminId);
+            $statement->execute();
+            $deleted = $statement->affected_rows > 0;
+            $statement->close();
+
+            if (!$deleted) {
+                throw new RuntimeException('Playlist could not be deleted.');
+            }
+
+            $db->commit();
+        } catch (Throwable $exception) {
+            $db->rollback();
+            throw $exception;
+        }
+
+        set_flash('success', 'Playlist "' . $playlistToDelete['name'] . '" deleted.');
+        redirect('/admin/playlists.php');
+    }
+
     if ($action === 'add_playlist_media_item') {
         $playlistId = (int) ($_POST['playlist_id'] ?? 0);
         $mediaId = (int) ($_POST['media_id'] ?? 0);
@@ -496,6 +550,12 @@ require_once __DIR__ . '/../includes/header.php';
                             </div>
                         </div>
                         <button class="btn btn-primary mt-3" type="submit">Save Playlist</button>
+                    </form>
+                    <form method="post" class="mt-3" onsubmit="return confirm('Delete this playlist? Assigned screens will become unassigned and playlist items will be removed.');">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="delete_playlist">
+                        <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
+                        <button class="btn btn-outline-danger" type="submit">Delete Playlist</button>
                     </form>
                 </div>
             </div>
