@@ -31,7 +31,8 @@ if (!$screen) {
 $sql = "SELECT m.filename, m.mime_type
         FROM media m
         INNER JOIN playlist_items pi ON pi.media_id = m.id AND pi.active = 1
-        INNER JOIN screens s ON s.playlist_id = pi.playlist_id
+        INNER JOIN playlists p ON p.id = pi.playlist_id AND p.owner_admin_id = m.owner_admin_id
+        INNER JOIN screens s ON s.playlist_id = pi.playlist_id AND s.owner_admin_id = p.owner_admin_id
         WHERE s.id = ? AND m.id = ? AND m.active = 1
         LIMIT 1";
 $statement = $db->prepare($sql);

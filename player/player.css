@@ -34,6 +34,96 @@ body {
     outline: none;
 }
 
+.quiz-card {
+    width: min(1100px, calc(100vw - 64px));
+    max-height: calc(100vh - 64px);
+    padding: 32px;
+    border-radius: 28px;
+    background: linear-gradient(160deg, rgba(24, 34, 52, 0.96), rgba(5, 10, 18, 0.98));
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.quiz-badge {
+    align-self: flex-start;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: #ffe082;
+    color: #1b1b1b;
+    font-size: 18px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.quiz-question {
+    font-size: clamp(32px, 4vw, 56px);
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.quiz-countdown,
+.quiz-footer {
+    font-size: clamp(18px, 2vw, 28px);
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.quiz-answers {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.quiz-answer {
+    min-height: 120px;
+    padding: 20px 22px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.quiz-answer.is-correct {
+    background: rgba(25, 135, 84, 0.24);
+    border-color: rgba(25, 135, 84, 0.95);
+    transform: scale(1.01);
+}
+
+.quiz-answer-key {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 700;
+    flex: 0 0 auto;
+}
+
+.quiz-answer-text {
+    font-size: clamp(20px, 2.2vw, 30px);
+    line-height: 1.2;
+}
+
+@media (max-width: 900px) {
+    .quiz-card {
+        width: calc(100vw - 24px);
+        padding: 20px;
+        gap: 16px;
+    }
+
+    .quiz-answers {
+        grid-template-columns: 1fr;
+    }
+}
+
 #overlay {
     position: fixed;
     left: 0;

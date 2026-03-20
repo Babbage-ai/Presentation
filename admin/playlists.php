@@ -5,6 +5,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_login();
 
 $db = get_db();
+$adminId = current_admin_id();
 
 if (is_post_request()) {
     require_valid_csrf();
@@ -19,8 +20,8 @@ if (is_post_request()) {
             redirect('/admin/playlists.php');
         }
 
-        $statement = $db->prepare("INSERT INTO playlists (name, active, created_at, updated_at) VALUES (?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())");
-        $statement->bind_param('si', $name, $active);
+        $statement = $db->prepare("INSERT INTO playlists (owner_admin_id, name, active, created_at, updated_at) VALUES (?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())");
+        $statement->bind_param('isi', $adminId, $name, $active);
         $statement->execute();
         $playlistId = $statement->insert_id;
         $statement->close();
@@ -39,8 +40,8 @@ if (is_post_request()) {
             redirect('/admin/playlists.php');
         }
 
-        $statement = $db->prepare("UPDATE playlists SET name = ?, active = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?");
-        $statement->bind_param('sii', $name, $active, $playlistId);
+        $statement = $db->prepare("UPDATE playlists SET name = ?, active = ?, updated_at = UTC_TIMESTAMP() WHERE id = ? AND owner_admin_id = ?");
+        $statement->bind_param('siii', $name, $active, $playlistId, $adminId);
         $statement->execute();
         $statement->close();
 
@@ -48,10 +49,10 @@ if (is_post_request()) {
         redirect('/admin/playlists.php?playlist_id=' . $playlistId);
     }
 
-    if ($action === 'add_playlist_item') {
+    if ($action === 'add_playlist_media_item') {
         $playlistId = (int) ($_POST['playlist_id'] ?? 0);
         $mediaId = (int) ($_POST['media_id'] ?? 0);
-        $sortOrder = normalize_int($_POST['sort_order'] ?? null, 1);
+        $sortOrder = max(1, normalize_int($_POST['sort_order'] ?? null, 1));
         $imageDuration = max(1, normalize_int($_POST['image_duration'] ?? null, 10));
 
         if ($playlistId < 1 || $mediaId < 1) {
@@ -59,20 +60,68 @@ if (is_post_request()) {
             redirect('/admin/playlists.php' . ($playlistId > 0 ? '?playlist_id=' . $playlistId : ''));
         }
 
-        $statement = $db->prepare("INSERT INTO playlist_items (playlist_id, media_id, sort_order, image_duration, active, created_at)
-                                   VALUES (?, ?, ?, ?, 1, UTC_TIMESTAMP())");
+        $statement = $db->prepare("SELECT COUNT(*) AS total
+            FROM playlists p
+            INNER JOIN media m ON m.id = ?
+            WHERE p.id = ? AND p.owner_admin_id = ? AND m.owner_admin_id = ?");
+        $statement->bind_param('iiii', $mediaId, $playlistId, $adminId, $adminId);
+        $statement->execute();
+        $validRelation = (int) $statement->get_result()->fetch_assoc()['total'] === 1;
+        $statement->close();
+
+        if (!$validRelation) {
+            set_flash('danger', 'The selected media or playlist does not belong to your presentation system.');
+            redirect('/admin/playlists.php?playlist_id=' . $playlistId);
+        }
+
+        $statement = $db->prepare("INSERT INTO playlist_items (playlist_id, item_type, media_id, quiz_question_id, sort_order, image_duration, active, created_at)
+            VALUES (?, 'media', ?, NULL, ?, ?, 1, UTC_TIMESTAMP())");
         $statement->bind_param('iiii', $playlistId, $mediaId, $sortOrder, $imageDuration);
         $statement->execute();
         $statement->close();
 
-        set_flash('success', 'Playlist item added.');
+        set_flash('success', 'Media item added to playlist.');
+        redirect('/admin/playlists.php?playlist_id=' . $playlistId);
+    }
+
+    if ($action === 'add_playlist_quiz_item') {
+        $playlistId = (int) ($_POST['playlist_id'] ?? 0);
+        $quizId = (int) ($_POST['quiz_question_id'] ?? 0);
+        $sortOrder = max(1, normalize_int($_POST['sort_order'] ?? null, 1));
+
+        if ($playlistId < 1 || $quizId < 1) {
+            set_flash('danger', 'A valid playlist and quiz question are required.');
+            redirect('/admin/playlists.php' . ($playlistId > 0 ? '?playlist_id=' . $playlistId : ''));
+        }
+
+        $statement = $db->prepare("SELECT COUNT(*) AS total
+            FROM playlists p
+            INNER JOIN quiz_questions q ON q.id = ?
+            WHERE p.id = ? AND p.owner_admin_id = ? AND q.owner_admin_id = ?");
+        $statement->bind_param('iiii', $quizId, $playlistId, $adminId, $adminId);
+        $statement->execute();
+        $validRelation = (int) $statement->get_result()->fetch_assoc()['total'] === 1;
+        $statement->close();
+
+        if (!$validRelation) {
+            set_flash('danger', 'The selected quiz question or playlist does not belong to your presentation system.');
+            redirect('/admin/playlists.php?playlist_id=' . $playlistId);
+        }
+
+        $statement = $db->prepare("INSERT INTO playlist_items (playlist_id, item_type, media_id, quiz_question_id, sort_order, image_duration, active, created_at)
+            VALUES (?, 'quiz', NULL, ?, ?, 10, 1, UTC_TIMESTAMP())");
+        $statement->bind_param('iii', $playlistId, $quizId, $sortOrder);
+        $statement->execute();
+        $statement->close();
+
+        set_flash('success', 'Quiz question added to playlist.');
         redirect('/admin/playlists.php?playlist_id=' . $playlistId);
     }
 
     if ($action === 'update_playlist_item') {
         $playlistId = (int) ($_POST['playlist_id'] ?? 0);
         $itemId = (int) ($_POST['item_id'] ?? 0);
-        $sortOrder = normalize_int($_POST['sort_order'] ?? null, 1);
+        $sortOrder = max(1, normalize_int($_POST['sort_order'] ?? null, 1));
         $imageDuration = max(1, normalize_int($_POST['image_duration'] ?? null, 10));
         $active = isset($_POST['active']) ? 1 : 0;
 
@@ -81,10 +130,11 @@ if (is_post_request()) {
             redirect('/admin/playlists.php');
         }
 
-        $statement = $db->prepare("UPDATE playlist_items
-                                   SET sort_order = ?, image_duration = ?, active = ?
-                                   WHERE id = ? AND playlist_id = ?");
-        $statement->bind_param('iiiii', $sortOrder, $imageDuration, $active, $itemId, $playlistId);
+        $statement = $db->prepare("UPDATE playlist_items pi
+            INNER JOIN playlists p ON p.id = pi.playlist_id
+            SET pi.sort_order = ?, pi.image_duration = ?, pi.active = ?
+            WHERE pi.id = ? AND pi.playlist_id = ? AND p.owner_admin_id = ?");
+        $statement->bind_param('iiiiii', $sortOrder, $imageDuration, $active, $itemId, $playlistId, $adminId);
         $statement->execute();
         $statement->close();
 
@@ -101,8 +151,11 @@ if (is_post_request()) {
             redirect('/admin/playlists.php');
         }
 
-        $statement = $db->prepare("DELETE FROM playlist_items WHERE id = ? AND playlist_id = ?");
-        $statement->bind_param('ii', $itemId, $playlistId);
+        $statement = $db->prepare("DELETE pi
+            FROM playlist_items pi
+            INNER JOIN playlists p ON p.id = pi.playlist_id
+            WHERE pi.id = ? AND pi.playlist_id = ? AND p.owner_admin_id = ?");
+        $statement->bind_param('iii', $itemId, $playlistId, $adminId);
         $statement->execute();
         $statement->close();
 
@@ -112,31 +165,47 @@ if (is_post_request()) {
 }
 
 $playlists = [];
-$result = $db->query("SELECT p.*, (SELECT COUNT(*) FROM playlist_items pi WHERE pi.playlist_id = p.id) AS item_count
-                      FROM playlists p
-                      ORDER BY p.updated_at DESC, p.id DESC");
+$statement = $db->prepare("SELECT p.*,
+        (SELECT COUNT(*) FROM playlist_items pi WHERE pi.playlist_id = p.id) AS item_count
+    FROM playlists p
+    WHERE p.owner_admin_id = ?
+    ORDER BY p.updated_at DESC, p.id DESC");
+$statement->bind_param('i', $adminId);
+$statement->execute();
+$result = $statement->get_result();
 while ($row = $result->fetch_assoc()) {
     $playlists[] = $row;
 }
+$statement->close();
 
 $selectedPlaylistId = (int) ($_GET['playlist_id'] ?? ($playlists[0]['id'] ?? 0));
 $selectedPlaylist = null;
 $playlistItems = [];
 
 if ($selectedPlaylistId > 0) {
-    $statement = $db->prepare("SELECT * FROM playlists WHERE id = ? LIMIT 1");
-    $statement->bind_param('i', $selectedPlaylistId);
+    $statement = $db->prepare("SELECT * FROM playlists WHERE id = ? AND owner_admin_id = ? LIMIT 1");
+    $statement->bind_param('ii', $selectedPlaylistId, $adminId);
     $statement->execute();
     $selectedPlaylist = $statement->get_result()->fetch_assoc() ?: null;
     $statement->close();
 
     if ($selectedPlaylist) {
-        $statement = $db->prepare("SELECT pi.*, m.title, m.media_type, m.filename
-                                   FROM playlist_items pi
-                                   INNER JOIN media m ON m.id = pi.media_id
-                                   WHERE pi.playlist_id = ?
-                                   ORDER BY pi.sort_order ASC, pi.id ASC");
-        $statement->bind_param('i', $selectedPlaylistId);
+        $statement = $db->prepare("SELECT
+                pi.*,
+                m.title AS media_title,
+                m.media_type,
+                m.filename,
+                q.question_text,
+                q.correct_option,
+                q.countdown_seconds,
+                q.reveal_duration
+            FROM playlist_items pi
+            INNER JOIN playlists p ON p.id = pi.playlist_id
+            LEFT JOIN media m ON m.id = pi.media_id AND m.owner_admin_id = p.owner_admin_id
+            LEFT JOIN quiz_questions q ON q.id = pi.quiz_question_id AND q.owner_admin_id = p.owner_admin_id
+            WHERE pi.playlist_id = ? AND p.owner_admin_id = ?
+            ORDER BY pi.sort_order ASC, pi.id ASC");
+        $statement->bind_param('ii', $selectedPlaylistId, $adminId);
         $statement->execute();
         $result = $statement->get_result();
         while ($row = $result->fetch_assoc()) {
@@ -147,10 +216,30 @@ if ($selectedPlaylistId > 0) {
 }
 
 $mediaOptions = [];
-$result = $db->query("SELECT id, title, media_type, filename FROM media WHERE active = 1 ORDER BY created_at DESC");
+$statement = $db->prepare("SELECT id, title, media_type, filename
+    FROM media
+    WHERE owner_admin_id = ? AND active = 1
+    ORDER BY created_at DESC");
+$statement->bind_param('i', $adminId);
+$statement->execute();
+$result = $statement->get_result();
 while ($row = $result->fetch_assoc()) {
     $mediaOptions[] = $row;
 }
+$statement->close();
+
+$quizOptions = [];
+$statement = $db->prepare("SELECT id, question_text, correct_option, countdown_seconds, reveal_duration
+    FROM quiz_questions
+    WHERE owner_admin_id = ? AND active = 1
+    ORDER BY updated_at DESC, id DESC");
+$statement->bind_param('i', $adminId);
+$statement->execute();
+$result = $statement->get_result();
+while ($row = $result->fetch_assoc()) {
+    $quizOptions[] = $row;
+}
+$statement->close();
 
 $pageTitle = 'Playlists';
 require_once __DIR__ . '/../includes/header.php';
@@ -225,37 +314,73 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
             </div>
 
-            <div class="card mb-4">
-                <div class="card-header"><h2 class="h5 mb-0">Add Media To Playlist</h2></div>
-                <div class="card-body">
-                    <form method="post" class="row g-3">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="action" value="add_playlist_item">
-                        <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
-                        <div class="col-md-6">
-                            <label class="form-label" for="media_id">Media</label>
-                            <select class="form-select" id="media_id" name="media_id" required>
-                                <option value="">Select media</option>
-                                <?php foreach ($mediaOptions as $media): ?>
-                                    <option value="<?= (int) $media['id'] ?>"><?= e($media['title']) ?> (<?= e($media['media_type']) ?>)</option>
-                                <?php endforeach; ?>
-                            </select>
+            <div class="row g-4">
+                <div class="col-xl-6">
+                    <div class="card mb-4 h-100">
+                        <div class="card-header"><h2 class="h5 mb-0">Add Media To Playlist</h2></div>
+                        <div class="card-body">
+                            <form method="post" class="row g-3">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="add_playlist_media_item">
+                                <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
+                                <div class="col-12">
+                                    <label class="form-label" for="media_id">Media</label>
+                                    <select class="form-select" id="media_id" name="media_id" required>
+                                        <option value="">Select media</option>
+                                        <?php foreach ($mediaOptions as $media): ?>
+                                            <option value="<?= (int) $media['id'] ?>"><?= e($media['title']) ?> (<?= e($media['media_type']) ?>)</option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="media_sort_order">Sort Order</label>
+                                    <input class="form-control" id="media_sort_order" name="sort_order" type="number" min="1" value="1" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="image_duration">Image Duration</label>
+                                    <input class="form-control" id="image_duration" name="image_duration" type="number" min="1" value="10" required>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-text">Videos ignore image duration and play until completion.</div>
+                                </div>
+                                <div class="col-12">
+                                    <button class="btn btn-primary" type="submit">Add Media Item</button>
+                                </div>
+                            </form>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label" for="sort_order">Sort Order</label>
-                            <input class="form-control" id="sort_order" name="sort_order" type="number" min="1" value="1" required>
+                    </div>
+                </div>
+
+                <div class="col-xl-6">
+                    <div class="card mb-4 h-100">
+                        <div class="card-header"><h2 class="h5 mb-0">Add Quiz To Playlist</h2></div>
+                        <div class="card-body">
+                            <form method="post" class="row g-3">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="add_playlist_quiz_item">
+                                <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
+                                <div class="col-12">
+                                    <label class="form-label" for="quiz_question_id">Quiz Question</label>
+                                    <select class="form-select" id="quiz_question_id" name="quiz_question_id" required>
+                                        <option value="">Select quiz question</option>
+                                        <?php foreach ($quizOptions as $quiz): ?>
+                                            <option value="<?= (int) $quiz['id'] ?>"><?= e(substr($quiz['question_text'], 0, 80)) ?><?= strlen($quiz['question_text']) > 80 ? '...' : '' ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="quiz_sort_order">Sort Order</label>
+                                    <input class="form-control" id="quiz_sort_order" name="sort_order" type="number" min="1" value="1" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-text pt-4">Countdown and reveal timing come from the quiz question settings.</div>
+                                </div>
+                                <div class="col-12">
+                                    <button class="btn btn-primary" type="submit">Add Quiz Item</button>
+                                </div>
+                            </form>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label" for="image_duration">Image Duration</label>
-                            <input class="form-control" id="image_duration" name="image_duration" type="number" min="1" value="10" required>
-                        </div>
-                        <div class="col-12">
-                            <div class="form-text">Videos ignore image duration and play until completion.</div>
-                        </div>
-                        <div class="col-12">
-                            <button class="btn btn-primary" type="submit">Add Item</button>
-                        </div>
-                    </form>
+                    </div>
                 </div>
             </div>
 
@@ -266,11 +391,11 @@ require_once __DIR__ . '/../includes/header.php';
                         <table class="table table-striped mb-0">
                             <thead>
                                 <tr>
-                                    <th>Media</th>
+                                    <th>Item</th>
                                     <th>Type</th>
-                                    <th>File</th>
+                                    <th>Details</th>
                                     <th>Order</th>
-                                    <th>Image Duration</th>
+                                    <th>Duration</th>
                                     <th>Active</th>
                                     <th>Actions</th>
                                 </tr>
@@ -282,14 +407,31 @@ require_once __DIR__ . '/../includes/header.php';
                                 <?php foreach ($playlistItems as $item): ?>
                                     <?php $formId = 'playlist-item-form-' . (int) $item['id']; ?>
                                     <tr>
-                                        <td><?= e($item['title']) ?></td>
-                                        <td><?= e($item['media_type']) ?></td>
-                                        <td><?= e($item['filename']) ?></td>
+                                        <td>
+                                            <?php if ($item['item_type'] === 'quiz'): ?>
+                                                <?= e($item['question_text']) ?>
+                                            <?php else: ?>
+                                                <?= e($item['media_title']) ?>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><?= e($item['item_type'] === 'quiz' ? 'quiz' : $item['media_type']) ?></td>
+                                        <td class="small text-muted">
+                                            <?php if ($item['item_type'] === 'quiz'): ?>
+                                                Answer <?= e($item['correct_option']) ?>, countdown <?= (int) $item['countdown_seconds'] ?>s, reveal <?= (int) $item['reveal_duration'] ?>s
+                                            <?php else: ?>
+                                                <?= e($item['filename']) ?>
+                                            <?php endif; ?>
+                                        </td>
                                         <td>
                                             <input class="form-control form-control-sm" name="sort_order" type="number" min="1" value="<?= (int) $item['sort_order'] ?>" required form="<?= e($formId) ?>">
                                         </td>
                                         <td>
-                                            <input class="form-control form-control-sm" name="image_duration" type="number" min="1" value="<?= (int) $item['image_duration'] ?>" required form="<?= e($formId) ?>">
+                                            <?php if ($item['item_type'] === 'quiz'): ?>
+                                                <span class="small text-muted"><?= (int) $item['countdown_seconds'] + (int) $item['reveal_duration'] ?>s total</span>
+                                                <input type="hidden" name="image_duration" value="<?= (int) $item['image_duration'] ?>" form="<?= e($formId) ?>">
+                                            <?php else: ?>
+                                                <input class="form-control form-control-sm" name="image_duration" type="number" min="1" value="<?= (int) $item['image_duration'] ?>" required form="<?= e($formId) ?>">
+                                            <?php endif; ?>
                                         </td>
                                         <td>
                                             <div class="form-check">

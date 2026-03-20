@@ -6,40 +6,51 @@ require_login();
 
 $db = get_db();
 sync_screen_statuses($db);
+$adminId = current_admin_id();
 
 $counts = [
     'media' => 0,
+    'quizzes' => 0,
     'playlists' => 0,
     'screens' => 0,
     'online_screens' => 0,
 ];
 
 foreach ([
-    'media' => "SELECT COUNT(*) AS total FROM media",
-    'playlists' => "SELECT COUNT(*) AS total FROM playlists",
-    'screens' => "SELECT COUNT(*) AS total FROM screens",
-    'online_screens' => "SELECT COUNT(*) AS total FROM screens WHERE status = 'online'",
+    'media' => "SELECT COUNT(*) AS total FROM media WHERE owner_admin_id = ?",
+    'quizzes' => "SELECT COUNT(*) AS total FROM quiz_questions WHERE owner_admin_id = ?",
+    'playlists' => "SELECT COUNT(*) AS total FROM playlists WHERE owner_admin_id = ?",
+    'screens' => "SELECT COUNT(*) AS total FROM screens WHERE owner_admin_id = ?",
+    'online_screens' => "SELECT COUNT(*) AS total FROM screens WHERE owner_admin_id = ? AND status = 'online'",
 ] as $key => $sql) {
-    $result = $db->query($sql);
-    $counts[$key] = (int) $result->fetch_assoc()['total'];
+    $statement = $db->prepare($sql);
+    $statement->bind_param('i', $adminId);
+    $statement->execute();
+    $counts[$key] = (int) $statement->get_result()->fetch_assoc()['total'];
+    $statement->close();
 }
 
 $recentActivity = [];
 $sql = "SELECT s.name, s.location, s.last_seen, s.status, s.last_ip, s.resolution, p.name AS playlist_name
         FROM screens s
-        LEFT JOIN playlists p ON p.id = s.playlist_id
+        LEFT JOIN playlists p ON p.id = s.playlist_id AND p.owner_admin_id = s.owner_admin_id
+        WHERE s.owner_admin_id = ?
         ORDER BY s.last_seen IS NULL, s.last_seen DESC, s.created_at DESC
         LIMIT 10";
-$result = $db->query($sql);
+$statement = $db->prepare($sql);
+$statement->bind_param('i', $adminId);
+$statement->execute();
+$result = $statement->get_result();
 while ($row = $result->fetch_assoc()) {
     $recentActivity[] = $row;
 }
+$statement->close();
 
 $pageTitle = 'Dashboard';
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <div class="row g-3 mb-4">
-    <div class="col-6 col-xl-3">
+    <div class="col-6 col-xl-2">
         <div class="card">
             <div class="card-body">
                 <div class="text-muted small">Total Media</div>
@@ -47,7 +58,15 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
         </div>
     </div>
-    <div class="col-6 col-xl-3">
+    <div class="col-6 col-xl-2">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted small">Total Quizzes</div>
+                <div class="display-6"><?= $counts['quizzes'] ?></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-2">
         <div class="card">
             <div class="card-body">
                 <div class="text-muted small">Total Playlists</div>

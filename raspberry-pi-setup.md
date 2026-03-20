@@ -129,3 +129,9 @@ sudo systemctl start cloud-signage-player.service
 - Paste the matching token into `player/config.json`.
 - Heartbeats update the screen's `last_seen`, `resolution`, IP, and player version.
 - Cached media remains available in Chromium's local profile even if the WAN connection drops.
+
+## 9. Fresh SD Card Workflow
+
+If the Pi has not booted yet and the SD card is still in your PC, use the first-boot method documented in [`raspberry-pi-firstboot.md`](/workspaces/Presentation/raspberry-pi-firstboot.md).
+
+That workflow lets you place the player files and provisioning script onto the boot partition first, then have the Pi install the kiosk stack automatically during its initial boot.

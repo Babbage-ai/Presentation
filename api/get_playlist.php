@@ -35,6 +35,26 @@ $items = fetch_playlist_items($db, (int) $screen['playlist_id']);
 $formattedItems = [];
 
 foreach ($items as $item) {
+    if ($item['item_type'] === 'quiz') {
+        $formattedItems[] = [
+            'quiz_question_id' => (int) $item['quiz_question_id'],
+            'title' => $item['question_text'],
+            'type' => 'quiz',
+            'question' => $item['question_text'],
+            'answers' => [
+                ['key' => 'A', 'text' => $item['option_a']],
+                ['key' => 'B', 'text' => $item['option_b']],
+                ['key' => 'C', 'text' => $item['option_c']],
+                ['key' => 'D', 'text' => $item['option_d']],
+            ],
+            'correct_answer' => $item['correct_option'],
+            'countdown_seconds' => max(1, (int) $item['countdown_seconds']),
+            'reveal_duration' => max(1, (int) $item['reveal_duration']),
+            'sort_order' => (int) $item['sort_order'],
+        ];
+        continue;
+    }
+
     $formattedItems[] = [
         'media_id' => (int) $item['media_id'],
         'title' => $item['title'],

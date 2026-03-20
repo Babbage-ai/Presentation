@@ -6,6 +6,7 @@ require_login();
 
 $db = get_db();
 sync_screen_statuses($db);
+$adminId = current_admin_id();
 
 if (is_post_request()) {
     require_valid_csrf();
@@ -23,13 +24,26 @@ if (is_post_request()) {
         }
 
         if ($playlistId > 0) {
-            $statement = $db->prepare("INSERT INTO screens (name, screen_token, location, playlist_id, resolution, last_seen, last_ip, status, player_version, created_at)
-                                       VALUES (?, ?, ?, ?, NULL, NULL, NULL, 'offline', NULL, UTC_TIMESTAMP())");
-            $statement->bind_param('sssi', $name, $token, $location, $playlistId);
+            $statement = $db->prepare("SELECT COUNT(*) AS total FROM playlists WHERE id = ? AND owner_admin_id = ?");
+            $statement->bind_param('ii', $playlistId, $adminId);
+            $statement->execute();
+            $playlistExists = (int) $statement->get_result()->fetch_assoc()['total'] === 1;
+            $statement->close();
+
+            if (!$playlistExists) {
+                set_flash('danger', 'Selected playlist was not found in your presentation system.');
+                redirect('/admin/screens.php');
+            }
+        }
+
+        if ($playlistId > 0) {
+            $statement = $db->prepare("INSERT INTO screens (owner_admin_id, name, screen_token, location, playlist_id, resolution, last_seen, last_ip, status, player_version, created_at)
+                                       VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL, 'offline', NULL, UTC_TIMESTAMP())");
+            $statement->bind_param('isssi', $adminId, $name, $token, $location, $playlistId);
         } else {
-            $statement = $db->prepare("INSERT INTO screens (name, screen_token, location, playlist_id, resolution, last_seen, last_ip, status, player_version, created_at)
-                                       VALUES (?, ?, ?, NULL, NULL, NULL, NULL, 'offline', NULL, UTC_TIMESTAMP())");
-            $statement->bind_param('sss', $name, $token, $location);
+            $statement = $db->prepare("INSERT INTO screens (owner_admin_id, name, screen_token, location, playlist_id, resolution, last_seen, last_ip, status, player_version, created_at)
+                                       VALUES (?, ?, ?, ?, NULL, NULL, NULL, NULL, 'offline', NULL, UTC_TIMESTAMP())");
+            $statement->bind_param('isss', $adminId, $name, $token, $location);
         }
         $statement->execute();
         $statement->close();
@@ -50,11 +64,24 @@ if (is_post_request()) {
         }
 
         if ($playlistId > 0) {
-            $statement = $db->prepare("UPDATE screens SET name = ?, location = ?, playlist_id = ? WHERE id = ?");
-            $statement->bind_param('ssii', $name, $location, $playlistId, $screenId);
+            $statement = $db->prepare("SELECT COUNT(*) AS total FROM playlists WHERE id = ? AND owner_admin_id = ?");
+            $statement->bind_param('ii', $playlistId, $adminId);
+            $statement->execute();
+            $playlistExists = (int) $statement->get_result()->fetch_assoc()['total'] === 1;
+            $statement->close();
+
+            if (!$playlistExists) {
+                set_flash('danger', 'Selected playlist was not found in your presentation system.');
+                redirect('/admin/screens.php');
+            }
+        }
+
+        if ($playlistId > 0) {
+            $statement = $db->prepare("UPDATE screens SET name = ?, location = ?, playlist_id = ? WHERE id = ? AND owner_admin_id = ?");
+            $statement->bind_param('ssiii', $name, $location, $playlistId, $screenId, $adminId);
         } else {
-            $statement = $db->prepare("UPDATE screens SET name = ?, location = ?, playlist_id = NULL WHERE id = ?");
-            $statement->bind_param('ssi', $name, $location, $screenId);
+            $statement = $db->prepare("UPDATE screens SET name = ?, location = ?, playlist_id = NULL WHERE id = ? AND owner_admin_id = ?");
+            $statement->bind_param('ssii', $name, $location, $screenId, $adminId);
         }
         $statement->execute();
         $statement->close();
@@ -72,8 +99,8 @@ if (is_post_request()) {
             redirect('/admin/screens.php');
         }
 
-        $statement = $db->prepare("UPDATE screens SET screen_token = ? WHERE id = ?");
-        $statement->bind_param('si', $token, $screenId);
+        $statement = $db->prepare("UPDATE screens SET screen_token = ? WHERE id = ? AND owner_admin_id = ?");
+        $statement->bind_param('sii', $token, $screenId, $adminId);
         $statement->execute();
         $statement->close();
 
@@ -83,20 +110,29 @@ if (is_post_request()) {
 }
 
 $playlists = [];
-$result = $db->query("SELECT id, name FROM playlists WHERE active = 1 ORDER BY name ASC");
+$statement = $db->prepare("SELECT id, name FROM playlists WHERE owner_admin_id = ? AND active = 1 ORDER BY name ASC");
+$statement->bind_param('i', $adminId);
+$statement->execute();
+$result = $statement->get_result();
 while ($row = $result->fetch_assoc()) {
     $playlists[] = $row;
 }
+$statement->close();
 
 $screens = [];
 $sql = "SELECT s.*, p.name AS playlist_name
         FROM screens s
-        LEFT JOIN playlists p ON p.id = s.playlist_id
+        LEFT JOIN playlists p ON p.id = s.playlist_id AND p.owner_admin_id = s.owner_admin_id
+        WHERE s.owner_admin_id = ?
         ORDER BY s.created_at DESC, s.id DESC";
-$result = $db->query($sql);
+$statement = $db->prepare($sql);
+$statement->bind_param('i', $adminId);
+$statement->execute();
+$result = $statement->get_result();
 while ($row = $result->fetch_assoc()) {
     $screens[] = $row;
 }
+$statement->close();
 
 $pageTitle = 'Screens';
 require_once __DIR__ . '/../includes/header.php';

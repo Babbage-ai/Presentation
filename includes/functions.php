@@ -393,7 +393,7 @@ function find_screen_by_token(mysqli $db, string $token): ?array
 {
     $sql = "SELECT s.*, p.name AS playlist_name, p.active AS playlist_active
             FROM screens s
-            LEFT JOIN playlists p ON p.id = s.playlist_id
+            LEFT JOIN playlists p ON p.id = s.playlist_id AND p.owner_admin_id = s.owner_admin_id
             WHERE s.screen_token = ?
             LIMIT 1";
     $statement = $db->prepare($sql);
@@ -426,18 +426,36 @@ function fetch_playlist_items(mysqli $db, int $playlistId): array
     $sql = "SELECT
                 pi.id,
                 pi.playlist_id,
+                pi.item_type,
                 pi.media_id,
+                pi.quiz_question_id,
                 pi.sort_order,
                 pi.image_duration,
                 pi.active,
-                m.title,
+                m.title AS media_title,
                 m.filename,
                 m.mime_type,
                 m.media_type,
-                m.file_size
+                m.file_size,
+                q.question_text,
+                q.option_a,
+                q.option_b,
+                q.option_c,
+                q.option_d,
+                q.correct_option,
+                q.countdown_seconds,
+                q.reveal_duration
             FROM playlist_items pi
-            INNER JOIN media m ON m.id = pi.media_id
-            WHERE pi.playlist_id = ? AND pi.active = 1 AND m.active = 1
+            INNER JOIN playlists p ON p.id = pi.playlist_id
+            LEFT JOIN media m ON m.id = pi.media_id AND m.owner_admin_id = p.owner_admin_id
+            LEFT JOIN quiz_questions q ON q.id = pi.quiz_question_id AND q.owner_admin_id = p.owner_admin_id
+            WHERE pi.playlist_id = ?
+              AND pi.active = 1
+              AND (
+                    (pi.item_type = 'media' AND m.id IS NOT NULL AND m.active = 1)
+                    OR
+                    (pi.item_type = 'quiz' AND q.id IS NOT NULL AND q.active = 1)
+                  )
             ORDER BY pi.sort_order ASC, pi.id ASC";
 
     $statement = $db->prepare($sql);
@@ -447,11 +465,19 @@ function fetch_playlist_items(mysqli $db, int $playlistId): array
     $items = [];
 
     while ($row = $result->fetch_assoc()) {
-        $row['media_id'] = (int) $row['media_id'];
+        $row['media_id'] = $row['media_id'] !== null ? (int) $row['media_id'] : null;
+        $row['quiz_question_id'] = $row['quiz_question_id'] !== null ? (int) $row['quiz_question_id'] : null;
         $row['sort_order'] = (int) $row['sort_order'];
         $row['image_duration'] = (int) $row['image_duration'];
-        $row['file_size'] = (int) $row['file_size'];
-        $row['full_url'] = media_file_url($row['filename']);
+        $row['countdown_seconds'] = isset($row['countdown_seconds']) ? (int) $row['countdown_seconds'] : 0;
+        $row['reveal_duration'] = isset($row['reveal_duration']) ? (int) $row['reveal_duration'] : 0;
+        $row['file_size'] = $row['file_size'] !== null ? (int) $row['file_size'] : 0;
+        $row['title'] = $row['item_type'] === 'quiz'
+            ? $row['question_text']
+            : (string) ($row['media_title'] ?? '');
+        $row['full_url'] = $row['item_type'] === 'media' && !empty($row['filename'])
+            ? media_file_url($row['filename'])
+            : null;
         $items[] = $row;
     }
 

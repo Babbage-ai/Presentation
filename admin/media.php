@@ -6,6 +6,7 @@ require_login();
 
 $db = get_db();
 ensure_media_upload_dir();
+$adminId = current_admin_id();
 
 if (is_post_request()) {
     if (exceeds_post_max_size()) {
@@ -78,9 +79,9 @@ if (is_post_request()) {
         $fileSize = (int) filesize($destination);
         $durationSeconds = null;
 
-        $statement = $db->prepare("INSERT INTO media (title, filename, mime_type, file_size, duration_seconds, media_type, active, created_at)
-                                   VALUES (?, ?, ?, ?, NULL, ?, 1, UTC_TIMESTAMP())");
-        $statement->bind_param('sssis', $title, $safeFilename, $mimeType, $fileSize, $mediaType);
+        $statement = $db->prepare("INSERT INTO media (owner_admin_id, title, filename, mime_type, file_size, duration_seconds, media_type, active, created_at)
+                                   VALUES (?, ?, ?, ?, ?, NULL, ?, 1, UTC_TIMESTAMP())");
+        $statement->bind_param('isssis', $adminId, $title, $safeFilename, $mimeType, $fileSize, $mediaType);
         $statement->execute();
         $statement->close();
 
@@ -94,8 +95,8 @@ if (is_post_request()) {
         $mediaId = (int) ($_POST['media_id'] ?? 0);
         $active = (int) ($_POST['active'] ?? 0) === 1 ? 1 : 0;
 
-        $statement = $db->prepare("UPDATE media SET active = ? WHERE id = ?");
-        $statement->bind_param('ii', $active, $mediaId);
+        $statement = $db->prepare("UPDATE media SET active = ? WHERE id = ? AND owner_admin_id = ?");
+        $statement->bind_param('iii', $active, $mediaId, $adminId);
         $statement->execute();
         $statement->close();
 
@@ -106,8 +107,11 @@ if (is_post_request()) {
     if ($action === 'delete_media') {
         $mediaId = (int) ($_POST['media_id'] ?? 0);
 
-        $statement = $db->prepare("SELECT COUNT(*) AS usage_count FROM playlist_items WHERE media_id = ?");
-        $statement->bind_param('i', $mediaId);
+        $statement = $db->prepare("SELECT COUNT(*) AS usage_count
+                                   FROM playlist_items pi
+                                   INNER JOIN playlists p ON p.id = pi.playlist_id
+                                   WHERE pi.media_id = ? AND p.owner_admin_id = ?");
+        $statement->bind_param('ii', $mediaId, $adminId);
         $statement->execute();
         $usageCount = (int) $statement->get_result()->fetch_assoc()['usage_count'];
         $statement->close();
@@ -117,15 +121,15 @@ if (is_post_request()) {
             redirect('/admin/media.php');
         }
 
-        $statement = $db->prepare("SELECT filename FROM media WHERE id = ? LIMIT 1");
-        $statement->bind_param('i', $mediaId);
+        $statement = $db->prepare("SELECT filename FROM media WHERE id = ? AND owner_admin_id = ? LIMIT 1");
+        $statement->bind_param('ii', $mediaId, $adminId);
         $statement->execute();
         $media = $statement->get_result()->fetch_assoc();
         $statement->close();
 
         if ($media) {
-            $statement = $db->prepare("DELETE FROM media WHERE id = ?");
-            $statement->bind_param('i', $mediaId);
+            $statement = $db->prepare("DELETE FROM media WHERE id = ? AND owner_admin_id = ?");
+            $statement->bind_param('ii', $mediaId, $adminId);
             $statement->execute();
             $statement->close();
 
@@ -146,10 +150,17 @@ if (is_post_request()) {
 $mediaItems = [];
 $missingMediaCount = 0;
 $sql = "SELECT m.*,
-               (SELECT COUNT(*) FROM playlist_items pi WHERE pi.media_id = m.id) AS usage_count
+               (SELECT COUNT(*)
+                FROM playlist_items pi
+                INNER JOIN playlists p ON p.id = pi.playlist_id
+                WHERE pi.media_id = m.id AND p.owner_admin_id = m.owner_admin_id) AS usage_count
         FROM media m
+        WHERE m.owner_admin_id = ?
         ORDER BY m.created_at DESC, m.id DESC";
-$result = $db->query($sql);
+$statement = $db->prepare($sql);
+$statement->bind_param('i', $adminId);
+$statement->execute();
+$result = $statement->get_result();
 while ($row = $result->fetch_assoc()) {
     $row['file_exists'] = media_file_exists($row['filename']);
     if (!$row['file_exists']) {
@@ -157,6 +168,7 @@ while ($row = $result->fetch_assoc()) {
     }
     $mediaItems[] = $row;
 }
+$statement->close();
 
 $pageTitle = 'Media';
 require_once __DIR__ . '/../includes/header.php';
@@ -230,6 +242,19 @@ require_once __DIR__ . '/../includes/header.php';
                                     </td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-2">
+                                            <?php if ($item['file_exists']): ?>
+                                                <button
+                                                    class="btn btn-sm btn-outline-secondary js-preview-media"
+                                                    type="button"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#mediaPreviewModal"
+                                                    data-media-type="<?= e($item['media_type']) ?>"
+                                                    data-media-title="<?= e($item['title']) ?>"
+                                                    data-media-url="<?= e(media_file_url($item['filename'])) ?>"
+                                                >
+                                                    Preview
+                                                </button>
+                                            <?php endif; ?>
                                             <form method="post" class="m-0">
                                                 <?= csrf_field() ?>
                                                 <input type="hidden" name="action" value="toggle_active">
@@ -256,6 +281,21 @@ require_once __DIR__ . '/../includes/header.php';
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="mediaPreviewModal" tabindex="-1" aria-labelledby="mediaPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5 mb-0" id="mediaPreviewModalLabel">Media Preview</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="mediaPreviewEmpty" class="text-muted">Select a media item to preview it here.</div>
+                <img id="mediaPreviewImage" class="img-fluid rounded d-none" alt="">
+                <video id="mediaPreviewVideo" class="w-100 rounded d-none" controls preload="metadata"></video>
             </div>
         </div>
     </div>
@@ -344,6 +384,51 @@ if (uploadForm && window.XMLHttpRequest && window.FormData) {
 
         request.send(formData);
     });
+}
+
+const previewButtons = document.querySelectorAll('.js-preview-media');
+const previewModalLabel = document.getElementById('mediaPreviewModalLabel');
+const previewEmpty = document.getElementById('mediaPreviewEmpty');
+const previewImage = document.getElementById('mediaPreviewImage');
+const previewVideo = document.getElementById('mediaPreviewVideo');
+const previewModal = document.getElementById('mediaPreviewModal');
+
+const resetPreview = () => {
+    previewEmpty.classList.remove('d-none');
+    previewImage.classList.add('d-none');
+    previewImage.removeAttribute('src');
+    previewImage.alt = '';
+    previewVideo.classList.add('d-none');
+    previewVideo.pause();
+    previewVideo.removeAttribute('src');
+    previewVideo.load();
+};
+
+for (const button of previewButtons) {
+    button.addEventListener('click', () => {
+        const mediaType = button.getAttribute('data-media-type') || '';
+        const mediaTitle = button.getAttribute('data-media-title') || 'Media Preview';
+        const mediaUrl = button.getAttribute('data-media-url') || '';
+
+        resetPreview();
+        previewModalLabel.textContent = mediaTitle;
+
+        if (mediaType === 'video') {
+            previewVideo.src = mediaUrl;
+            previewVideo.classList.remove('d-none');
+            previewEmpty.classList.add('d-none');
+            return;
+        }
+
+        previewImage.src = mediaUrl;
+        previewImage.alt = mediaTitle;
+        previewImage.classList.remove('d-none');
+        previewEmpty.classList.add('d-none');
+    });
+}
+
+if (previewModal) {
+    previewModal.addEventListener('hidden.bs.modal', resetPreview);
 }
 </script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

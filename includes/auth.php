@@ -37,6 +37,11 @@ function current_admin(): ?array
     ];
 }
 
+function current_admin_id(): int
+{
+    return (int) ($_SESSION['admin_id'] ?? 0);
+}
+
 function require_login(): void
 {
     if (!is_logged_in()) {

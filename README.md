@@ -7,8 +7,11 @@ This repository contains a deployable Phase 1 MVP for a cloud-managed digital si
 ## Features
 
 - Admin login with password hashing and session-based auth
+- Per-admin isolated presentation systems so each login only sees its own media, playlists, and screens
 - Media upload for JPG, JPEG, PNG, WEBP, and MP4
+- Quiz question management with countdown and answer reveal
 - Playlist creation and item ordering
+- Mixed playlists containing both media and quiz items
 - Screen registration with unique tokens
 - Screen-to-playlist assignment
 - Heartbeat logging and online/offline visibility
@@ -77,6 +80,20 @@ mysql -u your_db_user -p < sql/schema.sql
 mysql -u your_db_user -p < sql/seed_admin.sql
 ```
 
+For existing installs upgrading to per-admin isolated presentation systems, run:
+
+```bash
+mysql -u your_db_user -p < sql/migrations/20260319_add_admin_ownership.sql
+```
+
+This migration assigns existing media, playlists, and screens to the oldest admin account already in `admins`.
+
+To add quiz-question support to an existing install, also run:
+
+```bash
+mysql -u your_db_user -p < sql/migrations/20260320_add_quiz_questions.sql
+```
+
 ## Default Admin Creation
 
 The seed SQL creates:
@@ -91,6 +108,19 @@ php -r "echo password_hash('YourNewStrongPassword', PASSWORD_DEFAULT), PHP_EOL;"
 ```
 
 Then update the `admins.password_hash` value in MySQL.
+
+To create additional isolated presentation systems, insert more rows into `admins`. Each admin account automatically gets its own separate media library, playlists, and screens:
+
+```sql
+INSERT INTO admins (username, password_hash, created_at)
+VALUES ('customer_a', '$2y$10$replace_with_password_hash', UTC_TIMESTAMP());
+```
+
+Generate the hash with:
+
+```bash
+php -r "echo password_hash('StrongPasswordHere', PASSWORD_DEFAULT), PHP_EOL;"
+```
 
 ## Upload Folder Permissions
 

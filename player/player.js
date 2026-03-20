@@ -15,6 +15,7 @@
         playlist: [],
         currentIndex: 0,
         currentTimer: null,
+        currentInterval: null,
         refreshTimer: null,
         heartbeatTimer: null,
         playbackStarted: false,
@@ -192,6 +193,10 @@
 
     async function prefetchMissingMedia() {
         for (const item of state.playlist) {
+            if (item.type === 'quiz') {
+                continue;
+            }
+
             try {
                 const cached = await getCachedMedia(item);
                 if (!cached) {
@@ -209,6 +214,11 @@
             state.currentTimer = null;
         }
 
+        if (state.currentInterval) {
+            window.clearInterval(state.currentInterval);
+            state.currentInterval = null;
+        }
+
         if (state.currentObjectUrl) {
             URL.revokeObjectURL(state.currentObjectUrl);
             state.currentObjectUrl = null;
@@ -218,6 +228,10 @@
     }
 
     async function resolvePlayableSource(item) {
+        if (item.type === 'quiz') {
+            return null;
+        }
+
         const cached = await getCachedMedia(item);
         if (cached && cached.blob) {
             state.currentObjectUrl = URL.createObjectURL(cached.blob);
@@ -296,6 +310,83 @@
         });
     }
 
+    async function playQuiz(item) {
+        return new Promise((resolve) => {
+            let remainingSeconds = Math.max(1, Number.parseInt(item.countdown_seconds || 10, 10));
+            const revealDuration = Math.max(1, Number.parseInt(item.reveal_duration || 5, 10));
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'quiz-card';
+
+            const badge = document.createElement('div');
+            badge.className = 'quiz-badge';
+            badge.textContent = 'Quiz';
+
+            const question = document.createElement('div');
+            question.className = 'quiz-question';
+            question.textContent = item.question || item.title || 'Quiz question';
+
+            const countdown = document.createElement('div');
+            countdown.className = 'quiz-countdown';
+
+            const answersList = document.createElement('div');
+            answersList.className = 'quiz-answers';
+
+            const answerNodes = new Map();
+            for (const answer of item.answers || []) {
+                const answerEl = document.createElement('div');
+                answerEl.className = 'quiz-answer';
+                answerEl.dataset.answerKey = answer.key;
+                answerEl.innerHTML = '<span class="quiz-answer-key"></span><span class="quiz-answer-text"></span>';
+                answerEl.querySelector('.quiz-answer-key').textContent = answer.key;
+                answerEl.querySelector('.quiz-answer-text').textContent = answer.text;
+                answersList.appendChild(answerEl);
+                answerNodes.set(answer.key, answerEl);
+            }
+
+            const footer = document.createElement('div');
+            footer.className = 'quiz-footer';
+            footer.textContent = 'Choose the best answer before the timer ends.';
+
+            wrapper.appendChild(badge);
+            wrapper.appendChild(question);
+            wrapper.appendChild(countdown);
+            wrapper.appendChild(answersList);
+            wrapper.appendChild(footer);
+            stage.appendChild(wrapper);
+
+            const updateCountdown = () => {
+                countdown.textContent = 'Answer in ' + remainingSeconds + ' second' + (remainingSeconds === 1 ? '' : 's');
+            };
+
+            updateCountdown();
+
+            state.currentInterval = window.setInterval(() => {
+                remainingSeconds -= 1;
+                if (remainingSeconds <= 0) {
+                    window.clearInterval(state.currentInterval);
+                    state.currentInterval = null;
+                    countdown.textContent = 'Time is up.';
+                    footer.textContent = 'Correct answer: ' + item.correct_answer;
+
+                    const correctAnswerNode = answerNodes.get(item.correct_answer);
+                    if (correctAnswerNode) {
+                        correctAnswerNode.classList.add('is-correct');
+                    }
+
+                    state.currentTimer = window.setTimeout(() => {
+                        state.currentIndex = nextIndex();
+                        void playCurrentItem();
+                    }, revealDuration * 1000);
+                    resolve();
+                    return;
+                }
+
+                updateCountdown();
+            }, 1000);
+        });
+    }
+
     async function playCurrentItem() {
         clearStage();
 
@@ -317,7 +408,9 @@
         try {
             const sourceUrl = await resolvePlayableSource(item);
 
-            if (item.type === 'video') {
+            if (item.type === 'quiz') {
+                await playQuiz(item);
+            } else if (item.type === 'video') {
                 await playVideo(item, sourceUrl);
             } else {
                 await playImage(item, sourceUrl);
