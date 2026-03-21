@@ -163,11 +163,34 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
         .attention-item { padding: 0.6rem 0.7rem; border-radius: 0.75rem; background: rgba(248, 250, 252, 0.94); border: 1px solid rgba(15, 23, 42, 0.05); }
         .attention-item strong { display: block; font-size: 0.9rem; }
         .attention-item span { color: var(--admin-text-soft); font-size: 0.8rem; }
+        .dashboard-cluster { display: grid; gap: 0.9rem; }
+        .dashboard-box { border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 0.95rem; background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55); }
+        .dashboard-box-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.8rem; padding: 0.8rem 0.9rem; border-bottom: 1px solid rgba(15, 23, 42, 0.06); }
+        .dashboard-box-head h3 { margin: 0; font-size: 0.95rem; }
+        .dashboard-box-head p { margin: 0.18rem 0 0; color: var(--admin-text-soft); font-size: 0.79rem; }
+        .dashboard-box-body { padding: 0.82rem 0.9rem 0.9rem; }
+        .dashboard-box-grid { display: grid; gap: 0.75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .dashboard-mini-grid { display: grid; gap: 0.55rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .dashboard-link-grid { display: grid; gap: 0.65rem; }
+        .dashboard-link-card { display: flex; flex-direction: column; gap: 0.28rem; padding: 0.8rem 0.85rem; border-radius: 0.85rem; border: 1px solid rgba(15, 23, 42, 0.06); background: rgba(255, 255, 255, 0.86); text-decoration: none; color: inherit; transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease; }
+        .dashboard-link-card:hover { transform: translateY(-1px); border-color: rgba(15, 23, 42, 0.12); box-shadow: 0 0.35rem 0.9rem rgba(15, 23, 42, 0.06); }
+        .dashboard-link-card strong { font-size: 0.9rem; }
+        .dashboard-link-card span { color: var(--admin-text-soft); font-size: 0.79rem; }
+        .dashboard-screen-grid { display: grid; gap: 0.7rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .dashboard-screen-card { border: 1px solid rgba(15, 23, 42, 0.06); border-radius: 0.85rem; background: rgba(255, 255, 255, 0.9); overflow: hidden; }
+        .dashboard-screen-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; padding: 0.75rem 0.8rem; border-bottom: 1px solid rgba(15, 23, 42, 0.05); }
+        .dashboard-screen-head strong { display: block; font-size: 0.9rem; }
+        .dashboard-screen-head span { display: block; margin-top: 0.15rem; color: var(--admin-text-soft); font-size: 0.79rem; }
+        .dashboard-screen-body { padding: 0.75rem 0.8rem; }
+        .dashboard-screen-body .summary-list { gap: 0.45rem; }
+        .dashboard-screen-body .summary-row { padding: 0.48rem 0.58rem; }
         @media (max-width: 1199px) {
             main.container-fluid { width: 100%; padding-left: 0.8rem; padding-right: 0.8rem; }
             .panel-grid.two-up { grid-template-columns: 1fr; }
             .metric-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .hero-grid { grid-template-columns: 1fr; }
+            .dashboard-box-grid { grid-template-columns: 1fr; }
+            .dashboard-screen-grid { grid-template-columns: 1fr; }
         }
         @media (max-width: 991px) {
             .info-grid { grid-template-columns: 1fr; }
@@ -175,6 +198,7 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
             .navbar .d-flex.align-items-center.gap-3 { gap: 0.6rem !important; }
             .admin-side-panel { position: static; }
             .metric-row { grid-template-columns: 1fr; }
+            .dashboard-mini-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>

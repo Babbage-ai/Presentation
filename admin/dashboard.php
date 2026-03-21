@@ -139,19 +139,19 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <div class="row g-3 mb-3">
-    <div class="col-xl-4 col-lg-5">
+    <div class="col-xl-8">
         <div class="card h-100">
-            <div class="card-header"><h2 class="h5 mb-0">At A Glance</h2></div>
+            <div class="card-header"><h2 class="h5 mb-0">Overview</h2></div>
             <div class="card-body">
-                <div class="panel-grid">
-                    <section class="panel-section">
-                        <div class="panel-section-head">
+                <div class="dashboard-box-grid">
+                    <section class="dashboard-box">
+                        <div class="dashboard-box-head">
                             <div>
-                                <h3 class="panel-section-title">System</h3>
-                                <p class="panel-section-copy">What is currently live and connected.</p>
+                                <h3>System Status</h3>
+                                <p>What is live, connected, and still missing.</p>
                             </div>
                         </div>
-                        <div class="panel-section-body">
+                        <div class="dashboard-box-body">
                             <div class="summary-list">
                                 <div class="summary-row">
                                     <div class="summary-label">Latest Active Playlist</div>
@@ -172,14 +172,14 @@ require_once __DIR__ . '/../includes/header.php';
                             </div>
                         </div>
                     </section>
-                    <section class="panel-section">
-                        <div class="panel-section-head">
+                    <section class="dashboard-box">
+                        <div class="dashboard-box-head">
                             <div>
-                                <h3 class="panel-section-title">Recommended Next Step</h3>
-                                <p class="panel-section-copy">The quickest route to a tidier system.</p>
+                                <h3>Next Step</h3>
+                                <p>The quickest action to clean up the system.</p>
                             </div>
                         </div>
-                        <div class="panel-section-body">
+                        <div class="dashboard-box-body dashboard-cluster">
                             <div class="stack-list">
                                 <div class="stack-item">
                                     <strong>Latest playlist</strong>
@@ -190,49 +190,69 @@ require_once __DIR__ . '/../includes/header.php';
                                     <span><?= $unassignedScreens > 0 ? 'Assign playlists to unassigned screens.' : 'Check any offline screens in the attention list.' ?></span>
                                 </div>
                             </div>
+                            <div class="dashboard-mini-grid">
+                                <div class="summary-row">
+                                    <div class="summary-label">Media</div>
+                                    <div class="summary-value"><?= $counts['media'] ?></div>
+                                </div>
+                                <div class="summary-row">
+                                    <div class="summary-label">Quizzes</div>
+                                    <div class="summary-value"><?= $counts['quizzes'] ?></div>
+                                </div>
+                            </div>
                         </div>
                     </section>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-xl-8 col-lg-7">
+    <div class="col-xl-4">
         <div class="card h-100">
             <div class="card-header"><h2 class="h5 mb-0">Needs Attention</h2></div>
             <div class="card-body">
-                <div class="attention-list">
-                    <?php $hasAttentionItems = false; ?>
-                    <?php if (!$attentionScreens): ?>
-                        <div class="attention-item">
-                            <strong>No screens yet</strong>
-                            <span>Create a screen to start monitoring player status.</span>
+                <section class="dashboard-box h-100">
+                    <div class="dashboard-box-head">
+                        <div>
+                            <h3>Priority Screens</h3>
+                            <p>Offline, unassigned, or behind the current playlist.</p>
                         </div>
-                    <?php else: ?>
-                        <?php foreach ($attentionScreens as $screen): ?>
-                            <?php $screenOnline = screen_is_online($screen['last_seen']); ?>
-                            <?php $assignedPlaylistId = (int) ($screen['playlist_id'] ?? 0); ?>
-                            <?php $latestPlaylistId = (int) ($latestActivePlaylist['id'] ?? 0); ?>
-                            <?php $needsPlaylist = $assignedPlaylistId < 1; ?>
-                            <?php $isOutdated = $latestPlaylistId > 0 && $assignedPlaylistId > 0 && $assignedPlaylistId !== $latestPlaylistId; ?>
-                            <?php if ($screenOnline && !$needsPlaylist && !$isOutdated) { continue; } ?>
-                            <?php $hasAttentionItems = true; ?>
-                            <div class="attention-item">
-                                <strong><?= e($screen['name']) ?></strong>
-                                <span>
-                                    <?= e($screen['location'] ?: 'No location') ?> ·
-                                    <?= $screenOnline ? 'Online' : 'Offline' ?> ·
-                                    <?= $needsPlaylist ? 'Unassigned' : ($isOutdated ? 'Not using latest playlist' : 'Using latest playlist') ?>
-                                </span>
-                            </div>
-                        <?php endforeach; ?>
-                        <?php if (!$hasAttentionItems): ?>
-                            <div class="attention-item">
-                                <strong>All screens look healthy</strong>
-                                <span>No offline, unassigned, or outdated screens were found.</span>
-                            </div>
-                        <?php endif; ?>
-                    <?php endif; ?>
-                </div>
+                    </div>
+                    <div class="dashboard-box-body">
+                        <div class="attention-list">
+                            <?php $hasAttentionItems = false; ?>
+                            <?php if (!$attentionScreens): ?>
+                                <div class="attention-item">
+                                    <strong>No screens yet</strong>
+                                    <span>Create a screen to start monitoring player status.</span>
+                                </div>
+                            <?php else: ?>
+                                <?php foreach ($attentionScreens as $screen): ?>
+                                    <?php $screenOnline = screen_is_online($screen['last_seen']); ?>
+                                    <?php $assignedPlaylistId = (int) ($screen['playlist_id'] ?? 0); ?>
+                                    <?php $latestPlaylistId = (int) ($latestActivePlaylist['id'] ?? 0); ?>
+                                    <?php $needsPlaylist = $assignedPlaylistId < 1; ?>
+                                    <?php $isOutdated = $latestPlaylistId > 0 && $assignedPlaylistId > 0 && $assignedPlaylistId !== $latestPlaylistId; ?>
+                                    <?php if ($screenOnline && !$needsPlaylist && !$isOutdated) { continue; } ?>
+                                    <?php $hasAttentionItems = true; ?>
+                                    <div class="attention-item">
+                                        <strong><?= e($screen['name']) ?></strong>
+                                        <span>
+                                            <?= e($screen['location'] ?: 'No location') ?> ·
+                                            <?= $screenOnline ? 'Online' : 'Offline' ?> ·
+                                            <?= $needsPlaylist ? 'Unassigned' : ($isOutdated ? 'Not using latest playlist' : 'Using latest playlist') ?>
+                                        </span>
+                                    </div>
+                                <?php endforeach; ?>
+                                <?php if (!$hasAttentionItems): ?>
+                                    <div class="attention-item">
+                                        <strong>All screens look healthy</strong>
+                                        <span>No offline, unassigned, or outdated screens were found.</span>
+                                    </div>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </section>
             </div>
         </div>
     </div>
@@ -243,7 +263,10 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card h-100">
             <div class="card-header">
                 <div class="section-heading mb-0">
-                    <h2 class="h5">Recent Screens</h2>
+                    <div>
+                        <h2 class="h5 mb-0">Recent Screens</h2>
+                        <div class="section-subtitle">Latest activity and assignment status in one place.</div>
+                    </div>
                     <a class="btn btn-outline-dark btn-sm" href="<?= e(app_path('/admin/screens.php')) ?>">
                         <i class="bi bi-display"></i>
                         <span class="ms-1">Open Screens</span>
@@ -254,23 +277,23 @@ require_once __DIR__ . '/../includes/header.php';
                 <?php if (!$recentActivity): ?>
                     <p class="text-muted mb-0">No screens created yet.</p>
                 <?php else: ?>
-                    <div class="panel-grid">
+                    <div class="dashboard-screen-grid">
                         <?php foreach ($recentActivity as $screen): ?>
                             <?php $online = screen_is_online($screen['last_seen']); ?>
                             <?php $assignedPlaylistId = (int) ($screen['playlist_id'] ?? 0); ?>
                             <?php $latestPlaylistId = (int) ($latestActivePlaylist['id'] ?? 0); ?>
                             <?php $isLatestAssigned = $latestPlaylistId > 0 && $assignedPlaylistId === $latestPlaylistId; ?>
-                            <section class="panel-section">
-                                <div class="panel-section-head">
+                            <section class="dashboard-screen-card">
+                                <div class="dashboard-screen-head">
                                     <div>
-                                        <h3 class="panel-section-title"><?= e($screen['name']) ?></h3>
-                                        <p class="panel-section-copy"><?= e($screen['location'] ?: 'No location') ?></p>
+                                        <strong><?= e($screen['name']) ?></strong>
+                                        <span><?= e($screen['location'] ?: 'No location') ?></span>
                                     </div>
                                     <span class="badge <?= $online ? 'text-bg-success' : 'text-bg-secondary' ?>">
                                         <?= $online ? 'Online' : 'Offline' ?>
                                     </span>
                                 </div>
-                                <div class="panel-section-body">
+                                <div class="dashboard-screen-body">
                                     <div class="summary-list">
                                         <div class="summary-row">
                                             <div class="summary-label">Assigned Playlist</div>
@@ -303,41 +326,30 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card h-100">
             <div class="card-header"><h2 class="h5 mb-0">Quick Links</h2></div>
             <div class="card-body">
-                <div class="panel-grid">
-                    <a class="panel-section text-decoration-none text-reset" href="<?= e(app_path('/admin/screens.php')) ?>">
-                        <div class="panel-section-head">
-                            <div>
-                                <h3 class="panel-section-title">Screens</h3>
-                                <p class="panel-section-copy">Assignments and previews.</p>
-                            </div>
+                <section class="dashboard-box h-100">
+                    <div class="dashboard-box-head">
+                        <div>
+                            <h3>Admin Areas</h3>
+                            <p>Jump straight to the part of the system you need.</p>
                         </div>
-                        <div class="panel-section-body">
-                            <div class="compact-note">Assignments, browser tests, tokens, and update pushes.</div>
+                    </div>
+                    <div class="dashboard-box-body">
+                        <div class="dashboard-link-grid">
+                            <a class="dashboard-link-card" href="<?= e(app_path('/admin/screens.php')) ?>">
+                                <strong>Screens</strong>
+                                <span>Assignments, browser tests, tokens, and update pushes.</span>
+                            </a>
+                            <a class="dashboard-link-card" href="<?= e(app_path('/admin/playlists.php')) ?>">
+                                <strong>Playlists</strong>
+                                <span>Update what is live and keep screens on the correct content.</span>
+                            </a>
+                            <a class="dashboard-link-card" href="<?= e(app_path('/admin/media.php')) ?>">
+                                <strong>Media And Quizzes</strong>
+                                <span>Manage the content library that feeds your playlists.</span>
+                            </a>
                         </div>
-                    </a>
-                    <a class="panel-section text-decoration-none text-reset" href="<?= e(app_path('/admin/playlists.php')) ?>">
-                        <div class="panel-section-head">
-                            <div>
-                                <h3 class="panel-section-title">Playlists</h3>
-                                <p class="panel-section-copy">What screens are running.</p>
-                            </div>
-                        </div>
-                        <div class="panel-section-body">
-                            <div class="compact-note">Update what is live and keep screens on the correct content.</div>
-                        </div>
-                    </a>
-                    <a class="panel-section text-decoration-none text-reset" href="<?= e(app_path('/admin/media.php')) ?>">
-                        <div class="panel-section-head">
-                            <div>
-                                <h3 class="panel-section-title">Media And Quizzes</h3>
-                                <p class="panel-section-copy">Content library.</p>
-                            </div>
-                        </div>
-                        <div class="panel-section-body">
-                            <div class="compact-note">Manage the content library that feeds your playlists.</div>
-                        </div>
-                    </a>
-                </div>
+                    </div>
+                </section>
             </div>
         </div>
     </div>
