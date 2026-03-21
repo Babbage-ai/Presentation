@@ -95,7 +95,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="section-heading">
     <div>
         <h1 class="h3">Dashboard</h1>
-        <div class="section-subtitle">Overview first, problems second, recent activity last.</div>
+        <div class="section-subtitle">Only the key counts, screens that need action, and recent screen status.</div>
     </div>
 </div>
 
@@ -139,74 +139,7 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <div class="row g-3 mb-3">
-    <div class="col-xl-8">
-        <div class="card h-100">
-            <div class="card-header"><h2 class="h5 mb-0">Overview</h2></div>
-            <div class="card-body">
-                <div class="dashboard-box-grid">
-                    <section class="dashboard-box">
-                        <div class="dashboard-box-head">
-                            <div>
-                                <h3>System Status</h3>
-                                <p>What is live, connected, and still missing.</p>
-                            </div>
-                        </div>
-                        <div class="dashboard-box-body">
-                            <div class="summary-list">
-                                <div class="summary-row">
-                                    <div class="summary-label">Latest Active Playlist</div>
-                                    <div class="summary-value"><?= e($latestActivePlaylist['name'] ?? 'None') ?></div>
-                                </div>
-                                <div class="summary-row">
-                                    <div class="summary-label">Online Screens</div>
-                                    <div class="summary-value"><?= $counts['online_screens'] ?> / <?= $counts['screens'] ?></div>
-                                </div>
-                                <div class="summary-row">
-                                    <div class="summary-label">Offline Screens</div>
-                                    <div class="summary-value"><?= max(0, $counts['screens'] - $counts['online_screens']) ?></div>
-                                </div>
-                                <div class="summary-row">
-                                    <div class="summary-label">Unassigned Screens</div>
-                                    <div class="summary-value"><?= $unassignedScreens ?></div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                    <section class="dashboard-box">
-                        <div class="dashboard-box-head">
-                            <div>
-                                <h3>Next Step</h3>
-                                <p>The quickest action to clean up the system.</p>
-                            </div>
-                        </div>
-                        <div class="dashboard-box-body dashboard-cluster">
-                            <div class="stack-list">
-                                <div class="stack-item">
-                                    <strong>Latest playlist</strong>
-                                    <span><?= $latestActivePlaylist ? e($latestActivePlaylist['name']) . ' updated ' . e(format_datetime($latestActivePlaylist['updated_at'])) : 'No active playlist is ready for screens.' ?></span>
-                                </div>
-                                <div class="stack-item">
-                                    <strong>Next action</strong>
-                                    <span><?= $unassignedScreens > 0 ? 'Assign playlists to unassigned screens.' : 'Check any offline screens in the attention list.' ?></span>
-                                </div>
-                            </div>
-                            <div class="dashboard-mini-grid">
-                                <div class="summary-row">
-                                    <div class="summary-label">Media</div>
-                                    <div class="summary-value"><?= $counts['media'] ?></div>
-                                </div>
-                                <div class="summary-row">
-                                    <div class="summary-label">Quizzes</div>
-                                    <div class="summary-value"><?= $counts['quizzes'] ?></div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-xl-4">
+    <div class="col-12">
         <div class="card h-100">
             <div class="card-header"><h2 class="h5 mb-0">Needs Attention</h2></div>
             <div class="card-body">
@@ -259,7 +192,7 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <div class="row g-3">
-    <div class="col-xl-8">
+    <div class="col-12">
         <div class="card h-100">
             <div class="card-header">
                 <div class="section-heading mb-0">
@@ -319,37 +252,6 @@ require_once __DIR__ . '/../includes/header.php';
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
-            </div>
-        </div>
-    </div>
-    <div class="col-xl-4">
-        <div class="card h-100">
-            <div class="card-header"><h2 class="h5 mb-0">Quick Links</h2></div>
-            <div class="card-body">
-                <section class="dashboard-box h-100">
-                    <div class="dashboard-box-head">
-                        <div>
-                            <h3>Admin Areas</h3>
-                            <p>Jump straight to the part of the system you need.</p>
-                        </div>
-                    </div>
-                    <div class="dashboard-box-body">
-                        <div class="dashboard-link-grid">
-                            <a class="dashboard-link-card" href="<?= e(app_path('/admin/screens.php')) ?>">
-                                <strong>Screens</strong>
-                                <span>Assignments, browser tests, tokens, and update pushes.</span>
-                            </a>
-                            <a class="dashboard-link-card" href="<?= e(app_path('/admin/playlists.php')) ?>">
-                                <strong>Playlists</strong>
-                                <span>Update what is live and keep screens on the correct content.</span>
-                            </a>
-                            <a class="dashboard-link-card" href="<?= e(app_path('/admin/media.php')) ?>">
-                                <strong>Media And Quizzes</strong>
-                                <span>Manage the content library that feeds your playlists.</span>
-                            </a>
-                        </div>
-                    </div>
-                </section>
             </div>
         </div>
     </div>
