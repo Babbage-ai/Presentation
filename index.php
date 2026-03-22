@@ -5,16 +5,14 @@ require_once __DIR__ . '/includes/functions.php';
 
 $siteName = 'Display Flow';
 $adminUrl = app_path('/admin/login.php');
-$playerGuideUrl = app_path('/raspberry-pi-setup.md');
-$appBaseUrl = application_base_url();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= e($siteName) ?> | Cloud Signage for Raspberry Pi Screens</title>
-    <meta name="description" content="Display Flow is a practical cloud signage platform for Raspberry Pi screens with playlists, media uploads, screen assignment, and remote updates.">
+    <title><?= e($siteName) ?> | Affordable Digital Signage for Any Space</title>
+    <meta name="description" content="Display Flow helps businesses show the right information on screens in reception areas, waiting rooms, shops, schools, and public spaces without spending a fortune.">
     <style>
         :root {
             color-scheme: light;
@@ -282,106 +280,104 @@ $appBaseUrl = application_base_url();
             </div>
             <nav class="topbar-links" aria-label="Primary">
                 <a class="button button-secondary" href="<?= e($adminUrl) ?>">Admin Login</a>
-                <a class="button button-secondary" href="<?= e($playerGuideUrl) ?>">Pi Setup Guide</a>
             </nav>
         </header>
 
         <main>
             <section class="hero">
                 <div class="panel hero-copy">
-                    <span class="eyebrow">Cloud Signage for Raspberry Pi</span>
-                    <h1>Run screen networks without buying an overbuilt platform.</h1>
-                    <p>Display Flow gives you a practical admin panel for uploads, playlists, quizzes, screen assignment, and player updates. It is designed for real deployments on normal PHP hosting, with Raspberry Pi screens running a local HTML player.</p>
+                    <span class="eyebrow">Affordable Digital Signage</span>
+                    <h1>Put useful information on screens without spending a fortune.</h1>
+                    <p>Display Flow helps you keep displays fresh, clear, and easy to manage. Share announcements, promotions, directions, menus, timetables, and internal updates across one screen or an entire network.</p>
                     <div class="actions">
                         <a class="button button-primary" href="<?= e($adminUrl) ?>">Open Admin</a>
-                        <a class="button button-secondary" href="<?= e($playerGuideUrl) ?>">Read Setup Guide</a>
                     </div>
                 </div>
                 <aside class="panel hero-side" aria-label="Platform summary">
                     <div class="signal-card">
-                        <strong>Phase 1 MVP</strong>
-                        <p>Media uploads, playlists, quizzes, screen assignment, JSON APIs, and a Pi-ready player in one small PHP codebase.</p>
+                        <strong>Easy to run</strong>
+                        <p>Manage content from one place and keep screens updated without constant manual changes on each device.</p>
                     </div>
                     <div class="signal-grid">
                         <div class="signal-card">
-                            <strong>PHP + MySQL</strong>
-                            <p>Deployable on standard VPS or shared hosting.</p>
+                            <strong>Clear messaging</strong>
+                            <p>Show the right information at the right time across your locations.</p>
                         </div>
                         <div class="signal-card">
-                            <strong>Pi Player</strong>
-                            <p>Browser-based playback with heartbeat reporting and offline cache support.</p>
+                            <strong>Low cost</strong>
+                            <p>A practical option for organisations that want digital signage without enterprise pricing.</p>
                         </div>
                     </div>
                     <div class="signal-card">
-                        <p><strong>Base URL</strong></p>
-                        <p><code><?= e($appBaseUrl) ?></code></p>
+                        <p><strong>Possible Applications</strong></p>
+                        <p>Anywhere that needs display information without spending a fortune.</p>
                     </div>
                 </aside>
             </section>
 
             <section class="section section-grid">
                 <article class="panel feature-card">
-                    <h2>Keep content moving</h2>
-                    <p>Upload images and video, organize them into playlists, and control which screens pull which content without touching the device again.</p>
+                    <h2>Promotions and offers</h2>
+                    <p>Highlight products, special offers, seasonal campaigns, and featured services in shops, cafes, salons, and reception spaces.</p>
                     <ul class="feature-list">
-                        <li>Batch image uploads with server-side validation</li>
-                        <li>Playlist ordering and mixed content support</li>
-                        <li>Per-screen playlist assignment</li>
+                        <li>Retail promotions</li>
+                        <li>Food and drink offers</li>
+                        <li>Seasonal campaigns</li>
                     </ul>
                 </article>
                 <article class="panel feature-card">
-                    <h2>Operate with less friction</h2>
-                    <p>Each screen has a token, the player checks in on a heartbeat, and the cloud side can flag pending updates for the next sync cycle.</p>
+                    <h2>Information and guidance</h2>
+                    <p>Display directions, waiting room notices, timetables, check-in instructions, and public information where people need it most.</p>
                     <ul class="feature-list">
-                        <li>Online and offline visibility</li>
-                        <li>Controlled media downloads through the API</li>
-                        <li>Simple Raspberry Pi rollout path</li>
+                        <li>Reception areas</li>
+                        <li>Waiting rooms</li>
+                        <li>Schools and community spaces</li>
                     </ul>
                 </article>
                 <article class="panel feature-card">
-                    <h2>Built for straightforward hosting</h2>
-                    <p>This is intentionally a light stack: PHP 8, MySQL or MariaDB, static player assets, and no framework lock-in.</p>
+                    <h2>Internal communications</h2>
+                    <p>Keep staff informed with shift messages, safety reminders, performance updates, event notices, and company news.</p>
                     <ul class="feature-list">
-                        <li>No Node backend required</li>
-                        <li>No Composer dependency chain</li>
-                        <li>Readable files for practical maintenance</li>
+                        <li>Office dashboards</li>
+                        <li>Warehouse notices</li>
+                        <li>Staff room updates</li>
                     </ul>
                 </article>
             </section>
 
             <section class="section section-grid">
                 <article class="panel info-card">
-                    <h2>For operators</h2>
-                    <p>Use the admin panel to manage the library, playlists, screens, and quiz content from one place.</p>
+                    <h2>Simple to manage</h2>
+                    <p>Update screens from one dashboard instead of editing content separately on every display.</p>
                     <ul class="info-list">
                         <li><a href="<?= e($adminUrl) ?>">Admin login</a></li>
-                        <li><a href="<?= e(app_path('/admin/media.php')) ?>">Media library</a></li>
-                        <li><a href="<?= e(app_path('/admin/screens.php')) ?>">Screen management</a></li>
+                        <li>One place to manage your screens</li>
+                        <li>Fast content updates across locations</li>
                     </ul>
                 </article>
                 <article class="panel info-card">
-                    <h2>For installers</h2>
-                    <p>Use the Raspberry Pi guide to provision a player and point it at the cloud instance.</p>
+                    <h2>Flexible for many spaces</h2>
+                    <p>Use it for a single display or build a wider network across multiple rooms, branches, or public areas.</p>
                     <ul class="info-list">
-                        <li><a href="<?= e($playerGuideUrl) ?>">Raspberry Pi setup</a></li>
-                        <li><a href="<?= e(app_path('/player/player.html')) ?>">Player shell</a></li>
-                        <li><a href="<?= e(app_path('/player/config.json')) ?>">Player config template</a></li>
+                        <li>Shops and showrooms</li>
+                        <li>Healthcare and education</li>
+                        <li>Offices and hospitality</li>
                     </ul>
                 </article>
                 <article class="panel info-card">
-                    <h2>For deployments</h2>
-                    <p>The application already supports deployment under a subdirectory by setting <code>APP_BASE_PATH</code> if the main site lives at the domain root.</p>
+                    <h2>Built around value</h2>
+                    <p>Display Flow is designed for organisations that want modern digital signage without the cost and complexity of bigger platforms.</p>
                     <ul class="info-list">
-                        <li><code>APP_URL=https://displayflow.co.uk</code></li>
-                        <li><code>APP_BASE_PATH=</code> for root app installs</li>
-                        <li><code>APP_BASE_PATH=/app</code> if the platform moves below the homepage later</li>
+                        <li>Lower setup cost</li>
+                        <li>Straightforward day-to-day use</li>
+                        <li>Professional presentation for customers and staff</li>
                     </ul>
                 </article>
             </section>
         </main>
 
         <footer class="footer">
-            <p><?= e($siteName) ?> is a deployable signage platform for managed Raspberry Pi displays, playlists, quizzes, and remote content delivery.</p>
+            <p><?= e($siteName) ?> helps organisations share useful information on screens clearly, consistently, and affordably.</p>
         </footer>
     </div>
 </body>
