@@ -13,7 +13,13 @@ function find_quiz_question(mysqli $db, int $adminId, int $quizId): ?array
             (SELECT COUNT(*)
              FROM playlist_items pi
              INNER JOIN playlists p ON p.id = pi.playlist_id
-             WHERE pi.quiz_question_id = q.id AND p.owner_admin_id = q.owner_admin_id) AS usage_count
+             WHERE pi.quiz_question_id = q.id AND p.owner_admin_id = q.owner_admin_id) AS usage_count,
+            COALESCE((
+                SELECT GROUP_CONCAT(DISTINCT p.name ORDER BY p.name SEPARATOR ', ')
+                FROM playlist_items pi
+                INNER JOIN playlists p ON p.id = pi.playlist_id
+                WHERE pi.quiz_question_id = q.id AND p.owner_admin_id = q.owner_admin_id
+            ), '') AS playlist_names
         FROM quiz_questions q
         WHERE q.id = ? AND q.owner_admin_id = ?
         LIMIT 1");
@@ -39,8 +45,23 @@ function quiz_question_payload(array $quiz): array
         'reveal_duration' => (int) $quiz['reveal_duration'],
         'active' => (int) $quiz['active'],
         'usage_count' => (int) ($quiz['usage_count'] ?? 0),
+        'playlist_names' => (string) ($quiz['playlist_names'] ?? ''),
         'updated_at' => format_datetime($quiz['updated_at'] ?? null),
     ];
+}
+
+function quiz_usage_count(mysqli $db, int $adminId, int $quizId): int
+{
+    $statement = $db->prepare("SELECT COUNT(*) AS usage_count
+        FROM playlist_items pi
+        INNER JOIN playlists p ON p.id = pi.playlist_id
+        WHERE pi.quiz_question_id = ? AND p.owner_admin_id = ?");
+    $statement->bind_param('ii', $quizId, $adminId);
+    $statement->execute();
+    $usageCount = (int) $statement->get_result()->fetch_assoc()['usage_count'];
+    $statement->close();
+
+    return $usageCount;
 }
 
 if (is_post_request()) {
@@ -66,6 +87,11 @@ if (is_post_request()) {
 
         if (!in_array($correctOption, ['A', 'B', 'C', 'D'], true)) {
             set_flash('danger', 'Choose a valid correct answer.');
+            redirect('/admin/quizzes.php');
+        }
+
+        if ($action === 'update_quiz' && $active === 0 && quiz_usage_count($db, $adminId, $quizId) > 0) {
+            set_flash('warning', 'Quiz question cannot be deactivated while it is used in a playlist.');
             redirect('/admin/quizzes.php');
         }
 
@@ -95,6 +121,21 @@ if (is_post_request()) {
     if ($action === 'toggle_quiz_active') {
         $quizId = (int) ($_POST['quiz_id'] ?? 0);
         $active = isset($_POST['active']) ? 1 : 0;
+
+        if ($active === 0 && quiz_usage_count($db, $adminId, $quizId) > 0) {
+            if (is_ajax_request()) {
+                header('Content-Type: application/json');
+                http_response_code(409);
+                echo json_encode([
+                    'ok' => false,
+                    'message' => 'Quiz question cannot be deactivated while it is used in a playlist.',
+                ]);
+                exit;
+            }
+
+            set_flash('warning', 'Quiz question cannot be deactivated while it is used in a playlist.');
+            redirect('/admin/quizzes.php');
+        }
 
         $statement = $db->prepare("UPDATE quiz_questions
             SET active = ?, updated_at = UTC_TIMESTAMP()
@@ -192,7 +233,13 @@ $statement = $db->prepare("SELECT q.*,
         (SELECT COUNT(*)
          FROM playlist_items pi
          INNER JOIN playlists p ON p.id = pi.playlist_id
-         WHERE pi.quiz_question_id = q.id AND p.owner_admin_id = q.owner_admin_id) AS usage_count
+         WHERE pi.quiz_question_id = q.id AND p.owner_admin_id = q.owner_admin_id) AS usage_count,
+        COALESCE((
+            SELECT GROUP_CONCAT(DISTINCT p.name ORDER BY p.name SEPARATOR ', ')
+            FROM playlist_items pi
+            INNER JOIN playlists p ON p.id = pi.playlist_id
+            WHERE pi.quiz_question_id = q.id AND p.owner_admin_id = q.owner_admin_id
+        ), '') AS playlist_names
     FROM quiz_questions q
     WHERE q.owner_admin_id = ?
     ORDER BY q.updated_at DESC, q.id DESC");
@@ -221,8 +268,12 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="section-heading">
     <div>
         <h1 class="h3">Quizzes</h1>
-        <div class="section-subtitle">Create questions, toggle availability instantly, and edit from a single click.</div>
+        <div class="section-subtitle">One-line questions, inline playlist usage, and a single modal for add and edit.</div>
     </div>
+    <button class="btn btn-primary" type="button" id="openCreateQuizModal">
+        <i class="bi bi-plus-circle"></i>
+        <span class="ms-1">Add Quiz</span>
+    </button>
 </div>
 <div class="row g-3 mb-3">
     <div class="col-6 col-xl-3">
@@ -262,70 +313,6 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
     </div>
 </div>
-<div class="card top-create-card mb-3">
-    <div class="card-header"><h2 class="h5 mb-0">Add New Quiz</h2></div>
-    <div class="card-body">
-        <form class="dense-form" method="post">
-            <?= csrf_field() ?>
-            <input type="hidden" name="action" value="create_quiz">
-            <div class="row g-3">
-                <div class="col-lg-6">
-                    <label class="form-label" for="question_text">Question</label>
-                    <textarea class="form-control" id="question_text" name="question_text" rows="3" required></textarea>
-                </div>
-                <div class="col-lg-6">
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <label class="form-label" for="option_a">Answer A</label>
-                            <input class="form-control" id="option_a" name="option_a" type="text" required>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label" for="option_b">Answer B</label>
-                            <input class="form-control" id="option_b" name="option_b" type="text" required>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label" for="option_c">Answer C</label>
-                            <input class="form-control" id="option_c" name="option_c" type="text" required>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label" for="option_d">Answer D</label>
-                            <input class="form-control" id="option_d" name="option_d" type="text" required>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label" for="correct_option">Correct Answer</label>
-                    <select class="form-select" id="correct_option" name="correct_option">
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                        <option value="D">D</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label" for="countdown_seconds">Countdown</label>
-                    <input class="form-control" id="countdown_seconds" name="countdown_seconds" type="number" min="1" value="10" required>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label" for="reveal_duration">Reveal Duration</label>
-                    <input class="form-control" id="reveal_duration" name="reveal_duration" type="number" min="1" value="5" required>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" id="quiz_active" name="active" type="checkbox" checked>
-                        <label class="form-check-label" for="quiz_active">Quiz active</label>
-                    </div>
-                </div>
-                <div class="col-12">
-                    <button class="btn btn-primary" type="submit">
-                        <i class="bi bi-plus-circle"></i>
-                        <span class="ms-1">Create Quiz</span>
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
 <div class="card list-card">
     <div class="card-header"><h2 class="h5 mb-0">Quiz Questions</h2></div>
     <div class="card-body p-0">
@@ -334,19 +321,21 @@ require_once __DIR__ . '/../includes/header.php';
                 <div class="p-3 text-muted">No quiz questions created yet.</div>
             <?php else: ?>
                 <?php foreach ($quizQuestions as $quiz): ?>
-                    <?php $questionPreview = substr($quiz['question_text'], 0, 120); ?>
                     <div
                         class="quiz-row"
                         data-quiz="<?= e(json_encode(quiz_question_payload($quiz), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)) ?>"
                         tabindex="0"
                         role="button"
                     >
-                        <div class="quiz-row-main">
-                            <div class="quiz-row-title"><?= e($questionPreview) ?><?= strlen($quiz['question_text']) > 120 ? '...' : '' ?></div>
-                            <div class="quiz-row-meta">
-                                <span><?= (int) $quiz['usage_count'] ?> playlist use(s)</span>
-                                <span><?= (int) $quiz['active'] === 1 ? 'Active' : 'Inactive' ?></span>
-                                <span>Updated <?= e(format_datetime($quiz['updated_at'])) ?></span>
+                        <div class="quiz-row-main" title="<?= e($quiz['question_text']) ?>">
+                            <div class="quiz-row-line">
+                                <span class="quiz-row-title"><?= e($quiz['question_text']) ?></span>
+                                <span class="quiz-row-sep">|</span>
+                                <span class="quiz-row-inline-meta" data-role="playlists">
+                                    <?= (int) $quiz['usage_count'] > 0 ? 'Playlists: ' . e($quiz['playlist_names']) : 'Not in playlists' ?>
+                                </span>
+                                <span class="quiz-row-sep">|</span>
+                                <span class="quiz-row-inline-meta" data-role="active"><?= (int) $quiz['active'] === 1 ? 'Active' : 'Inactive' ?></span>
                             </div>
                         </div>
                         <div class="quiz-row-actions">
@@ -356,6 +345,7 @@ require_once __DIR__ . '/../includes/header.php';
                                     type="checkbox"
                                     <?= (int) $quiz['active'] === 1 ? 'checked' : '' ?>
                                     data-quiz-id="<?= (int) $quiz['id'] ?>"
+                                    data-usage-count="<?= (int) $quiz['usage_count'] ?>"
                                 >
                             </label>
                             <button
@@ -364,6 +354,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 title="Delete question"
                                 data-quiz-id="<?= (int) $quiz['id'] ?>"
                                 data-usage-count="<?= (int) $quiz['usage_count'] ?>"
+                                <?= (int) $quiz['usage_count'] > 0 ? 'disabled' : '' ?>
                             >
                                 <i class="bi bi-trash"></i>
                             </button>
@@ -385,7 +376,7 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="modal-body">
                 <form class="dense-form" method="post" id="quizEditForm">
                     <?= csrf_field() ?>
-                    <input type="hidden" name="action" value="update_quiz">
+                    <input type="hidden" name="action" value="update_quiz" id="edit_quiz_action">
                     <input type="hidden" name="quiz_id" id="edit_quiz_id" value="">
                     <div class="mb-3">
                         <label class="form-label" for="edit_question_text">Question</label>
@@ -445,8 +436,10 @@ require_once __DIR__ . '/../includes/header.php';
 const quizEditModalEl = document.getElementById('quizEditModal');
 const quizEditModal = quizEditModalEl ? new bootstrap.Modal(quizEditModalEl) : null;
 const quizList = document.querySelector('.quiz-list');
+const createQuizButton = document.getElementById('openCreateQuizModal');
 const csrfToken = <?= json_encode(csrf_token()) ?>;
 const quizEditFields = {
+    action: document.getElementById('edit_quiz_action'),
     id: document.getElementById('edit_quiz_id'),
     questionText: document.getElementById('edit_question_text'),
     optionA: document.getElementById('edit_option_a'),
@@ -467,25 +460,31 @@ function updateQuizRowState(row, quiz) {
     row.dataset.quiz = JSON.stringify(quiz);
 
     const title = row.querySelector('.quiz-row-title');
-    const meta = row.querySelector('.quiz-row-meta');
+    const playlistMeta = row.querySelector('.quiz-row-inline-meta[data-role="playlists"]');
+    const activeMeta = row.querySelector('.quiz-row-inline-meta[data-role="active"]');
     const toggle = row.querySelector('.js-quiz-active-toggle');
     const deleteButton = row.querySelector('.js-quiz-delete');
-    const trimmed = quiz.question_text.length > 120 ? `${quiz.question_text.slice(0, 120)}...` : quiz.question_text;
 
     if (title) {
-        title.textContent = trimmed;
+        title.textContent = quiz.question_text;
     }
 
-    if (meta) {
-        meta.innerHTML = `<span>${quiz.usage_count} playlist use(s)</span><span>${Number(quiz.active) === 1 ? 'Active' : 'Inactive'}</span><span>Updated ${quiz.updated_at}</span>`;
+    if (playlistMeta) {
+        playlistMeta.textContent = Number(quiz.usage_count) > 0 ? `Playlists: ${quiz.playlist_names}` : 'Not in playlists';
+    }
+
+    if (activeMeta) {
+        activeMeta.textContent = Number(quiz.active) === 1 ? 'Active' : 'Inactive';
     }
 
     if (toggle) {
         toggle.checked = Number(quiz.active) === 1;
+        toggle.dataset.usageCount = String(quiz.usage_count);
     }
 
     if (deleteButton) {
         deleteButton.dataset.usageCount = String(quiz.usage_count);
+        deleteButton.disabled = Number(quiz.usage_count) > 0;
     }
 }
 
@@ -512,12 +511,35 @@ async function postQuizAction(body) {
     return data;
 }
 
+function resetQuizEditorForCreate() {
+    if (!quizEditModal) {
+        return;
+    }
+
+    document.getElementById('quizEditModalLabel').textContent = 'Add Quiz Question';
+    quizEditFields.action.value = 'create_quiz';
+    quizEditFields.id.value = '';
+    quizEditFields.questionText.value = '';
+    quizEditFields.optionA.value = '';
+    quizEditFields.optionB.value = '';
+    quizEditFields.optionC.value = '';
+    quizEditFields.optionD.value = '';
+    quizEditFields.correctOption.value = 'A';
+    quizEditFields.countdownSeconds.value = 10;
+    quizEditFields.revealDuration.value = 5;
+    quizEditFields.active.checked = true;
+    quizEditFields.active.disabled = false;
+    quizEditModal.show();
+}
+
 function openQuizEditor(row) {
     if (!row || !quizEditModal) {
         return;
     }
 
     const quiz = JSON.parse(row.dataset.quiz || '{}');
+    document.getElementById('quizEditModalLabel').textContent = 'Edit Quiz Question';
+    quizEditFields.action.value = 'update_quiz';
     quizEditFields.id.value = quiz.id || '';
     quizEditFields.questionText.value = quiz.question_text || '';
     quizEditFields.optionA.value = quiz.option_a || '';
@@ -528,7 +550,12 @@ function openQuizEditor(row) {
     quizEditFields.countdownSeconds.value = quiz.countdown_seconds || 10;
     quizEditFields.revealDuration.value = quiz.reveal_duration || 5;
     quizEditFields.active.checked = Number(quiz.active) === 1;
+    quizEditFields.active.disabled = Number(quiz.usage_count) > 0 && Number(quiz.active) === 1;
     quizEditModal.show();
+}
+
+if (createQuizButton) {
+    createQuizButton.addEventListener('click', resetQuizEditorForCreate);
 }
 
 if (quizList) {
@@ -583,6 +610,13 @@ if (quizList) {
     quizList.addEventListener('change', async (event) => {
         const toggle = event.target.closest('.js-quiz-active-toggle');
         if (!toggle) {
+            return;
+        }
+
+        const usageCount = Number(toggle.dataset.usageCount || '0');
+        if (!toggle.checked && usageCount > 0) {
+            toggle.checked = true;
+            window.alert('Quiz question cannot be deactivated while it is used in a playlist.');
             return;
         }
 

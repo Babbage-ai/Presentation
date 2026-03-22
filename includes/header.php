@@ -181,9 +181,11 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
         .quiz-row:first-child { border-top: 0; }
         .quiz-row:hover,
         .quiz-row:focus-visible { background: rgba(248, 250, 252, 0.9); outline: none; }
-        .quiz-row-main { min-width: 0; display: grid; gap: 0.2rem; flex: 1 1 auto; }
-        .quiz-row-title { font-weight: 600; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .quiz-row-meta { display: flex; gap: 0.75rem; flex-wrap: wrap; color: var(--admin-text-soft); font-size: 0.78rem; }
+        .quiz-row-main { min-width: 0; flex: 1 1 auto; }
+        .quiz-row-line { display: flex; align-items: center; gap: 0.45rem; min-width: 0; white-space: nowrap; overflow: hidden; }
+        .quiz-row-title { min-width: 0; flex: 1 1 auto; font-weight: 600; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; }
+        .quiz-row-sep,
+        .quiz-row-inline-meta { flex-shrink: 0; color: var(--admin-text-soft); font-size: 0.78rem; }
         .quiz-row-actions { display: flex; align-items: center; gap: 0.55rem; flex-shrink: 0; }
         .quiz-row-toggle { display: inline-flex; align-items: center; justify-content: center; min-width: 2rem; min-height: 2rem; margin: 0; cursor: pointer; }
         .quiz-row-toggle .form-check-input { margin-top: 0; }
@@ -201,6 +203,7 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
             .admin-side-panel { position: static; }
             .metric-row { grid-template-columns: 1fr; }
             .quiz-row { align-items: flex-start; flex-direction: column; }
+            .quiz-row-line { width: 100%; }
             .quiz-row-actions { width: 100%; justify-content: space-between; }
         }
     </style>
