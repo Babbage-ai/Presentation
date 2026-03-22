@@ -499,7 +499,8 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="section-subtitle">Manage playlists, add content, and reorder items from one cleaner workspace.</div>
     </div>
 </div>
-<div class="row g-3 mb-3">
+<div class="playlist-admin-page">
+<div class="row g-2">
     <div class="col-6 col-xl-3">
         <div class="card stat-card">
             <div class="card-body">
@@ -537,7 +538,7 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
     </div>
 </div>
-<div class="card top-create-card mb-3">
+<div class="card top-create-card">
     <div class="card-header"><h2 class="h5 mb-0">Add New Playlist</h2></div>
     <div class="card-body">
         <form class="dense-form" method="post">
@@ -564,7 +565,7 @@ require_once __DIR__ . '/../includes/header.php';
         </form>
     </div>
 </div>
-<div class="row g-3">
+<div class="row g-2">
     <div class="col-xl-3 col-lg-4">
         <div class="admin-side-panel panel-stack">
             <div class="card list-card">
@@ -598,7 +599,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <div class="card-body text-muted">Select a playlist to edit settings and manage its items.</div>
             </div>
         <?php else: ?>
-            <div class="card hero-card mb-3">
+            <div class="card hero-card">
                 <div class="card-header"><h2 class="h5 mb-0">Selected Playlist</h2></div>
                 <div class="card-body">
                     <div class="dashboard-box-grid">
@@ -676,7 +677,7 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
             </div>
 
-            <div class="row g-3 mb-3">
+            <div class="row g-2">
                 <div class="col-xl-6">
                     <div class="card section-card h-100">
                         <div class="card-header"><h2 class="h5 mb-0">Add Media To Playlist</h2></div>
@@ -879,6 +880,7 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
         <?php endif; ?>
     </div>
+</div>
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function () {

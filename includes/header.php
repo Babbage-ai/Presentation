@@ -193,6 +193,18 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
         #quizEditModal .form-select { border: 1px solid rgba(15, 23, 42, 0.45); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45); }
         #quizEditModal .form-control:focus,
         #quizEditModal .form-select:focus { border-color: rgba(15, 23, 42, 0.75); box-shadow: 0 0 0 0.15rem rgba(15, 23, 42, 0.12); }
+        .playlist-admin-page { display: grid; gap: 0.75rem; }
+        .playlist-admin-page .card-body { padding: 0.78rem; }
+        .playlist-admin-page .hero-card .card-body { padding: 0.85rem; }
+        .playlist-admin-page .section-card .card-body,
+        .playlist-admin-page .list-card .card-body,
+        .playlist-admin-page .table-card .card-body { padding: 0.82rem; }
+        .playlist-admin-page .dashboard-box-head { padding: 0.65rem 0.75rem; }
+        .playlist-admin-page .dashboard-box-body { padding: 0.7rem 0.75rem 0.75rem; }
+        .playlist-admin-page .summary-row { padding: 0.42rem 0.55rem; }
+        .playlist-admin-page .list-group-item { padding: 0.52rem 0.7rem; }
+        .playlist-admin-page .muted-stack { gap: 0.08rem; }
+        .playlist-admin-page .form-text.pt-4 { padding-top: 1rem !important; }
         @media (max-width: 1199px) {
             main.container-fluid { width: 100%; padding-left: 0.8rem; padding-right: 0.8rem; }
             .panel-grid.two-up { grid-template-columns: 1fr; }
