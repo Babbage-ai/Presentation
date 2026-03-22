@@ -354,7 +354,6 @@ require_once __DIR__ . '/../includes/header.php';
                                 title="Delete question"
                                 data-quiz-id="<?= (int) $quiz['id'] ?>"
                                 data-usage-count="<?= (int) $quiz['usage_count'] ?>"
-                                <?= (int) $quiz['usage_count'] > 0 ? 'disabled' : '' ?>
                             >
                                 <i class="bi bi-trash"></i>
                             </button>
@@ -433,6 +432,7 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
+window.addEventListener('load', () => {
 const quizEditModalEl = document.getElementById('quizEditModal');
 const quizEditModal = quizEditModalEl ? new bootstrap.Modal(quizEditModalEl) : null;
 const quizList = document.querySelector('.quiz-list');
@@ -484,7 +484,6 @@ function updateQuizRowState(row, quiz) {
 
     if (deleteButton) {
         deleteButton.dataset.usageCount = String(quiz.usage_count);
-        deleteButton.disabled = Number(quiz.usage_count) > 0;
     }
 }
 
@@ -567,6 +566,14 @@ if (quizList) {
 
         const toggle = event.target.closest('.js-quiz-active-toggle');
         if (toggle) {
+            const usageCount = Number(toggle.dataset.usageCount || '0');
+            if (usageCount > 0) {
+                event.preventDefault();
+                event.stopPropagation();
+                window.alert('Quiz question cannot be deactivated while it is used in a playlist.');
+                return;
+            }
+
             event.stopPropagation();
             return;
         }
@@ -613,13 +620,6 @@ if (quizList) {
             return;
         }
 
-        const usageCount = Number(toggle.dataset.usageCount || '0');
-        if (!toggle.checked && usageCount > 0) {
-            toggle.checked = true;
-            window.alert('Quiz question cannot be deactivated while it is used in a playlist.');
-            return;
-        }
-
         const row = toggle.closest('.quiz-row');
         toggle.disabled = true;
 
@@ -651,5 +651,6 @@ if (quizList) {
         }
     });
 }
+});
 </script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
