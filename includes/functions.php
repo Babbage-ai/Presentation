@@ -460,13 +460,16 @@ function find_screen_by_token(mysqli $db, string $token): ?array
         return null;
     }
 
+    $screenCode = normalize_screen_code($token);
+
     $sql = "SELECT s.*, p.name AS playlist_name, p.active AS playlist_active
             FROM screens s
             LEFT JOIN playlists p ON p.id = s.playlist_id AND p.owner_admin_id = s.owner_admin_id
-            WHERE s.screen_token = ?
+            WHERE s.screen_code = ?
+               OR s.screen_token = ?
             LIMIT 1";
     $statement = $db->prepare($sql);
-    $statement->bind_param('s', $token);
+    $statement->bind_param('ss', $screenCode, $token);
     $statement->execute();
     $result = $statement->get_result();
     $row = $result->fetch_assoc() ?: null;
@@ -479,7 +482,7 @@ function generate_unique_screen_code(mysqli $db): string
 {
     do {
         $code = generate_screen_code();
-        $statement = $db->prepare("SELECT id FROM screens WHERE screen_token = ? LIMIT 1");
+        $statement = $db->prepare("SELECT id FROM screens WHERE screen_code = ? LIMIT 1");
         $statement->bind_param('s', $code);
         $statement->execute();
         $existing = $statement->get_result()->fetch_assoc() ?: null;
@@ -487,6 +490,43 @@ function generate_unique_screen_code(mysqli $db): string
     } while ($existing);
 
     return $code;
+}
+
+function ensure_screen_code(mysqli $db, array $screen): string
+{
+    $existingCode = normalize_screen_code((string) ($screen['screen_code'] ?? ''));
+    if (is_valid_screen_code($existingCode)) {
+        return $existingCode;
+    }
+
+    $screenId = (int) ($screen['id'] ?? 0);
+    if ($screenId < 1) {
+        return '';
+    }
+
+    do {
+        $code = generate_unique_screen_code($db);
+        $statement = $db->prepare("UPDATE screens SET screen_code = ? WHERE id = ? AND (screen_code IS NULL OR screen_code = '' OR CHAR_LENGTH(screen_code) <> 6)");
+        $statement->bind_param('si', $code, $screenId);
+        $statement->execute();
+        $updated = $statement->affected_rows > 0;
+        $statement->close();
+
+        if ($updated) {
+            return $code;
+        }
+
+        $statement = $db->prepare("SELECT screen_code FROM screens WHERE id = ? LIMIT 1");
+        $statement->bind_param('i', $screenId);
+        $statement->execute();
+        $row = $statement->get_result()->fetch_assoc() ?: null;
+        $statement->close();
+
+        $existingCode = normalize_screen_code((string) ($row['screen_code'] ?? ''));
+        if (is_valid_screen_code($existingCode)) {
+            return $existingCode;
+        }
+    } while (true);
 }
 
 function bump_screen_sync_revision(mysqli $db, int $screenId, int $adminId): bool

@@ -16,7 +16,8 @@ if (is_post_request()) {
         $name = trim((string) ($_POST['name'] ?? ''));
         $location = trim((string) ($_POST['location'] ?? ''));
         $playlistId = (int) ($_POST['playlist_id'] ?? 0);
-        $token = generate_unique_screen_code($db);
+        $screenCode = generate_unique_screen_code($db);
+        $token = generate_screen_token();
 
         if ($name === '') {
             set_flash('danger', 'Screen name is required.');
@@ -37,13 +38,13 @@ if (is_post_request()) {
         }
 
         if ($playlistId > 0) {
-            $statement = $db->prepare("INSERT INTO screens (owner_admin_id, name, screen_token, location, playlist_id, resolution, last_seen, last_ip, status, player_version, created_at)
-                                       VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL, 'offline', NULL, UTC_TIMESTAMP())");
-            $statement->bind_param('isssi', $adminId, $name, $token, $location, $playlistId);
+            $statement = $db->prepare("INSERT INTO screens (owner_admin_id, name, screen_code, screen_token, location, playlist_id, resolution, last_seen, last_ip, status, player_version, created_at)
+                                       VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, NULL, 'offline', NULL, UTC_TIMESTAMP())");
+            $statement->bind_param('issssi', $adminId, $name, $screenCode, $token, $location, $playlistId);
         } else {
-            $statement = $db->prepare("INSERT INTO screens (owner_admin_id, name, screen_token, location, playlist_id, resolution, last_seen, last_ip, status, player_version, created_at)
-                                       VALUES (?, ?, ?, ?, NULL, NULL, NULL, NULL, 'offline', NULL, UTC_TIMESTAMP())");
-            $statement->bind_param('isss', $adminId, $name, $token, $location);
+            $statement = $db->prepare("INSERT INTO screens (owner_admin_id, name, screen_code, screen_token, location, playlist_id, resolution, last_seen, last_ip, status, player_version, created_at)
+                                       VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, 'offline', NULL, UTC_TIMESTAMP())");
+            $statement->bind_param('issss', $adminId, $name, $screenCode, $token, $location);
         }
         $statement->execute();
         $statement->close();
@@ -137,15 +138,15 @@ if (is_post_request()) {
 
     if ($action === 'regenerate_token') {
         $screenId = (int) ($_POST['screen_id'] ?? 0);
-        $token = generate_unique_screen_code($db);
+        $screenCode = generate_unique_screen_code($db);
 
         if ($screenId < 1) {
             set_flash('danger', 'Invalid screen code update request.');
             redirect('/admin/screens.php');
         }
 
-        $statement = $db->prepare("UPDATE screens SET screen_token = ? WHERE id = ? AND owner_admin_id = ?");
-        $statement->bind_param('sii', $token, $screenId, $adminId);
+        $statement = $db->prepare("UPDATE screens SET screen_code = ? WHERE id = ? AND owner_admin_id = ?");
+        $statement->bind_param('sii', $screenCode, $screenId, $adminId);
         $statement->execute();
         $statement->close();
 
@@ -175,6 +176,7 @@ $statement->bind_param('i', $adminId);
 $statement->execute();
 $result = $statement->get_result();
 while ($row = $result->fetch_assoc()) {
+    $row['screen_code'] = ensure_screen_code($db, $row);
     $screens[] = $row;
 }
 $statement->close();
@@ -315,8 +317,8 @@ require_once __DIR__ . '/../includes/header.php';
                         <?php foreach ($screens as $screen): ?>
                             <?php $online = screen_is_online($screen['last_seen']); ?>
                             <?php $formId = 'screen-form-' . (int) $screen['id']; ?>
-                            <?php $playerUrl = player_launch_url($screen['screen_token']); ?>
-                            <?php $browserTestUrl = player_browser_test_url($screen['screen_token']); ?>
+                            <?php $playerUrl = player_launch_url($screen['screen_code']); ?>
+                            <?php $browserTestUrl = player_browser_test_url($screen['screen_code']); ?>
                             <div class="screen-card">
                                 <div class="screen-card-head">
                                     <div class="screen-card-title">
@@ -385,7 +387,7 @@ require_once __DIR__ . '/../includes/header.php';
                                             </div>
                                             <div class="panel-section-body">
                                                 <div class="screen-card-meta">
-                                                    <span class="badge text-bg-dark">Code <?= e($screen['screen_token']) ?></span>
+                                                    <span class="badge text-bg-dark">Code <?= e($screen['screen_code']) ?></span>
                                                     <span class="badge text-bg-light border"><?= e($screen['playlist_name'] ?: 'Unassigned') ?></span>
                                                     <span class="badge text-bg-light border">Seen <?= e(format_datetime($screen['last_seen'])) ?></span>
                                                     <?php if (!empty($screen['last_ip'])): ?>
@@ -412,7 +414,7 @@ require_once __DIR__ . '/../includes/header.php';
                                                             </div>
                                                             <div class="info-cell info-cell-wide">
                                                                 <span class="info-label">Screen Code</span>
-                                                                <pre class="token-box bg-light p-2 rounded mt-2"><?= e($screen['screen_token']) ?></pre>
+                                                                <pre class="token-box bg-light p-2 rounded mt-2"><?= e($screen['screen_code']) ?></pre>
                                                             </div>
                                                             <div class="info-cell info-cell-wide">
                                                                 <span class="info-label">Player URL</span>

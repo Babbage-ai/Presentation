@@ -107,6 +107,12 @@ To add admin-pushed screen updates and random quiz markers to an existing instal
 mysql -u your_db_user -p < sql/migrations/20260320_add_screen_sync_and_random_quiz_markers.sql
 ```
 
+To add dedicated 6-character screen codes for existing installs, also run:
+
+```bash
+mysql -u your_db_user -p < sql/migrations/20260322_add_screen_codes.sql
+```
+
 ## Default Admin Creation
 
 The seed SQL creates:
