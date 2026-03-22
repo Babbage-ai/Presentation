@@ -6,9 +6,9 @@ require_once __DIR__ . '/../includes/db.php';
 
 set_api_headers();
 
-$token = trim((string) ($_GET['token'] ?? $_POST['token'] ?? ''));
+$token = trim((string) ($_GET['screen'] ?? $_GET['token'] ?? $_POST['screen'] ?? $_POST['token'] ?? ''));
 if ($token === '') {
-    json_response(false, 'Missing screen token.', [], 400);
+    json_response(false, 'Missing screen code.', [], 400);
 }
 
 $db = get_db();
@@ -16,7 +16,7 @@ sync_screen_statuses($db);
 $screen = find_screen_by_token($db, $token);
 
 if (!$screen) {
-    json_response(false, 'Invalid screen token.', [], 401);
+    json_response(false, 'Invalid screen code.', [], 401);
 }
 
 $playlistSummary = null;

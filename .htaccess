@@ -1,0 +1,4 @@
+RewriteEngine On
+
+# Allow /screen=ABC123 to resolve through the main entrypoint.
+RewriteRule ^screen=([A-Za-z0-9]{6})$ index.php?screen=$1 [L,QSA]

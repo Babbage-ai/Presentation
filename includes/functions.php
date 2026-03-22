@@ -236,9 +236,28 @@ function format_datetime(?string $datetime): string
     }
 }
 
-function generate_screen_token(int $bytes = 24): string
+function normalize_screen_code(string $value): string
 {
-    return bin2hex(random_bytes($bytes));
+    $value = strtoupper(trim($value));
+    return preg_replace('/[^A-Z0-9]/', '', $value) ?? '';
+}
+
+function is_valid_screen_code(string $value): bool
+{
+    return preg_match('/^[A-Z0-9]{6}$/', normalize_screen_code($value)) === 1;
+}
+
+function generate_screen_code(int $length = 6): string
+{
+    $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    $maxIndex = strlen($alphabet) - 1;
+    $code = '';
+
+    for ($index = 0; $index < $length; $index++) {
+        $code .= $alphabet[random_int(0, $maxIndex)];
+    }
+
+    return $code;
 }
 
 function media_upload_dir(): string
@@ -371,16 +390,15 @@ function media_file_exists(string $filename): bool
     return is_file(media_upload_dir() . '/' . $filename);
 }
 
-function player_launch_url(string $screenToken): string
+function player_launch_url(string $screenCode): string
 {
-    return application_base_url()
-        . '/player/player.html?token=' . rawurlencode($screenToken)
-        . '&api_base_url=' . rawurlencode(application_base_url());
+    return absolute_url('/screen=' . rawurlencode(normalize_screen_code($screenCode)));
 }
 
-function player_browser_test_url(string $screenToken): string
+function player_browser_test_url(string $screenCode): string
 {
-    return player_launch_url($screenToken)
+    return absolute_url('/player/player.html?screen=' . rawurlencode(normalize_screen_code($screenCode)))
+        . '&api_base_url=' . rawurlencode(application_base_url())
         . '&refresh_interval_seconds=30'
         . '&heartbeat_interval_seconds=30';
 }
@@ -437,6 +455,11 @@ function sync_screen_statuses(mysqli $db, int $onlineThresholdSeconds = 120): vo
 
 function find_screen_by_token(mysqli $db, string $token): ?array
 {
+    $token = trim($token);
+    if ($token === '') {
+        return null;
+    }
+
     $sql = "SELECT s.*, p.name AS playlist_name, p.active AS playlist_active
             FROM screens s
             LEFT JOIN playlists p ON p.id = s.playlist_id AND p.owner_admin_id = s.owner_admin_id
@@ -450,6 +473,20 @@ function find_screen_by_token(mysqli $db, string $token): ?array
     $statement->close();
 
     return $row;
+}
+
+function generate_unique_screen_code(mysqli $db): string
+{
+    do {
+        $code = generate_screen_code();
+        $statement = $db->prepare("SELECT id FROM screens WHERE screen_token = ? LIMIT 1");
+        $statement->bind_param('s', $code);
+        $statement->execute();
+        $existing = $statement->get_result()->fetch_assoc() ?: null;
+        $statement->close();
+    } while ($existing);
+
+    return $code;
 }
 
 function bump_screen_sync_revision(mysqli $db, int $screenId, int $adminId): bool

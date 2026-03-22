@@ -11,7 +11,7 @@ It does not fully install the player from the PC alone. Instead, it prepares the
 - configures Chromium kiosk autostart
 - creates the `cloud-signage-player.service` local HTTP service
 - disables display blanking
-- leaves `player/config.json` ready for you to fill in with the real cloud server URL and screen token
+- leaves `player/config.json` ready for you to fill in with the real cloud server URL and screen code
 
 ## Requirements
 
@@ -78,14 +78,14 @@ Log into the Pi locally or over SSH and edit:
 Set:
 
 - `api_base_url`
-- `screen_token`
+- `screen_code`
 
 Example:
 
 ```json
 {
     "api_base_url": "https://your-domain.example",
-    "screen_token": "replace-with-screen-token",
+    "screen_code": "ABC123",
     "refresh_interval_seconds": 300,
     "heartbeat_interval_seconds": 60,
     "cache_namespace": "screen-main"

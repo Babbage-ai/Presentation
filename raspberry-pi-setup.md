@@ -38,7 +38,7 @@ nano /home/pi/cloud-signage/player/config.json
 Set:
 
 - `api_base_url`
-- `screen_token`
+- `screen_code`
 - optional refresh and heartbeat intervals
 
 ## 4. Serve The Player Locally
@@ -126,7 +126,7 @@ sudo systemctl start cloud-signage-player.service
 ## 8. Operational Notes
 
 - Create one screen record per Pi in the admin panel.
-- Paste the matching token into `player/config.json`.
+- Paste the matching screen code into `player/config.json`.
 - Heartbeats update the screen's `last_seen`, `resolution`, IP, and player version.
 - Cached media remains available in Chromium's local profile even if the WAN connection drops.
 

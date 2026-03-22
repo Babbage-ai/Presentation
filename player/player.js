@@ -67,7 +67,7 @@
     function readUrlConfig() {
         const params = new URLSearchParams(window.location.search);
         const apiBaseUrl = (params.get('api_base_url') || '').trim();
-        const screenToken = (params.get('token') || '').trim();
+        const screenToken = (params.get('screen') || params.get('token') || '').trim().toUpperCase();
         const cacheNamespace = (params.get('cache_namespace') || '').trim();
         const refreshInterval = Number.parseInt(params.get('refresh_interval_seconds') || '', 10);
         const heartbeatInterval = Number.parseInt(params.get('heartbeat_interval_seconds') || '', 10);
@@ -105,7 +105,10 @@
             config.api_base_url = urlConfig.api_base_url;
         }
         if (urlConfig.screen_token) {
-            config.screen_token = urlConfig.screen_token;
+            config.screen_token = String(urlConfig.screen_token).trim().toUpperCase();
+        }
+        if (config.screen_code && !config.screen_token) {
+            config.screen_token = String(config.screen_code).trim().toUpperCase();
         }
         if (urlConfig.cache_namespace) {
             config.cache_namespace = urlConfig.cache_namespace;
@@ -118,7 +121,7 @@
         }
 
         if (!config.api_base_url || !config.screen_token) {
-            throw new Error('Provide token and api_base_url in the URL or in config.json.');
+            throw new Error('Provide screen code and api_base_url in the URL or in config.json.');
         }
 
         return config;
@@ -240,7 +243,7 @@
         }
 
         state.syncPromise = (async () => {
-            const query = '?token=' + encodeURIComponent(state.config.screen_token);
+            const query = '?screen=' + encodeURIComponent(state.config.screen_token);
             const data = await fetchApiJson('/api/get_playlist.php' + query);
             const nextPlaylist = Array.isArray(data.items) ? data.items : [];
             const currentItemIdentity = playlistIdentity(state.playlist[state.currentIndex]);
@@ -560,7 +563,7 @@
 
     async function sendHeartbeat() {
         const payload = {
-            token: state.config.screen_token,
+            screen: state.config.screen_token,
             ip: '',
             resolution: window.innerWidth + 'x' + window.innerHeight,
             player_version: PLAYER_VERSION

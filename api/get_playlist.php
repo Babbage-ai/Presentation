@@ -6,9 +6,9 @@ require_once __DIR__ . '/../includes/db.php';
 
 set_api_headers();
 
-$token = trim((string) ($_GET['token'] ?? $_POST['token'] ?? ''));
+$token = trim((string) ($_GET['screen'] ?? $_GET['token'] ?? $_POST['screen'] ?? $_POST['token'] ?? ''));
 if ($token === '') {
-    json_response(false, 'Missing screen token.', [], 400);
+    json_response(false, 'Missing screen code.', [], 400);
 }
 
 $db = get_db();
@@ -16,7 +16,7 @@ sync_screen_statuses($db);
 $screen = find_screen_by_token($db, $token);
 
 if (!$screen) {
-    json_response(false, 'Invalid screen token.', [], 401);
+    json_response(false, 'Invalid screen code.', [], 401);
 }
 
 if (empty($screen['playlist_id'])) {
@@ -65,7 +65,7 @@ foreach ($items as $item) {
         'type' => $item['media_type'],
         'filename' => $item['filename'],
         'full_url' => $item['full_url'],
-        'download_url' => absolute_url('api/download.php?token=' . rawurlencode($token) . '&media_id=' . (int) $item['media_id']),
+        'download_url' => absolute_url('api/download.php?screen=' . rawurlencode($token) . '&media_id=' . (int) $item['media_id']),
         'duration' => $item['media_type'] === 'image' ? max(1, (int) $item['image_duration']) : null,
         'sort_order' => (int) $item['sort_order'],
     ];

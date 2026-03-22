@@ -16,7 +16,7 @@ if (is_post_request()) {
         $name = trim((string) ($_POST['name'] ?? ''));
         $location = trim((string) ($_POST['location'] ?? ''));
         $playlistId = (int) ($_POST['playlist_id'] ?? 0);
-        $token = generate_screen_token();
+        $token = generate_unique_screen_code($db);
 
         if ($name === '') {
             set_flash('danger', 'Screen name is required.');
@@ -48,7 +48,7 @@ if (is_post_request()) {
         $statement->execute();
         $statement->close();
 
-        set_flash('success', 'Screen created.');
+        set_flash('success', 'Screen created with a new screen code.');
         redirect('/admin/screens.php');
     }
 
@@ -137,10 +137,10 @@ if (is_post_request()) {
 
     if ($action === 'regenerate_token') {
         $screenId = (int) ($_POST['screen_id'] ?? 0);
-        $token = generate_screen_token();
+        $token = generate_unique_screen_code($db);
 
         if ($screenId < 1) {
-            set_flash('danger', 'Invalid screen token update request.');
+            set_flash('danger', 'Invalid screen code update request.');
             redirect('/admin/screens.php');
         }
 
@@ -149,7 +149,7 @@ if (is_post_request()) {
         $statement->execute();
         $statement->close();
 
-        set_flash('success', 'Screen token regenerated.');
+        set_flash('success', 'Screen code regenerated.');
         redirect('/admin/screens.php');
     }
 }
@@ -260,7 +260,7 @@ require_once __DIR__ . '/../includes/header.php';
                         </div>
                     </div>
                     <div class="panel-section-body">
-                        <div class="compact-note">A token is generated automatically and the screen starts offline until the player checks in.</div>
+                        <div class="compact-note">A 6-character screen code is generated automatically and the screen starts offline until the player checks in.</div>
                     </div>
                 </div>
                 <form class="dense-form" method="post">
@@ -308,7 +308,7 @@ require_once __DIR__ . '/../includes/header.php';
                             </div>
                         </div>
                         <div class="panel-section-body">
-                            <div class="compact-note">Use the top actions for quick launch and sync. Open details only when you need token or diagnostics.</div>
+                            <div class="compact-note">Use the top actions for quick launch and sync. Open details only when you need the screen code or diagnostics.</div>
                         </div>
                     </div>
                     <div class="screen-list">
@@ -397,7 +397,7 @@ require_once __DIR__ . '/../includes/header.php';
                                                 <details class="details-toggle mt-3">
                                                     <summary>
                                                         <span>Details And Tools</span>
-                                                        <span class="compact-note">Token, player URL, and diagnostics</span>
+                                                        <span class="compact-note">Screen code, player URL, and diagnostics</span>
                                                     </summary>
                                                     <div class="details-toggle-body">
                                                         <div class="info-grid">
@@ -410,7 +410,7 @@ require_once __DIR__ . '/../includes/header.php';
                                                                 <div class="info-value"><?= (int) $screen['sync_revision'] ?></div>
                                                             </div>
                                                             <div class="info-cell info-cell-wide">
-                                                                <span class="info-label">Token</span>
+                                                                <span class="info-label">Screen Code</span>
                                                                 <pre class="token-box bg-light p-2 rounded mt-2"><?= e($screen['screen_token']) ?></pre>
                                                             </div>
                                                             <div class="info-cell info-cell-wide">
@@ -428,7 +428,7 @@ require_once __DIR__ . '/../includes/header.php';
                                             <div class="panel-section-head">
                                                 <div>
                                                     <h2 class="panel-section-title">Edit Screen</h2>
-                                                    <p class="panel-section-copy">Update name, location, playlist, or token.</p>
+                                                    <p class="panel-section-copy">Update name, location, playlist, or screen code.</p>
                                                 </div>
                                             </div>
                                             <div class="panel-section-body">
@@ -459,11 +459,11 @@ require_once __DIR__ . '/../includes/header.php';
                                                         <i class="bi bi-check2"></i>
                                                     </button>
                                                 </form>
-                                                <form method="post" class="m-0" onsubmit="return confirm('Regenerate the screen token? The player config will need to be updated.');">
+                                                <form method="post" class="m-0" onsubmit="return confirm('Regenerate the screen code? Any player using the old code or token will need to be updated.');">
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="action" value="regenerate_token">
                                                     <input type="hidden" name="screen_id" value="<?= (int) $screen['id'] ?>">
-                                                    <button class="btn btn-outline-warning icon-btn" type="submit" title="Regenerate token" aria-label="Regenerate token">
+                                                    <button class="btn btn-outline-warning icon-btn" type="submit" title="Regenerate screen code" aria-label="Regenerate screen code">
                                                         <i class="bi bi-key"></i>
                                                     </button>
                                                 </form>

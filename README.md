@@ -12,7 +12,7 @@ This repository contains a deployable Phase 1 MVP for a cloud-managed digital si
 - Quiz question management with countdown and answer reveal
 - Playlist creation and item ordering
 - Mixed playlists containing media, fixed quiz items, and random quiz markers
-- Screen registration with unique tokens
+- Screen registration with unique 6-character codes
 - Screen-to-playlist assignment
 - Admin-triggered screen update push on the next player heartbeat
 - Heartbeat logging and online/offline visibility
@@ -148,9 +148,8 @@ sudo chmod -R 755 /path/to/project/uploads
 ## How Raspberry Pi Devices Connect
 
 1. Create a screen in the admin panel.
-2. Copy the generated `screen_token`.
-3. Copy [`player/config.json.example`](/workspaces/Presentation/player/config.json.example) to `player/config.json`.
-4. Set `api_base_url` and `screen_token`.
+2. Copy the generated 6-character `screen code`.
+3. Set `api_base_url` and `screen_code` in [`player/config.json`](/workspaces/Presentation/player/config.json).
 5. Serve the player locally on the Pi.
 6. Launch Chromium in kiosk mode against the local player URL.
 
@@ -177,16 +176,16 @@ All API responses use this JSON shape:
 
 Endpoints:
 
-- `GET /api/get_screen_config.php?token=...`
-- `GET /api/get_playlist.php?token=...`
+- `GET /api/get_screen_config.php?screen=...`
+- `GET /api/get_playlist.php?screen=...`
 - `POST /api/heartbeat.php`
-- `GET /api/download.php?token=...&media_id=...`
+- `GET /api/download.php?screen=...&media_id=...`
 
 ## Notes On Media Delivery
 
 The project includes `download.php` rather than relying only on direct static file URLs. This makes the player-side fetch flow simpler because:
 
-- screen tokens are validated before download
+- screen codes are validated before download
 - CORS headers can be sent consistently from PHP
 - the player can cache fetched blobs locally without extra web server rules
 

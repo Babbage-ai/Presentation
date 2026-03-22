@@ -7,21 +7,21 @@ require_once __DIR__ . '/../includes/db.php';
 set_api_headers();
 
 $input = get_json_input();
-$token = trim((string) ($input['token'] ?? $_POST['token'] ?? ''));
+$token = trim((string) ($input['screen'] ?? $input['token'] ?? $_POST['screen'] ?? $_POST['token'] ?? ''));
 $resolution = trim((string) ($input['resolution'] ?? $_POST['resolution'] ?? ''));
 $playerVersion = trim((string) ($input['player_version'] ?? $_POST['player_version'] ?? ''));
 $reportedIp = trim((string) ($input['ip'] ?? $_POST['ip'] ?? ''));
 $ip = $reportedIp !== '' ? $reportedIp : (string) ($_SERVER['REMOTE_ADDR'] ?? '');
 
 if ($token === '') {
-    json_response(false, 'Missing screen token.', [], 400);
+    json_response(false, 'Missing screen code.', [], 400);
 }
 
 $db = get_db();
 $screen = find_screen_by_token($db, $token);
 
 if (!$screen) {
-    json_response(false, 'Invalid screen token.', [], 401);
+    json_response(false, 'Invalid screen code.', [], 401);
 }
 
 $status = 'online';

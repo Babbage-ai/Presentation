@@ -1,6 +1,6 @@
 {
     "api_base_url": "https://babbage-ai.co.uk/Present",
-    "screen_token": "cafc46e5e43214ad39863a5f37ed9e2b11d37dd56744d66d",
+    "screen_code": "ABC123",
     "refresh_interval_seconds": 300,
     "heartbeat_interval_seconds": 60,
     "cache_namespace": "screen-main"

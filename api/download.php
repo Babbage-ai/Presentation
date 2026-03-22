@@ -13,19 +13,19 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
     exit;
 }
 
-$token = trim((string) ($_GET['token'] ?? ''));
+$token = trim((string) ($_GET['screen'] ?? $_GET['token'] ?? ''));
 $mediaId = (int) ($_GET['media_id'] ?? 0);
 
 if ($token === '' || $mediaId < 1) {
     http_response_code(400);
-    exit('Missing token or media id.');
+    exit('Missing screen code or media id.');
 }
 
 $db = get_db();
 $screen = find_screen_by_token($db, $token);
 if (!$screen) {
     http_response_code(401);
-    exit('Invalid screen token.');
+    exit('Invalid screen code.');
 }
 
 $sql = "SELECT m.filename, m.mime_type

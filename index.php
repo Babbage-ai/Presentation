@@ -3,6 +3,15 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/functions.php';
 
+$requestedScreenCode = normalize_screen_code((string) ($_GET['screen'] ?? ''));
+if ($requestedScreenCode !== '') {
+    $playerUrl = app_path('/player/player.html')
+        . '?screen=' . rawurlencode($requestedScreenCode)
+        . '&api_base_url=' . rawurlencode(application_base_url());
+    header('Location: ' . $playerUrl, true, 302);
+    exit;
+}
+
 $siteName = 'DisplayFlow';
 $primaryTagline = 'Control every screen. Anywhere.';
 $supportLine = 'Works on any screen. No hardware required.';
