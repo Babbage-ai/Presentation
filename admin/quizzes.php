@@ -7,6 +7,42 @@ require_login();
 $db = get_db();
 $adminId = current_admin_id();
 
+function find_quiz_question(mysqli $db, int $adminId, int $quizId): ?array
+{
+    $statement = $db->prepare("SELECT q.*,
+            (SELECT COUNT(*)
+             FROM playlist_items pi
+             INNER JOIN playlists p ON p.id = pi.playlist_id
+             WHERE pi.quiz_question_id = q.id AND p.owner_admin_id = q.owner_admin_id) AS usage_count
+        FROM quiz_questions q
+        WHERE q.id = ? AND q.owner_admin_id = ?
+        LIMIT 1");
+    $statement->bind_param('ii', $quizId, $adminId);
+    $statement->execute();
+    $quiz = $statement->get_result()->fetch_assoc() ?: null;
+    $statement->close();
+
+    return $quiz;
+}
+
+function quiz_question_payload(array $quiz): array
+{
+    return [
+        'id' => (int) $quiz['id'],
+        'question_text' => (string) $quiz['question_text'],
+        'option_a' => (string) $quiz['option_a'],
+        'option_b' => (string) $quiz['option_b'],
+        'option_c' => (string) $quiz['option_c'],
+        'option_d' => (string) $quiz['option_d'],
+        'correct_option' => (string) $quiz['correct_option'],
+        'countdown_seconds' => (int) $quiz['countdown_seconds'],
+        'reveal_duration' => (int) $quiz['reveal_duration'],
+        'active' => (int) $quiz['active'],
+        'usage_count' => (int) ($quiz['usage_count'] ?? 0),
+        'updated_at' => format_datetime($quiz['updated_at'] ?? null),
+    ];
+}
+
 if (is_post_request()) {
     require_valid_csrf();
     $action = (string) ($_POST['action'] ?? '');
@@ -25,12 +61,12 @@ if (is_post_request()) {
 
         if ($questionText === '' || $optionA === '' || $optionB === '' || $optionC === '' || $optionD === '') {
             set_flash('danger', 'Question text and all four answers are required.');
-            redirect('/admin/quizzes.php' . ($quizId > 0 ? '?quiz_id=' . $quizId : ''));
+            redirect('/admin/quizzes.php');
         }
 
         if (!in_array($correctOption, ['A', 'B', 'C', 'D'], true)) {
             set_flash('danger', 'Choose a valid correct answer.');
-            redirect('/admin/quizzes.php' . ($quizId > 0 ? '?quiz_id=' . $quizId : ''));
+            redirect('/admin/quizzes.php');
         }
 
         if ($action === 'create_quiz') {
@@ -39,11 +75,10 @@ if (is_post_request()) {
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())");
             $statement->bind_param('issssssiii', $adminId, $questionText, $optionA, $optionB, $optionC, $optionD, $correctOption, $countdownSeconds, $revealDuration, $active);
             $statement->execute();
-            $quizId = $statement->insert_id;
             $statement->close();
 
             set_flash('success', 'Quiz question created.');
-            redirect('/admin/quizzes.php?quiz_id=' . $quizId);
+            redirect('/admin/quizzes.php');
         }
 
         $statement = $db->prepare("UPDATE quiz_questions
@@ -54,7 +89,44 @@ if (is_post_request()) {
         $statement->close();
 
         set_flash('success', 'Quiz question updated.');
-        redirect('/admin/quizzes.php?quiz_id=' . $quizId);
+        redirect('/admin/quizzes.php');
+    }
+
+    if ($action === 'toggle_quiz_active') {
+        $quizId = (int) ($_POST['quiz_id'] ?? 0);
+        $active = isset($_POST['active']) ? 1 : 0;
+
+        $statement = $db->prepare("UPDATE quiz_questions
+            SET active = ?, updated_at = UTC_TIMESTAMP()
+            WHERE id = ? AND owner_admin_id = ?");
+        $statement->bind_param('iii', $active, $quizId, $adminId);
+        $statement->execute();
+        $statement->close();
+
+        $quiz = find_quiz_question($db, $adminId, $quizId);
+
+        if (is_ajax_request()) {
+            header('Content-Type: application/json');
+
+            if (!$quiz) {
+                http_response_code(404);
+                echo json_encode([
+                    'ok' => false,
+                    'message' => 'Quiz question not found.',
+                ]);
+                exit;
+            }
+
+            echo json_encode([
+                'ok' => true,
+                'message' => $active === 1 ? 'Quiz question activated.' : 'Quiz question deactivated.',
+                'quiz' => quiz_question_payload($quiz),
+            ]);
+            exit;
+        }
+
+        set_flash($quiz ? 'success' : 'danger', $quiz ? ($active === 1 ? 'Quiz question activated.' : 'Quiz question deactivated.') : 'Quiz question not found.');
+        redirect('/admin/quizzes.php');
     }
 
     if ($action === 'delete_quiz') {
@@ -70,14 +142,45 @@ if (is_post_request()) {
         $statement->close();
 
         if ($usageCount > 0) {
+            if (is_ajax_request()) {
+                header('Content-Type: application/json');
+                http_response_code(409);
+                echo json_encode([
+                    'ok' => false,
+                    'message' => 'Quiz question cannot be deleted while it is used in a playlist.',
+                ]);
+                exit;
+            }
+
             set_flash('warning', 'Quiz question cannot be deleted while it is used in a playlist.');
-            redirect('/admin/quizzes.php?quiz_id=' . $quizId);
+            redirect('/admin/quizzes.php');
         }
 
         $statement = $db->prepare("DELETE FROM quiz_questions WHERE id = ? AND owner_admin_id = ?");
         $statement->bind_param('ii', $quizId, $adminId);
         $statement->execute();
+        $deleted = $statement->affected_rows > 0;
         $statement->close();
+
+        if (is_ajax_request()) {
+            header('Content-Type: application/json');
+
+            if (!$deleted) {
+                http_response_code(404);
+                echo json_encode([
+                    'ok' => false,
+                    'message' => 'Quiz question not found.',
+                ]);
+                exit;
+            }
+
+            echo json_encode([
+                'ok' => true,
+                'message' => 'Quiz question deleted.',
+                'quiz_id' => $quizId,
+            ]);
+            exit;
+        }
 
         set_flash('success', 'Quiz question deleted.');
         redirect('/admin/quizzes.php');
@@ -101,17 +204,6 @@ while ($row = $result->fetch_assoc()) {
 }
 $statement->close();
 
-$selectedQuizId = (int) ($_GET['quiz_id'] ?? ($quizQuestions[0]['id'] ?? 0));
-$selectedQuiz = null;
-
-if ($selectedQuizId > 0) {
-    $statement = $db->prepare("SELECT * FROM quiz_questions WHERE id = ? AND owner_admin_id = ? LIMIT 1");
-    $statement->bind_param('ii', $selectedQuizId, $adminId);
-    $statement->execute();
-    $selectedQuiz = $statement->get_result()->fetch_assoc() ?: null;
-    $statement->close();
-}
-
 $activeQuizCount = 0;
 $quizInUseCount = 0;
 foreach ($quizQuestions as $quiz) {
@@ -129,7 +221,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="section-heading">
     <div>
         <h1 class="h3">Quizzes</h1>
-        <div class="section-subtitle">Build question banks and manage the quiz timing in one place.</div>
+        <div class="section-subtitle">Create questions, toggle availability instantly, and edit from a single click.</div>
     </div>
 </div>
 <div class="row g-3 mb-3">
@@ -163,9 +255,9 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="col-6 col-xl-3">
         <div class="card stat-card">
             <div class="card-body">
-                <div class="stat-label">Selected</div>
-                <div class="stat-number-box"><div class="small fw-semibold"><?= $selectedQuiz ? 'Edit' : 'None' ?></div></div>
-                <div class="stat-meta"><?= $selectedQuiz ? 'Question loaded below' : 'Choose one from the list' ?></div>
+                <div class="stat-label">Available</div>
+                <div class="stat-number-box"><div class="stat-value"><?= max(0, count($quizQuestions) - $quizInUseCount) ?></div></div>
+                <div class="stat-meta">Not currently in playlists</div>
             </div>
         </div>
     </div>
@@ -234,100 +326,296 @@ require_once __DIR__ . '/../includes/header.php';
         </form>
     </div>
 </div>
-<div class="row g-3">
-    <div class="col-xl-3 col-lg-4">
-        <div class="admin-side-panel panel-stack">
-        <div class="card list-card">
-            <div class="card-header"><h2 class="h5 mb-0">Quiz Questions</h2></div>
-            <div class="list-group list-group-flush">
-                <?php if (!$quizQuestions): ?>
-                    <div class="list-group-item text-muted">No quiz questions created yet.</div>
-                <?php else: ?>
-                    <?php foreach ($quizQuestions as $quiz): ?>
-                        <a class="list-group-item list-group-item-action <?= (int) $quiz['id'] === $selectedQuizId ? 'active' : '' ?>" href="<?= e(app_path('/admin/quizzes.php?quiz_id=' . (int) $quiz['id'])) ?>">
-                            <?php $questionPreview = substr($quiz['question_text'], 0, 80); ?>
-                            <div class="small fw-semibold"><?= e($questionPreview) ?><?= strlen($quiz['question_text']) > 80 ? '...' : '' ?></div>
-                            <div class="small opacity-75"><?= (int) $quiz['usage_count'] ?> playlist use(s)</div>
-                        </a>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-        </div>
+<div class="card list-card">
+    <div class="card-header"><h2 class="h5 mb-0">Quiz Questions</h2></div>
+    <div class="card-body p-0">
+        <div class="quiz-list">
+            <?php if (!$quizQuestions): ?>
+                <div class="p-3 text-muted">No quiz questions created yet.</div>
+            <?php else: ?>
+                <?php foreach ($quizQuestions as $quiz): ?>
+                    <?php $questionPreview = substr($quiz['question_text'], 0, 120); ?>
+                    <div
+                        class="quiz-row"
+                        data-quiz="<?= e(json_encode(quiz_question_payload($quiz), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)) ?>"
+                        tabindex="0"
+                        role="button"
+                    >
+                        <div class="quiz-row-main">
+                            <div class="quiz-row-title"><?= e($questionPreview) ?><?= strlen($quiz['question_text']) > 120 ? '...' : '' ?></div>
+                            <div class="quiz-row-meta">
+                                <span><?= (int) $quiz['usage_count'] ?> playlist use(s)</span>
+                                <span><?= (int) $quiz['active'] === 1 ? 'Active' : 'Inactive' ?></span>
+                                <span>Updated <?= e(format_datetime($quiz['updated_at'])) ?></span>
+                            </div>
+                        </div>
+                        <div class="quiz-row-actions">
+                            <label class="quiz-row-toggle" title="Active">
+                                <input
+                                    class="form-check-input js-quiz-active-toggle"
+                                    type="checkbox"
+                                    <?= (int) $quiz['active'] === 1 ? 'checked' : '' ?>
+                                    data-quiz-id="<?= (int) $quiz['id'] ?>"
+                                >
+                            </label>
+                            <button
+                                class="btn btn-outline-danger btn-sm icon-btn icon-btn-sm js-quiz-delete"
+                                type="button"
+                                title="Delete question"
+                                data-quiz-id="<?= (int) $quiz['id'] ?>"
+                                data-usage-count="<?= (int) $quiz['usage_count'] ?>"
+                            >
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
+</div>
 
-    <div class="col-xl-9 col-lg-8">
-        <?php if (!$selectedQuiz): ?>
-            <div class="card section-card">
-                <div class="card-body text-muted">Select a quiz question to edit it.</div>
+<div class="modal fade" id="quizEditModal" tabindex="-1" aria-labelledby="quizEditModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5 mb-0" id="quizEditModalLabel">Edit Quiz Question</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-        <?php else: ?>
-            <div class="card hero-card">
-                <div class="card-header"><h2 class="h5 mb-0">Edit Quiz Question</h2></div>
-                <div class="card-body">
-                    <form class="dense-form" method="post">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="action" value="update_quiz">
-                        <input type="hidden" name="quiz_id" value="<?= (int) $selectedQuiz['id'] ?>">
-                        <div class="mb-3">
-                            <label class="form-label" for="selected_question_text">Question</label>
-                            <textarea class="form-control" id="selected_question_text" name="question_text" rows="3" required><?= e($selectedQuiz['question_text']) ?></textarea>
+            <div class="modal-body">
+                <form class="dense-form" method="post" id="quizEditForm">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="update_quiz">
+                    <input type="hidden" name="quiz_id" id="edit_quiz_id" value="">
+                    <div class="mb-3">
+                        <label class="form-label" for="edit_question_text">Question</label>
+                        <textarea class="form-control" id="edit_question_text" name="question_text" rows="3" required></textarea>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="edit_option_a">Answer A</label>
+                            <input class="form-control" id="edit_option_a" name="option_a" type="text" required>
                         </div>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label" for="selected_option_a">Answer A</label>
-                                <input class="form-control" id="selected_option_a" name="option_a" type="text" value="<?= e($selectedQuiz['option_a']) ?>" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="selected_option_b">Answer B</label>
-                                <input class="form-control" id="selected_option_b" name="option_b" type="text" value="<?= e($selectedQuiz['option_b']) ?>" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="selected_option_c">Answer C</label>
-                                <input class="form-control" id="selected_option_c" name="option_c" type="text" value="<?= e($selectedQuiz['option_c']) ?>" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="selected_option_d">Answer D</label>
-                                <input class="form-control" id="selected_option_d" name="option_d" type="text" value="<?= e($selectedQuiz['option_d']) ?>" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" for="selected_correct_option">Correct Answer</label>
-                                <select class="form-select" id="selected_correct_option" name="correct_option">
-                                    <?php foreach (['A', 'B', 'C', 'D'] as $answerKey): ?>
-                                        <option value="<?= e($answerKey) ?>" <?= $selectedQuiz['correct_option'] === $answerKey ? 'selected' : '' ?>><?= e($answerKey) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" for="selected_countdown_seconds">Countdown</label>
-                                <input class="form-control" id="selected_countdown_seconds" name="countdown_seconds" type="number" min="1" value="<?= (int) $selectedQuiz['countdown_seconds'] ?>" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" for="selected_reveal_duration">Reveal Duration</label>
-                                <input class="form-control" id="selected_reveal_duration" name="reveal_duration" type="number" min="1" value="<?= (int) $selectedQuiz['reveal_duration'] ?>" required>
-                            </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="edit_option_b">Answer B</label>
+                            <input class="form-control" id="edit_option_b" name="option_b" type="text" required>
                         </div>
-                        <div class="form-check mt-3">
-                            <input class="form-check-input" id="selected_quiz_active" name="active" type="checkbox" <?= (int) $selectedQuiz['active'] === 1 ? 'checked' : '' ?>>
-                            <label class="form-check-label" for="selected_quiz_active">Quiz active</label>
+                        <div class="col-md-6">
+                            <label class="form-label" for="edit_option_c">Answer C</label>
+                            <input class="form-control" id="edit_option_c" name="option_c" type="text" required>
                         </div>
-                        <button class="btn btn-primary mt-3" type="submit">
+                        <div class="col-md-6">
+                            <label class="form-label" for="edit_option_d">Answer D</label>
+                            <input class="form-control" id="edit_option_d" name="option_d" type="text" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="edit_correct_option">Correct Answer</label>
+                            <select class="form-select" id="edit_correct_option" name="correct_option">
+                                <?php foreach (['A', 'B', 'C', 'D'] as $answerKey): ?>
+                                    <option value="<?= e($answerKey) ?>"><?= e($answerKey) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="edit_countdown_seconds">Countdown</label>
+                            <input class="form-control" id="edit_countdown_seconds" name="countdown_seconds" type="number" min="1" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="edit_reveal_duration">Reveal Duration</label>
+                            <input class="form-control" id="edit_reveal_duration" name="reveal_duration" type="number" min="1" required>
+                        </div>
+                    </div>
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" id="edit_quiz_active" name="active" type="checkbox">
+                        <label class="form-check-label" for="edit_quiz_active">Quiz active</label>
+                    </div>
+                    <div class="compact-form-actions mt-3">
+                        <button class="btn btn-primary" type="submit">
                             <i class="bi bi-check2"></i>
                             <span class="ms-1">Save Quiz</span>
                         </button>
-                    </form>
-                    <form method="post" class="mt-2 dense-form" onsubmit="return confirm('Delete this quiz question?');">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="action" value="delete_quiz">
-                        <input type="hidden" name="quiz_id" value="<?= (int) $selectedQuiz['id'] ?>">
-                        <button class="btn btn-outline-danger" type="submit">
-                            <i class="bi bi-trash"></i>
-                            <span class="ms-1">Delete Quiz</span>
-                        </button>
-                    </form>
-                </div>
+                    </div>
+                </form>
             </div>
-        <?php endif; ?>
+        </div>
     </div>
 </div>
+
+<script>
+const quizEditModalEl = document.getElementById('quizEditModal');
+const quizEditModal = quizEditModalEl ? new bootstrap.Modal(quizEditModalEl) : null;
+const quizList = document.querySelector('.quiz-list');
+const csrfToken = <?= json_encode(csrf_token()) ?>;
+const quizEditFields = {
+    id: document.getElementById('edit_quiz_id'),
+    questionText: document.getElementById('edit_question_text'),
+    optionA: document.getElementById('edit_option_a'),
+    optionB: document.getElementById('edit_option_b'),
+    optionC: document.getElementById('edit_option_c'),
+    optionD: document.getElementById('edit_option_d'),
+    correctOption: document.getElementById('edit_correct_option'),
+    countdownSeconds: document.getElementById('edit_countdown_seconds'),
+    revealDuration: document.getElementById('edit_reveal_duration'),
+    active: document.getElementById('edit_quiz_active'),
+};
+
+function updateQuizRowState(row, quiz) {
+    if (!row || !quiz) {
+        return;
+    }
+
+    row.dataset.quiz = JSON.stringify(quiz);
+
+    const title = row.querySelector('.quiz-row-title');
+    const meta = row.querySelector('.quiz-row-meta');
+    const toggle = row.querySelector('.js-quiz-active-toggle');
+    const deleteButton = row.querySelector('.js-quiz-delete');
+    const trimmed = quiz.question_text.length > 120 ? `${quiz.question_text.slice(0, 120)}...` : quiz.question_text;
+
+    if (title) {
+        title.textContent = trimmed;
+    }
+
+    if (meta) {
+        meta.innerHTML = `<span>${quiz.usage_count} playlist use(s)</span><span>${Number(quiz.active) === 1 ? 'Active' : 'Inactive'}</span><span>Updated ${quiz.updated_at}</span>`;
+    }
+
+    if (toggle) {
+        toggle.checked = Number(quiz.active) === 1;
+    }
+
+    if (deleteButton) {
+        deleteButton.dataset.usageCount = String(quiz.usage_count);
+    }
+}
+
+async function postQuizAction(body) {
+    const response = await fetch(<?= json_encode(app_path('/admin/quizzes.php')) ?>, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+        },
+        body: new URLSearchParams(body),
+    });
+
+    const data = await response.json().catch(() => ({
+        ok: false,
+        message: 'Request failed.',
+    }));
+
+    if (!response.ok || !data.ok) {
+        throw new Error(data.message || 'Request failed.');
+    }
+
+    return data;
+}
+
+function openQuizEditor(row) {
+    if (!row || !quizEditModal) {
+        return;
+    }
+
+    const quiz = JSON.parse(row.dataset.quiz || '{}');
+    quizEditFields.id.value = quiz.id || '';
+    quizEditFields.questionText.value = quiz.question_text || '';
+    quizEditFields.optionA.value = quiz.option_a || '';
+    quizEditFields.optionB.value = quiz.option_b || '';
+    quizEditFields.optionC.value = quiz.option_c || '';
+    quizEditFields.optionD.value = quiz.option_d || '';
+    quizEditFields.correctOption.value = quiz.correct_option || 'A';
+    quizEditFields.countdownSeconds.value = quiz.countdown_seconds || 10;
+    quizEditFields.revealDuration.value = quiz.reveal_duration || 5;
+    quizEditFields.active.checked = Number(quiz.active) === 1;
+    quizEditModal.show();
+}
+
+if (quizList) {
+    quizList.addEventListener('click', async (event) => {
+        const toggleLabel = event.target.closest('.quiz-row-toggle');
+        if (toggleLabel) {
+            event.stopPropagation();
+        }
+
+        const toggle = event.target.closest('.js-quiz-active-toggle');
+        if (toggle) {
+            event.stopPropagation();
+            return;
+        }
+
+        const deleteButton = event.target.closest('.js-quiz-delete');
+        if (deleteButton) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const usageCount = Number(deleteButton.dataset.usageCount || '0');
+            if (usageCount > 0) {
+                window.alert('Quiz question cannot be deleted while it is used in a playlist.');
+                return;
+            }
+
+            if (!window.confirm('Delete this quiz question?')) {
+                return;
+            }
+
+            deleteButton.disabled = true;
+
+            try {
+                const data = await postQuizAction({
+                    csrf_token: csrfToken,
+                    action: 'delete_quiz',
+                    quiz_id: deleteButton.dataset.quizId || '',
+                });
+                deleteButton.closest('.quiz-row')?.remove();
+                window.alert(data.message);
+            } catch (error) {
+                window.alert(error.message);
+                deleteButton.disabled = false;
+            }
+
+            return;
+        }
+
+        openQuizEditor(event.target.closest('.quiz-row'));
+    });
+
+    quizList.addEventListener('change', async (event) => {
+        const toggle = event.target.closest('.js-quiz-active-toggle');
+        if (!toggle) {
+            return;
+        }
+
+        const row = toggle.closest('.quiz-row');
+        toggle.disabled = true;
+
+        try {
+            const data = await postQuizAction({
+                csrf_token: csrfToken,
+                action: 'toggle_quiz_active',
+                quiz_id: toggle.dataset.quizId || '',
+                ...(toggle.checked ? { active: '1' } : {}),
+            });
+            updateQuizRowState(row, data.quiz);
+        } catch (error) {
+            toggle.checked = !toggle.checked;
+            window.alert(error.message);
+        } finally {
+            toggle.disabled = false;
+        }
+    });
+
+    quizList.addEventListener('keydown', (event) => {
+        const row = event.target.closest('.quiz-row');
+        if (!row) {
+            return;
+        }
+
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            openQuizEditor(row);
+        }
+    });
+}
+</script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
