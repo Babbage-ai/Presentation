@@ -177,7 +177,7 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
         .dashboard-screen-body .summary-list { gap: 0.45rem; }
         .dashboard-screen-body .summary-row { padding: 0.48rem 0.58rem; }
         .quiz-list { display: grid; }
-        .quiz-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.52rem 0.8rem; border-top: 1px solid var(--admin-border); cursor: pointer; transition: background-color 0.16s ease; }
+        .quiz-row { display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; padding: 0.22rem 0.75rem; border-top: 1px solid var(--admin-border); cursor: pointer; transition: background-color 0.16s ease; }
         .quiz-row:first-child { border-top: 0; }
         .quiz-row:hover,
         .quiz-row:focus-visible { background: rgba(248, 250, 252, 0.9); outline: none; }
@@ -190,9 +190,9 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
         .quiz-row-toggle { display: inline-flex; align-items: center; justify-content: center; min-width: 2rem; min-height: 2rem; margin: 0; cursor: pointer; }
         .quiz-row-toggle .form-check-input { margin-top: 0; }
         #quizEditModal .form-control,
-        #quizEditModal .form-select { border: 1px solid rgba(15, 23, 42, 0.22); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55); }
+        #quizEditModal .form-select { border: 1px solid rgba(15, 23, 42, 0.45); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45); }
         #quizEditModal .form-control:focus,
-        #quizEditModal .form-select:focus { border-color: rgba(15, 23, 42, 0.42); box-shadow: 0 0 0 0.15rem rgba(15, 23, 42, 0.08); }
+        #quizEditModal .form-select:focus { border-color: rgba(15, 23, 42, 0.75); box-shadow: 0 0 0 0.15rem rgba(15, 23, 42, 0.12); }
         @media (max-width: 1199px) {
             main.container-fluid { width: 100%; padding-left: 0.8rem; padding-right: 0.8rem; }
             .panel-grid.two-up { grid-template-columns: 1fr; }
