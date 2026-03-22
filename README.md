@@ -48,11 +48,16 @@ export DB_PORT=3306
 export DB_NAME=cloud_signage
 export DB_USER=your_db_user
 export DB_PASS=your_db_password
-export APP_URL=https://your-domain.example
+export APP_URL=https://displayflow.co.uk
 export APP_BASE_PATH=/cloud-signage
 ```
 
 Set `APP_BASE_PATH` to an empty value or omit it if the project is deployed at the domain root. Use a subdirectory value such as `/cloud-signage` on standard shared hosting when the app is not mounted at `/`.
+
+For a `displayflow.co.uk` style deployment where `/` acts as the marketing homepage, keep `index.php` as the public landing page and decide where the application lives:
+
+- Root application install: keep the existing `/admin`, `/api`, and `/player` paths and set `APP_BASE_PATH` to an empty string.
+- Subdirectory application install: move or expose the app under a path such as `/app`, then set `APP_URL=https://displayflow.co.uk` and `APP_BASE_PATH=/app`.
 
 If your host does not provide environment variables easily, copy [`includes/config.local.php.example`](/workspaces/Presentation/includes/config.local.php.example) to `includes/config.local.php` and set the database and URL values there.
 
