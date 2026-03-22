@@ -385,6 +385,7 @@ require_once __DIR__ . '/../includes/header.php';
                                             </div>
                                             <div class="panel-section-body">
                                                 <div class="screen-card-meta">
+                                                    <span class="badge text-bg-dark">Code <?= e($screen['screen_token']) ?></span>
                                                     <span class="badge text-bg-light border"><?= e($screen['playlist_name'] ?: 'Unassigned') ?></span>
                                                     <span class="badge text-bg-light border">Seen <?= e(format_datetime($screen['last_seen'])) ?></span>
                                                     <?php if (!empty($screen['last_ip'])): ?>
