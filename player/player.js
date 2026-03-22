@@ -26,7 +26,7 @@
         syncRevision: 0,
         syncPromise: null,
         playbackToken: 0,
-        playlistSignature: null,
+        playlistBannerIdentity: null,
         playlistBannerTimer: null
     };
 
@@ -228,10 +228,8 @@
         ].join(':');
     }
 
-    function buildPlaylistSignature(playlistInfo, items) {
-        const playlistId = playlistInfo && playlistInfo.id ? String(playlistInfo.id) : 'none';
-        const identities = Array.isArray(items) ? items.map((item) => playlistIdentity(item)) : [];
-        return [playlistId].concat(identities).join('|');
+    function buildPlaylistBannerIdentity(playlistInfo) {
+        return playlistInfo && playlistInfo.id ? String(playlistInfo.id) : 'none';
     }
 
     async function syncPlaylist(options = {}) {
@@ -246,13 +244,13 @@
             const data = await fetchApiJson('/api/get_playlist.php' + query);
             const nextPlaylist = Array.isArray(data.items) ? data.items : [];
             const currentItemIdentity = playlistIdentity(state.playlist[state.currentIndex]);
-            const hadPreviousPlaylist = state.playlistSignature !== null;
-            const nextPlaylistSignature = buildPlaylistSignature(data.playlist || null, nextPlaylist);
-            const playlistChanged = hadPreviousPlaylist && state.playlistSignature !== nextPlaylistSignature;
+            const hadPreviousPlaylist = state.playlistBannerIdentity !== null;
+            const nextPlaylistBannerIdentity = buildPlaylistBannerIdentity(data.playlist || null);
+            const playlistChanged = hadPreviousPlaylist && state.playlistBannerIdentity !== nextPlaylistBannerIdentity;
 
             state.playlist = nextPlaylist;
             state.syncRevision = Number.parseInt(data.screen && data.screen.sync_revision, 10) || 0;
-            state.playlistSignature = nextPlaylistSignature;
+            state.playlistBannerIdentity = nextPlaylistBannerIdentity;
 
             if (state.playlist.length === 0) {
                 state.currentIndex = 0;
