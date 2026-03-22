@@ -25,13 +25,28 @@ download_file "player.html" "player.html"
 download_file "player.js" "player.js"
 download_file "player.css" "player.css"
 
-install -m 0644 "${TMP_DIR}/player.html" "${PLAYER_DIR}/player.html"
-install -m 0644 "${TMP_DIR}/player.js" "${PLAYER_DIR}/player.js"
-install -m 0644 "${TMP_DIR}/player.css" "${PLAYER_DIR}/player.css"
+UPDATED_COUNT=0
 
-chown "${PI_USER}:${PI_USER}" \
-    "${PLAYER_DIR}/player.html" \
-    "${PLAYER_DIR}/player.js" \
-    "${PLAYER_DIR}/player.css"
+install_if_changed() {
+    local file_name="$1"
+    local source_path="${TMP_DIR}/${file_name}"
+    local target_path="${PLAYER_DIR}/${file_name}"
 
-echo "Player files updated from ${APP_BASE_URL%/}/player/"
+    if [ -f "$target_path" ] && cmp -s "$source_path" "$target_path"; then
+        return 0
+    fi
+
+    install -m 0644 "$source_path" "$target_path"
+    chown "${PI_USER}:${PI_USER}" "$target_path"
+    UPDATED_COUNT=$((UPDATED_COUNT + 1))
+}
+
+install_if_changed "player.html"
+install_if_changed "player.js"
+install_if_changed "player.css"
+
+if [ "$UPDATED_COUNT" -gt 0 ]; then
+    echo "Player files updated from ${APP_BASE_URL%/}/player/ (${UPDATED_COUNT} file(s) changed)."
+else
+    echo "Player files checked from ${APP_BASE_URL%/}/player/ (no changes)."
+fi

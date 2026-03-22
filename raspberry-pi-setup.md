@@ -136,9 +136,9 @@ If the Pi has not booted yet and the SD card is still in your PC, use the first-
 
 That workflow lets you place the player files and provisioning script onto the boot partition first, then have the Pi install the kiosk stack automatically during its initial boot.
 
-## 10. Auto-Update Player On Boot
+## 10. Auto-Update Player On Boot And Daily
 
-If you want each Pi to refresh its local player files from the live website before Chromium launches:
+If you want each Pi to refresh its local player files from the live website before Chromium launches, and also check daily for player code updates:
 
 1. Copy [`raspberry-pi-player-update.sh`](/workspaces/Presentation/raspberry-pi-player-update.sh) to the Pi, for example:
 
@@ -147,7 +147,16 @@ sudo cp raspberry-pi-player-update.sh /usr/local/bin/cloud-signage-player-update
 sudo chmod 755 /usr/local/bin/cloud-signage-player-update.sh
 ```
 
-2. Create a `systemd` oneshot service:
+2. Install the example `systemd` unit files:
+
+```bash
+sudo cp raspberry-pi-player-update.service.example /etc/systemd/system/cloud-signage-player-update.service
+sudo cp raspberry-pi-player-update.timer.example /etc/systemd/system/cloud-signage-player-update.timer
+```
+
+If you need a different live URL, edit the service file and change the `ExecStart` value.
+
+3. The service file should look like this:
 
 ```bash
 sudo nano /etc/systemd/system/cloud-signage-player-update.service
@@ -171,11 +180,37 @@ ExecStart=/usr/local/bin/cloud-signage-player-update.sh https://babbage-ai.co.uk
 WantedBy=multi-user.target
 ```
 
-3. Enable it:
+4. The timer file should look like this:
+
+```bash
+sudo nano /etc/systemd/system/cloud-signage-player-update.timer
+```
+
+Use:
+
+```ini
+[Unit]
+Description=Daily Cloud Signage Player Update Check
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=1d
+RandomizedDelaySec=30min
+Persistent=true
+Unit=cloud-signage-player-update.service
+
+[Install]
+WantedBy=timers.target
+```
+
+5. Enable the boot-time refresh and the daily timer:
 
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable cloud-signage-player-update.service
+sudo systemctl enable --now cloud-signage-player-update.timer
 ```
 
-This updates `player.html`, `player.js`, and `player.css` on each boot. It does not overwrite the Pi's local `config.json`.
+This updates `player.html`, `player.js`, and `player.css` on each boot, then checks again daily. It does not overwrite the Pi's local `config.json`.
+
+The updater script now skips unchanged files, so the daily check is safe to leave running permanently.

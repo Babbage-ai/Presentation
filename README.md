@@ -18,6 +18,7 @@ This repository contains a deployable Phase 1 MVP for a cloud-managed digital si
 - Heartbeat logging and online/offline visibility
 - JSON APIs for screen config, playlist retrieval, heartbeat, and controlled media download
 - Raspberry Pi kiosk player with local cache fallback
+- Optional Raspberry Pi boot-time and daily player code refresh
 
 ## Folder Structure
 
