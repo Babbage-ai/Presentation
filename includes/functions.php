@@ -279,6 +279,45 @@ function sanitize_upload_filename(string $originalName): string
     return $baseName . '-' . date('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.' . $extension;
 }
 
+function normalize_uploaded_files_array(?array $files): array
+{
+    if (!is_array($files)) {
+        return [];
+    }
+
+    $names = $files['name'] ?? null;
+
+    if (!is_array($names)) {
+        return [$files];
+    }
+
+    $normalized = [];
+    $keys = ['name', 'type', 'tmp_name', 'error', 'size'];
+
+    foreach (array_keys($names) as $index) {
+        $file = [];
+
+        foreach ($keys as $key) {
+            $value = $files[$key] ?? null;
+            $file[$key] = is_array($value) ? ($value[$index] ?? null) : $value;
+        }
+
+        $normalized[] = $file;
+    }
+
+    return $normalized;
+}
+
+function media_title_from_filename(string $filename): string
+{
+    $title = pathinfo($filename, PATHINFO_FILENAME);
+    $title = preg_replace('/[_-]+/', ' ', $title) ?? $title;
+    $title = preg_replace('/\s+/', ' ', $title) ?? $title;
+    $title = trim($title);
+
+    return $title !== '' ? $title : 'Untitled Media';
+}
+
 function validate_uploaded_media(array $file): array
 {
     $errorCode = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);

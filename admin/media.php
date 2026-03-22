@@ -42,50 +42,69 @@ if (is_post_request()) {
         };
 
         $title = trim((string) ($_POST['title'] ?? ''));
-        $file = $_FILES['media_file'] ?? null;
+        $files = normalize_uploaded_files_array($_FILES['media_file'] ?? null);
 
-        if ($title === '' || !is_array($file)) {
-            $message = 'Title and media file are required.';
+        if (!$files) {
+            $message = 'Select at least one media file to upload.';
             $respond(false, $message, 422);
             set_flash('danger', $message);
             redirect('/admin/media.php');
         }
 
-        [$valid, $errorMessage, $mimeType, $mediaType] = validate_uploaded_media($file);
+        $uploadedCount = 0;
 
-        if (!$valid) {
-            $respond(false, $errorMessage, 422);
-            set_flash('danger', $errorMessage);
-            redirect('/admin/media.php');
+        foreach ($files as $index => $file) {
+            if (!is_array($file)) {
+                $message = 'Uploaded file data was not received correctly.';
+                $respond(false, $message, 422);
+                set_flash('danger', $message);
+                redirect('/admin/media.php');
+            }
+
+            [$valid, $errorMessage, $mimeType, $mediaType] = validate_uploaded_media($file);
+
+            if (!$valid) {
+                $prefix = count($files) > 1 ? 'File ' . ($index + 1) . ': ' : '';
+                $message = $prefix . $errorMessage;
+                $respond(false, $message, 422);
+                set_flash('danger', $message);
+                redirect('/admin/media.php');
+            }
+
+            if (!is_uploaded_file((string) ($file['tmp_name'] ?? ''))) {
+                $message = 'Invalid upload source.';
+                $respond(false, $message, 400);
+                set_flash('danger', $message);
+                redirect('/admin/media.php');
+            }
+
+            $safeFilename = sanitize_upload_filename((string) ($file['name'] ?? 'media'));
+            $destination = media_upload_dir() . '/' . $safeFilename;
+
+            if (!move_uploaded_file((string) $file['tmp_name'], $destination)) {
+                $message = 'Could not move uploaded file into place.';
+                $respond(false, $message, 500);
+                set_flash('danger', $message);
+                redirect('/admin/media.php');
+            }
+
+            $fileSize = (int) filesize($destination);
+            $itemTitle = count($files) === 1 && $title !== ''
+                ? $title
+                : media_title_from_filename((string) ($file['name'] ?? ''));
+
+            $statement = $db->prepare("INSERT INTO media (owner_admin_id, title, filename, mime_type, file_size, duration_seconds, media_type, active, created_at)
+                                       VALUES (?, ?, ?, ?, ?, NULL, ?, 1, UTC_TIMESTAMP())");
+            $statement->bind_param('isssis', $adminId, $itemTitle, $safeFilename, $mimeType, $fileSize, $mediaType);
+            $statement->execute();
+            $statement->close();
+
+            $uploadedCount++;
         }
 
-        if (!is_uploaded_file($file['tmp_name'])) {
-            $message = 'Invalid upload source.';
-            $respond(false, $message, 400);
-            set_flash('danger', $message);
-            redirect('/admin/media.php');
-        }
-
-        $safeFilename = sanitize_upload_filename($file['name']);
-        $destination = media_upload_dir() . '/' . $safeFilename;
-
-        if (!move_uploaded_file($file['tmp_name'], $destination)) {
-            $message = 'Could not move uploaded file into place.';
-            $respond(false, $message, 500);
-            set_flash('danger', $message);
-            redirect('/admin/media.php');
-        }
-
-        $fileSize = (int) filesize($destination);
-        $durationSeconds = null;
-
-        $statement = $db->prepare("INSERT INTO media (owner_admin_id, title, filename, mime_type, file_size, duration_seconds, media_type, active, created_at)
-                                   VALUES (?, ?, ?, ?, ?, NULL, ?, 1, UTC_TIMESTAMP())");
-        $statement->bind_param('isssis', $adminId, $title, $safeFilename, $mimeType, $fileSize, $mediaType);
-        $statement->execute();
-        $statement->close();
-
-        $message = 'Media uploaded successfully.';
+        $message = $uploadedCount === 1
+            ? 'Media uploaded successfully.'
+            : $uploadedCount . ' media items uploaded successfully.';
         $respond(true, $message);
         set_flash('success', $message);
         redirect('/admin/media.php');
@@ -241,12 +260,13 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="row g-3">
                 <div class="col-lg-4">
                     <label class="form-label" for="title">Title</label>
-                    <input class="form-control" id="title" name="title" type="text" required>
+                    <input class="form-control" id="title" name="title" type="text" placeholder="Optional for single file">
+                    <div class="form-text">Used when uploading one file. Batch uploads use each filename as the media title.</div>
                 </div>
                 <div class="col-lg-5">
-                    <label class="form-label" for="media_file">File</label>
-                    <input class="form-control" id="media_file" name="media_file" type="file" accept=".jpg,.jpeg,.png,.webp,.mp4" required>
-                    <div class="form-text">Supported: JPG, JPEG, PNG, WEBP, MP4. Limit: <?= e(upload_limit_summary()) ?>.</div>
+                    <label class="form-label" for="media_file">Files</label>
+                    <input class="form-control" id="media_file" name="media_file[]" type="file" accept=".jpg,.jpeg,.png,.webp,.mp4" multiple required>
+                    <div class="form-text">Upload one video or multiple images at once. Supported: JPG, JPEG, PNG, WEBP, MP4. Total request limit: <?= e(upload_limit_summary()) ?>.</div>
                 </div>
                 <div class="col-lg-3 d-flex align-items-end">
                     <button id="uploadSubmitButton" class="btn btn-primary w-100" type="submit">
@@ -400,7 +420,7 @@ if (uploadForm && window.XMLHttpRequest && window.FormData) {
         progressWrap.classList.remove('d-none');
         progressWrap.setAttribute('aria-hidden', 'false');
         statusBox.classList.remove('d-none');
-        setStatus('Uploading media...', 'info');
+        setStatus('Uploading media files...', 'info');
         setProgress(0);
 
         request.open('POST', uploadForm.getAttribute('action') || window.location.href, true);
@@ -413,7 +433,7 @@ if (uploadForm && window.XMLHttpRequest && window.FormData) {
             }
 
             const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
-            setStatus('Uploading media... ' + percent + '%', 'info');
+            setStatus('Uploading media files... ' + percent + '%', 'info');
             setProgress(percent);
         });
 
