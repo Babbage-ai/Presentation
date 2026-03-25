@@ -265,6 +265,7 @@ foreach ($quizQuestions as $quiz) {
 $pageTitle = 'Quizzes';
 require_once __DIR__ . '/../includes/header.php';
 ?>
+<div class="page-shell">
 <div class="section-heading">
     <div>
         <h1 class="h3">Quizzes</h1>
@@ -363,6 +364,7 @@ require_once __DIR__ . '/../includes/header.php';
             <?php endif; ?>
         </div>
     </div>
+</div>
 </div>
 
 <div class="modal fade" id="quizEditModal" tabindex="-1" aria-labelledby="quizEditModalLabel" aria-hidden="true">

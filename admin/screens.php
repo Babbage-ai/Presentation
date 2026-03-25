@@ -417,7 +417,7 @@ require_once __DIR__ . '/../includes/header.php';
     }
 </style>
 
-<div class="screen-admin-page">
+<div class="page-shell screen-admin-page">
 <div class="section-heading">
     <div>
         <h1 class="h3">Screens</h1>

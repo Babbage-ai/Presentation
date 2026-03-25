@@ -614,6 +614,7 @@ require_once __DIR__ . '/../includes/header.php';
         .playlist-inline-static { white-space: normal; }
     }
 </style>
+<div class="page-shell playlist-admin-page">
 <div class="section-heading">
     <div>
         <h1 class="h3">Playlists</h1>
@@ -624,7 +625,6 @@ require_once __DIR__ . '/../includes/header.php';
         <span class="ms-1">Add Playlist</span>
     </button>
 </div>
-<div class="playlist-admin-page">
 <div class="row g-2">
     <div class="col-6 col-xl-3">
         <div class="card stat-card">

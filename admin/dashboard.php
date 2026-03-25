@@ -92,6 +92,7 @@ $statement->close();
 $pageTitle = 'Dashboard';
 require_once __DIR__ . '/../includes/header.php';
 ?>
+<div class="page-shell">
 <div class="section-heading">
     <div>
         <h1 class="h3">Dashboard</h1>
@@ -255,5 +256,6 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
         </div>
     </div>
+</div>
 </div>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

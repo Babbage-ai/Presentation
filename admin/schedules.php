@@ -329,7 +329,7 @@ require_once __DIR__ . '/../includes/header.php';
     }
 </style>
 
-<div class="schedule-page">
+<div class="page-shell schedule-page">
     <div class="section-heading">
         <div>
             <h1 class="h3">Schedules</h1>

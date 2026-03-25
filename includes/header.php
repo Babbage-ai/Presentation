@@ -55,6 +55,18 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
         .section-heading h1, .section-heading h2 { margin: 0; }
         .section-subtitle { color: var(--admin-text-soft); font-size: 0.84rem; }
         .page-shell { display: grid; gap: 1rem; }
+        .page-shell > .section-heading {
+            margin-bottom: 0;
+            padding: 0.95rem 1.05rem;
+            border: 1px solid var(--admin-border);
+            border-radius: 1.15rem;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.98));
+            box-shadow: var(--admin-shadow);
+        }
+        .page-shell > .section-heading .section-subtitle {
+            max-width: 42rem;
+            margin-top: 0.22rem;
+        }
         .hero-card,
         .table-card,
         .list-card,
@@ -215,6 +227,7 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
         @media (max-width: 991px) {
             .info-grid { grid-template-columns: 1fr; }
             .section-heading { align-items: flex-start; flex-direction: column; }
+            .page-shell > .section-heading { padding: 0.85rem 0.9rem; }
             .navbar .d-flex.align-items-center.gap-3 { gap: 0.6rem !important; }
             .admin-side-panel { position: static; }
             .metric-row { grid-template-columns: 1fr; }
