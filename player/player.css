@@ -83,7 +83,7 @@ body.has-announcement-bottom #app {
     width: max-content;
     min-width: 100%;
     gap: 0;
-    padding: 2px 0;
+    padding: 1px 0;
     white-space: nowrap;
     will-change: transform;
     animation: announcement-scroll var(--announcement-duration, 28s) linear infinite;
