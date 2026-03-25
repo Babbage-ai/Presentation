@@ -24,6 +24,7 @@ if ((int) ($screen['active'] ?? 1) !== 1) {
 }
 
 $assignment = resolve_screen_playlist_assignment($db, $screen);
+$ticker = resolve_screen_ticker($db, $screen);
 
 if (empty($assignment['playlist_id'])) {
     json_response(true, 'No playlist assigned to this screen.', [
@@ -36,6 +37,7 @@ if (empty($assignment['playlist_id'])) {
             'schedule_rule' => $assignment['schedule_rule'],
         ],
         'playlist' => null,
+        'ticker' => $ticker,
         'items' => [],
     ]);
 }
@@ -99,5 +101,6 @@ json_response(true, 'Playlist loaded.', [
         'name' => $assignment['playlist_name'],
         'source' => $assignment['source'],
     ],
+    'ticker' => $ticker,
     'items' => $formattedItems,
 ]);

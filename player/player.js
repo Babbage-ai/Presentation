@@ -11,6 +11,8 @@
     const overlayEl = document.getElementById('overlay');
     const playlistBannerEl = document.getElementById('playlist-banner');
     const playlistBannerLabelEl = playlistBannerEl ? playlistBannerEl.querySelector('.playlist-banner-label') : null;
+    const announcementBarEl = document.getElementById('announcement-bar');
+    const announcementTrackEl = announcementBarEl ? announcementBarEl.querySelector('[data-announcement-track]') : null;
 
     const state = {
         config: null,
@@ -27,7 +29,8 @@
         syncPromise: null,
         playbackToken: 0,
         playlistBannerIdentity: null,
-        playlistBannerTimer: null
+        playlistBannerTimer: null,
+        apiAnnouncement: null
     };
 
     function setStatus(message, keepVisible = true) {
@@ -71,13 +74,17 @@
         const cacheNamespace = (params.get('cache_namespace') || '').trim();
         const refreshInterval = Number.parseInt(params.get('refresh_interval_seconds') || '', 10);
         const heartbeatInterval = Number.parseInt(params.get('heartbeat_interval_seconds') || '', 10);
+        const announcementText = (params.get('announcement_text') || '').trim();
+        const announcementSpeedSeconds = Number.parseInt(params.get('announcement_speed_seconds') || '', 10);
 
         return {
             api_base_url: apiBaseUrl || null,
             screen_token: screenToken || null,
             cache_namespace: cacheNamespace || null,
             refresh_interval_seconds: Number.isFinite(refreshInterval) && refreshInterval > 0 ? refreshInterval : null,
-            heartbeat_interval_seconds: Number.isFinite(heartbeatInterval) && heartbeatInterval > 0 ? heartbeatInterval : null
+            heartbeat_interval_seconds: Number.isFinite(heartbeatInterval) && heartbeatInterval > 0 ? heartbeatInterval : null,
+            announcement_text: announcementText || null,
+            announcement_speed_seconds: Number.isFinite(announcementSpeedSeconds) && announcementSpeedSeconds > 0 ? announcementSpeedSeconds : null
         };
     }
 
@@ -98,6 +105,8 @@
             refresh_interval_seconds: 300,
             heartbeat_interval_seconds: 60,
             cache_namespace: 'default',
+            announcement_text: '',
+            announcement_speed_seconds: 28,
             ...fileConfig
         };
 
@@ -119,12 +128,55 @@
         if (urlConfig.heartbeat_interval_seconds) {
             config.heartbeat_interval_seconds = urlConfig.heartbeat_interval_seconds;
         }
+        if (urlConfig.announcement_text !== null) {
+            config.announcement_text = urlConfig.announcement_text;
+        }
+        if (urlConfig.announcement_speed_seconds) {
+            config.announcement_speed_seconds = urlConfig.announcement_speed_seconds;
+        }
 
         if (!config.api_base_url || !config.screen_token) {
             throw new Error('Provide screen code and api_base_url in the URL or in config.json.');
         }
 
         return config;
+    }
+
+    function applyAnnouncementBar() {
+        if (!announcementBarEl || !announcementTrackEl) {
+            return;
+        }
+
+        const apiAnnouncementText = String(state.apiAnnouncement && state.apiAnnouncement.message_text ? state.apiAnnouncement.message_text : '').trim();
+        const announcementText = apiAnnouncementText !== ''
+            ? apiAnnouncementText
+            : String(state.config.announcement_text || '').trim();
+
+        if (announcementText === '') {
+            announcementBarEl.classList.add('hidden');
+            announcementBarEl.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('has-announcement');
+            announcementTrackEl.innerHTML = '';
+            return;
+        }
+
+        const speedSource = state.apiAnnouncement && state.apiAnnouncement.speed_seconds
+            ? state.apiAnnouncement.speed_seconds
+            : state.config.announcement_speed_seconds;
+        const speedSeconds = Math.max(10, Number.parseInt(speedSource, 10) || 28);
+        announcementBarEl.style.setProperty('--announcement-duration', speedSeconds + 's');
+        announcementTrackEl.innerHTML = '';
+
+        for (let index = 0; index < 6; index += 1) {
+            const item = document.createElement('div');
+            item.className = 'announcement-item';
+            item.textContent = announcementText;
+            announcementTrackEl.appendChild(item);
+        }
+
+        announcementBarEl.classList.remove('hidden');
+        announcementBarEl.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('has-announcement');
     }
 
     function apiUrl(path) {
@@ -254,6 +306,8 @@
             state.playlist = nextPlaylist;
             state.syncRevision = Number.parseInt(data.screen && data.screen.sync_revision, 10) || 0;
             state.playlistBannerIdentity = nextPlaylistBannerIdentity;
+            state.apiAnnouncement = data.ticker || null;
+            applyAnnouncementBar();
 
             if (state.playlist.length === 0) {
                 state.currentIndex = 0;
@@ -607,6 +661,7 @@
     async function boot() {
         try {
             state.config = await loadConfig();
+            applyAnnouncementBar();
             state.idb = await openDatabase();
             await syncPlaylist();
             await sendHeartbeat();

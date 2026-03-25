@@ -742,6 +742,27 @@ function screen_schedule_rule_matches(array $rule, DateTimeImmutable $localNow):
     return ($dayMask & (1 << $previousDayIndex)) !== 0 && $timeNow < $endTime;
 }
 
+function scheduled_window_matches(array $entry, DateTimeImmutable $localNow): bool
+{
+    if ((int) ($entry['active'] ?? 0) !== 1) {
+        return false;
+    }
+
+    $localNowValue = $localNow->format('Y-m-d H:i:s');
+    $startsAt = trim((string) ($entry['starts_at'] ?? ''));
+    $endsAt = trim((string) ($entry['ends_at'] ?? ''));
+
+    if ($startsAt !== '' && $localNowValue < $startsAt) {
+        return false;
+    }
+
+    if ($endsAt !== '' && $localNowValue > $endsAt) {
+        return false;
+    }
+
+    return screen_schedule_rule_matches($entry, $localNow);
+}
+
 function resolve_screen_playlist_assignment(mysqli $db, array $screen, ?DateTimeImmutable $now = null): array
 {
     $resolved = [
@@ -799,6 +820,100 @@ function resolve_screen_playlist_assignment(mysqli $db, array $screen, ?DateTime
     }
 
     return $resolved;
+}
+
+function fetch_admin_screens_basic(mysqli $db, int $adminId): array
+{
+    $statement = $db->prepare("SELECT id, name, location, active, status
+        FROM screens
+        WHERE owner_admin_id = ?
+        ORDER BY status = 'online' DESC, name ASC, id ASC");
+    $statement->bind_param('i', $adminId);
+    $statement->execute();
+    $result = $statement->get_result();
+    $screens = [];
+
+    while ($row = $result->fetch_assoc()) {
+        $screens[] = [
+            'id' => (int) $row['id'],
+            'name' => (string) $row['name'],
+            'location' => (string) ($row['location'] ?? ''),
+            'active' => (int) ($row['active'] ?? 1),
+            'status' => (string) ($row['status'] ?? 'offline'),
+        ];
+    }
+
+    $statement->close();
+
+    return $screens;
+}
+
+function resolve_screen_ticker(mysqli $db, array $screen, ?DateTimeImmutable $now = null): ?array
+{
+    $screenId = (int) ($screen['id'] ?? 0);
+    $adminId = (int) ($screen['owner_admin_id'] ?? 0);
+
+    if ($screenId < 1 || $adminId < 1) {
+        return null;
+    }
+
+    $statement = $db->prepare("SELECT tm.*
+        FROM ticker_messages tm
+        LEFT JOIN ticker_message_screens tms
+            ON tms.ticker_message_id = tm.id
+           AND tms.screen_id = ?
+        WHERE tm.owner_admin_id = ?
+          AND tm.active = 1
+          AND (tm.applies_to_all_screens = 1 OR tms.screen_id IS NOT NULL)
+        ORDER BY tm.priority ASC, tm.id DESC");
+    $statement->bind_param('ii', $screenId, $adminId);
+    $statement->execute();
+    $result = $statement->get_result();
+    $rows = [];
+
+    while ($row = $result->fetch_assoc()) {
+        $row['id'] = (int) $row['id'];
+        $row['owner_admin_id'] = (int) $row['owner_admin_id'];
+        $row['day_mask'] = (int) $row['day_mask'];
+        $row['speed_seconds'] = (int) $row['speed_seconds'];
+        $row['priority'] = (int) $row['priority'];
+        $row['active'] = (int) $row['active'];
+        $row['applies_to_all_screens'] = (int) $row['applies_to_all_screens'];
+        $rows[] = $row;
+    }
+
+    $statement->close();
+
+    if (!$rows) {
+        return null;
+    }
+
+    $localNow = ($now ?? new DateTimeImmutable('now', new DateTimeZone('UTC')))
+        ->setTimezone(new DateTimeZone(app_timezone_name()));
+
+    foreach ($rows as $row) {
+        if (!scheduled_window_matches($row, $localNow)) {
+            continue;
+        }
+
+        return [
+            'id' => (int) $row['id'],
+            'name' => (string) $row['name'],
+            'message_text' => (string) $row['message_text'],
+            'speed_seconds' => max(10, (int) $row['speed_seconds']),
+            'priority' => (int) $row['priority'],
+            'day_mask' => (int) $row['day_mask'],
+            'day_summary' => schedule_day_mask_summary((int) $row['day_mask']),
+            'start_time' => (string) $row['start_time'],
+            'end_time' => (string) $row['end_time'],
+            'time_range' => schedule_time_label((string) $row['start_time']) . ' - ' . schedule_time_label((string) $row['end_time']),
+            'starts_at' => $row['starts_at'],
+            'ends_at' => $row['ends_at'],
+            'applies_to_all_screens' => (int) $row['applies_to_all_screens'],
+        ];
+    }
+
+    return null;
 }
 
 function fetch_active_quiz_bank(mysqli $db, int $adminId): array
