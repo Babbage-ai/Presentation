@@ -13,8 +13,8 @@ if ($requestedScreenCode !== '') {
 }
 
 $siteName = 'DisplayFlow';
-$primaryTagline = 'Control every screen. Anywhere.';
-$supportLine = 'Works on any screen. No hardware required.';
+$primaryTagline = 'Simple digital signage that gets screens live fast.';
+$supportLine = 'Use the screens you already have. Add hardware only if you want it.';
 $adminUrl = app_path('/admin/login.php');
 $canonicalUrl = absolute_url('');
 $stylesUrl = app_path('/assets/marketing.css');
@@ -35,7 +35,7 @@ $demoEmail = 'hello@displayflow.co.uk';
     <meta property="og:description" content="Cloud-based digital signage software for menus, promotions, announcements and remote screen management.">
     <meta property="og:url" content="<?= e($canonicalUrl) ?>">
     <meta property="og:site_name" content="<?= e($siteName) ?>">
-    <meta name="theme-color" content="#111111">
+    <meta name="theme-color" content="#ffffff">
     <link rel="stylesheet" href="<?= e($stylesUrl) ?>">
 </head>
 <body>
@@ -77,15 +77,21 @@ $demoEmail = 'hello@displayflow.co.uk';
                     <div class="hero-copy reveal">
                         <div class="eyebrow">
                             <span class="eyebrow-dot"></span>
-                            Browser-based digital signage software
+                            Browser-based digital signage for growing businesses
                         </div>
                         <h1><?= e($primaryTagline) ?></h1>
-                        <p class="hero-lead">DisplayFlow is a cloud-based display platform that lets you manage screens, menus, promotions and announcements remotely using just a browser.</p>
-                        <p class="hero-support">If you've got a screen, you're ready. Run professional digital displays on smart TVs, tablets, PCs, kiosk browsers, Fire Stick browsers and more, with optional plug-and-play hardware when you want it.</p>
+                        <p class="hero-lead">DisplayFlow helps you launch menus, promotions and announcements across your screens without complicated hardware, messy USB updates or expensive custom installs.</p>
+                        <p class="hero-support">Start with the TVs, tablets or media devices you already own, then manage everything from one simple dashboard as your rollout grows.</p>
 
                         <div class="hero-actions">
-                            <a class="button button-primary" href="#contact">Book a Demo</a>
-                            <a class="button button-secondary" href="#how-it-works">See How It Works</a>
+                            <a class="button button-primary" href="#pricing">View Pricing</a>
+                            <a class="button button-secondary" href="#contact">Book a Demo</a>
+                        </div>
+
+                        <div class="hero-proof">
+                            <span>No long-term setup headache</span>
+                            <span>Fast rollout for single or multi-site</span>
+                            <span>Optional plug-and-play hardware</span>
                         </div>
 
                         <div class="hero-notes">
@@ -219,7 +225,7 @@ $demoEmail = 'hello@displayflow.co.uk';
 
             <section class="trust-strip section">
                 <div class="container trust-wrap reveal">
-                    <p>Perfect for restaurants, gyms, retail, events, waiting areas and reception spaces.</p>
+                    <p>Built for businesses that want a straightforward way to turn screens into revenue, promotions and clearer customer communication.</p>
                     <div class="trust-items" aria-label="Industries and device compatibility">
                         <span>Restaurants & cafes</span>
                         <span>Gyms & martial arts schools</span>
@@ -512,15 +518,15 @@ $demoEmail = 'hello@displayflow.co.uk';
                 <div class="container">
                     <div class="section-heading reveal">
                         <span class="section-kicker">Pricing</span>
-                        <h2>Simple commercial options for different rollout styles</h2>
-                        <p>Choose software only, add plug-and-play hardware, or speak to us about a custom setup for larger or multi-site installations.</p>
+                        <h2>Clear options based on how quickly you want to launch</h2>
+                        <p>Start with software only, choose a faster plug-and-play setup, or talk to us about a tailored rollout for multiple sites.</p>
                     </div>
 
                     <div class="pricing-grid">
                         <article class="pricing-card reveal">
                             <span class="pricing-tier">Software Only</span>
                             <h3>Best when you already have screens</h3>
-                            <p>Monthly subscription per screen for businesses that want the most cost-effective route.</p>
+                            <p>A straightforward per-screen subscription for businesses that want the leanest path to launch.</p>
                             <ul>
                                 <li>Cloud-based screen management</li>
                                 <li>Menus, promos and announcements</li>
@@ -530,14 +536,14 @@ $demoEmail = 'hello@displayflow.co.uk';
                         </article>
                         <article class="pricing-card pricing-card-featured reveal reveal-delay-1">
                             <span class="pricing-tier">Plug & Play</span>
-                            <h3>Best for faster rollout</h3>
-                            <p>Software subscription plus optional ready-to-go hardware for a smoother installation path.</p>
+                            <h3>Best for the fastest rollout</h3>
+                            <p>Software plus optional pre-configured hardware for businesses that want to get live with less setup work.</p>
                             <ul>
                                 <li>Pre-configured hardware option</li>
                                 <li>Faster deployment</li>
                                 <li>Ideal for busy operators</li>
                             </ul>
-                            <a class="button button-primary" href="#contact">Book a demo</a>
+                            <a class="button button-primary" href="#contact">Start with this option</a>
                         </article>
                         <article class="pricing-card reveal reveal-delay-2">
                             <span class="pricing-tier">Custom / Multi-site</span>
@@ -624,18 +630,18 @@ $demoEmail = 'hello@displayflow.co.uk';
             <section class="section final-cta-section" id="contact">
                 <div class="container final-cta-grid">
                     <div class="final-cta-copy reveal">
-                        <span class="section-kicker">Book a demo</span>
-                        <h2>See how DisplayFlow could look in your business</h2>
-                        <p>Tell us what kind of screens you have and where you want to use them. We'll help you find the right setup, whether that means software only or a complete plug-and-play rollout.</p>
+                        <span class="section-kicker">Get started</span>
+                        <h2>Get the right setup for your screens</h2>
+                        <p>Tell us what screens you have, how many locations you run, and what you want to show. We’ll point you to the best-fit option and next step to launch.</p>
 
                         <div class="cta-points">
                             <div>
-                                <strong>Ideal for menus, promos, announcements and more</strong>
-                                <p>Show the right content clearly, professionally and on time.</p>
+                                <strong>Designed to make buying simple</strong>
+                                <p>We help you choose the quickest path based on your screens, sites and setup needs.</p>
                             </div>
                             <div>
-                                <strong>Built for growing businesses</strong>
-                                <p>Start with one screen and expand across locations as needed.</p>
+                                <strong>Built for growth after the first screen</strong>
+                                <p>Start small, prove it works, then expand without changing platform.</p>
                             </div>
                         </div>
                     </div>
@@ -670,8 +676,8 @@ $demoEmail = 'hello@displayflow.co.uk';
                                 <label for="demo_message">What do you want to show on screen?</label>
                                 <textarea id="demo_message" name="message" rows="4" placeholder="Tell us about your screens, locations, and what you want to display."></textarea>
                             </div>
-                            <button class="button button-primary button-block" type="submit">Request a Demo</button>
-                            <p class="form-note">This opens your email app to send a demo request to <a href="mailto:<?= e($demoEmail) ?>"><?= e($demoEmail) ?></a>.</p>
+                            <button class="button button-primary button-block" type="submit">Get Pricing and Demo</button>
+                            <p class="form-note">This opens your email app to send your enquiry to <a href="mailto:<?= e($demoEmail) ?>"><?= e($demoEmail) ?></a>.</p>
                         </form>
                     </div>
                 </div>
