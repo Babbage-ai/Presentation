@@ -4,6 +4,14 @@
 
 This repository contains a deployable Phase 1 MVP for a cloud-managed digital signage platform built with PHP 8, MySQL/MariaDB, and a local Raspberry Pi HTML/JavaScript player. The cloud side provides an admin panel for media, playlists, and screen assignment. The player side fetches playlist metadata, sends heartbeat updates, and caches media locally in the browser for resilient playback.
 
+## Architecture Summary
+
+- Cloud app: PHP admin and JSON API under `/admin`, `/api`, and `/includes`.
+- Browser player: static files under `/player`, served locally on the Pi over `http://127.0.0.1:8080`.
+- Pi runtime: provisioning scripts, setup UI, and systemd units under `/raspberry-pi`.
+- Protected Pi config: `/etc/displayflow/config.json` on the device, with generated player config synced into `/home/pi/cloud-signage/player/config.json`.
+- Boot controller: `displayflow-boot.service` decides between normal playback and setup hotspot mode, and falls back to setup mode after repeated connectivity failures.
+
 ## Features
 
 - Admin login with password hashing and session-based auth
@@ -20,15 +28,21 @@ This repository contains a deployable Phase 1 MVP for a cloud-managed digital si
 - Raspberry Pi kiosk player with local cache fallback
 - Optional Raspberry Pi boot-time and daily player code refresh
 
-## Folder Structure
+## File Tree
 
 ```text
-/admin      Admin UI pages
-/api        JSON API endpoints
-/includes   Shared DB, auth, layout, and helper functions
-/player     Raspberry Pi player files
-/sql        Schema and seed SQL
-/uploads    Uploaded media storage
+admin/
+api/
+assets/
+includes/
+player/
+raspberry-pi/
+  bin/
+  etc/
+  setup-ui/
+  systemd/
+sql/
+uploads/
 ```
 
 ## Installation Steps
@@ -45,7 +59,7 @@ This repository contains a deployable Phase 1 MVP for a cloud-managed digital si
 ```bash
 export DB_HOST=127.0.0.1
 export DB_PORT=3306
-export DB_NAME=cloud_signage
+export DB_NAME=cloud_signage_present
 export DB_USER=your_db_user
 export DB_PASS=your_db_password
 export APP_URL=https://displayflow.co.uk
@@ -155,9 +169,10 @@ sudo chmod -R 755 /path/to/project/uploads
 
 1. Create a screen in the admin panel.
 2. Copy the generated 6-character `screen code`.
-3. Set `api_base_url` and `screen_code` in [`player/config.json`](/workspaces/Presentation/player/config.json).
-5. Serve the player locally on the Pi.
-6. Launch Chromium in kiosk mode against the local player URL.
+3. Install the Pi runtime with [`install-displayflow-pi.sh`](/workspaces/Presentation/raspberry-pi/bin/install-displayflow-pi.sh).
+4. If the Pi is unprovisioned, connect to the temporary `DisplayFlow-Setup-XXXX` hotspot and open `http://192.168.4.1`.
+5. Enter the venue Wi-Fi SSID, password, and screen code.
+6. The Pi saves the protected config to `/etc/displayflow/config.json`, verifies the backend, generates the player config, and boots into normal playback mode.
 
 If the app is deployed in a subdirectory, include that in `api_base_url`, for example `https://example.com/cloud-signage`.
 
@@ -196,6 +211,50 @@ The project includes `download.php` rather than relying only on direct static fi
 - the player can cache fetched blobs locally without extra web server rules
 
 The API still exposes `full_url` for each item if direct access is useful later.
+
+## Raspberry Pi Provisioning And Recovery
+
+The Pi runtime adds:
+
+- boot-time setup-mode decision logic
+- a temporary Wi-Fi hotspot using `hostapd` + `dnsmasq`
+- a local mobile setup UI at `http://192.168.4.1`
+- atomic config writes to `/etc/displayflow/config.json`
+- automatic fallback into setup mode after repeated Wi-Fi or backend failures
+- manual recovery via `/etc/displayflow/force-setup` or `displayflow-reset-provisioning`
+
+The player updater still refreshes only the player assets, so automatic updates do not wipe local provisioning data.
+
+## Raspberry Pi Install Commands
+
+From a checkout of this repo on the Pi:
+
+```bash
+sudo bash raspberry-pi/bin/install-displayflow-pi.sh
+sudo nano /etc/default/displayflow
+sudo systemctl start displayflow-boot.service
+sudo reboot
+```
+
+Force setup mode again:
+
+```bash
+sudo touch /etc/displayflow/force-setup
+sudo reboot
+```
+
+Reset provisioning completely:
+
+```bash
+sudo displayflow-reset-provisioning
+sudo reboot
+```
+
+For customer-device preparation, see [`raspberry-pi-shipping.md`](/workspaces/Presentation/raspberry-pi-shipping.md).
+
+To prepare a fresh SD card from a PC in one step, use [`raspberry-pi-prep-sd.sh`](/workspaces/Presentation/raspberry-pi-prep-sd.sh).
+
+If you are working from Codespaces and cannot access the SD card directly, build a downloadable boot payload zip with [`raspberry-pi-build-sd-bundle.sh`](/workspaces/Presentation/raspberry-pi-build-sd-bundle.sh).
 
 ## Next-Phase Improvement Ideas
 

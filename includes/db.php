@@ -15,7 +15,7 @@ function get_db(): mysqli
 
     $host = defined('DB_HOST') ? DB_HOST : (getenv('DB_HOST') ?: '127.0.0.1');
     $port = (int) (defined('DB_PORT') ? DB_PORT : (getenv('DB_PORT') ?: 3306));
-    $database = defined('DB_NAME') ? DB_NAME : (getenv('DB_NAME') ?: 'cloud_signage');
+    $database = defined('DB_NAME') ? DB_NAME : (getenv('DB_NAME') ?: 'cloud_signage_present');
     $username = defined('DB_USER') ? DB_USER : (getenv('DB_USER') ?: 'root');
     $password = defined('DB_PASS') ? DB_PASS : (getenv('DB_PASS') ?: '');
 

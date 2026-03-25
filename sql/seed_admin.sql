@@ -1,4 +1,4 @@
-USE cloud_signage;
+USE cloud_signage_present;
 
 -- Default admin login:
 -- username: admin

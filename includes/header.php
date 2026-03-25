@@ -238,6 +238,7 @@ $currentPath = basename($_SERVER['PHP_SELF'] ?? '');
                 <li class="nav-item"><a class="nav-link <?= $currentPath === 'media.php' ? 'active' : '' ?>" href="<?= e(app_path('/admin/media.php')) ?>">Media</a></li>
                 <li class="nav-item"><a class="nav-link <?= $currentPath === 'quizzes.php' ? 'active' : '' ?>" href="<?= e(app_path('/admin/quizzes.php')) ?>">Quizzes</a></li>
                 <li class="nav-item"><a class="nav-link <?= $currentPath === 'playlists.php' ? 'active' : '' ?>" href="<?= e(app_path('/admin/playlists.php')) ?>">Playlists</a></li>
+                <li class="nav-item"><a class="nav-link <?= $currentPath === 'schedules.php' ? 'active' : '' ?>" href="<?= e(app_path('/admin/schedules.php')) ?>">Schedules</a></li>
                 <li class="nav-item"><a class="nav-link <?= $currentPath === 'screens.php' ? 'active' : '' ?>" href="<?= e(app_path('/admin/screens.php')) ?>">Screens</a></li>
             </ul>
             <div class="d-flex align-items-center gap-3 text-white">

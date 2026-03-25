@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DisplayFlow Setup Mode</title>
+    <link rel="stylesheet" href="/app.css">
+</head>
+<body class="screen-page">
+    <main class="screen-shell">
+        <section class="screen-card">
+            <div class="brand">DisplayFlow</div>
+            <p class="eyebrow">Setup mode</p>
+            <h1>Connect your phone to finish setup</h1>
+            <p class="intro">This screen is waiting for Wi-Fi details and a screen code.</p>
+
+            <div class="screen-panel">
+                <p class="panel-label">1. Join hotspot</p>
+                <p id="setup-ssid" class="screen-ssid">DisplayFlow-Setup-XXXX</p>
+            </div>
+
+            <div class="screen-panel">
+                <p class="panel-label">2. Open on your phone</p>
+                <p class="screen-url">http://192.168.4.1</p>
+            </div>
+
+            <div class="screen-panel">
+                <p class="panel-label">3. Enter</p>
+                <p class="screen-copy">Venue Wi-Fi name, venue Wi-Fi password, and screen code.</p>
+            </div>
+
+            <div id="screen-status" class="status-banner" hidden></div>
+        </section>
+    </main>
+
+    <script src="/screen.js"></script>
+</body>
+</html>

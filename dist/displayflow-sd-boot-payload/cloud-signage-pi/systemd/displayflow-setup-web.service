@@ -1,0 +1,15 @@
+[Unit]
+Description=DisplayFlow setup web server
+Requires=displayflow-setup-ap.service
+After=displayflow-setup-ap.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/lib/displayflow/bin/displayflow-setup-server.py --host 0.0.0.0 --port 80
+Restart=always
+RestartSec=2
+StandardOutput=append:/var/log/displayflow/setup-web.log
+StandardError=append:/var/log/displayflow/setup-web.log
+
+[Install]
+WantedBy=multi-user.target

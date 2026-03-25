@@ -19,20 +19,28 @@ if (!$screen) {
     json_response(false, 'Invalid screen code.', [], 401);
 }
 
-if (empty($screen['playlist_id'])) {
+if ((int) ($screen['active'] ?? 1) !== 1) {
+    json_response(false, 'Screen is inactive.', [], 403);
+}
+
+$assignment = resolve_screen_playlist_assignment($db, $screen);
+
+if (empty($assignment['playlist_id'])) {
     json_response(true, 'No playlist assigned to this screen.', [
         'screen' => [
             'id' => (int) $screen['id'],
             'name' => $screen['name'],
             'location' => $screen['location'],
             'sync_revision' => (int) $screen['sync_revision'],
+            'schedule_timezone' => $assignment['schedule_timezone'],
+            'schedule_rule' => $assignment['schedule_rule'],
         ],
         'playlist' => null,
         'items' => [],
     ]);
 }
 
-$items = fetch_playlist_items($db, (int) $screen['playlist_id'], (int) $screen['id']);
+$items = fetch_playlist_items($db, (int) $assignment['playlist_id'], (int) $screen['id']);
 $formattedItems = [];
 
 foreach ($items as $item) {
@@ -83,10 +91,13 @@ json_response(true, 'Playlist loaded.', [
         'name' => $screen['name'],
         'location' => $screen['location'],
         'sync_revision' => (int) $screen['sync_revision'],
+        'schedule_timezone' => $assignment['schedule_timezone'],
+        'schedule_rule' => $assignment['schedule_rule'],
     ],
     'playlist' => [
-        'id' => (int) $screen['playlist_id'],
-        'name' => $screen['playlist_name'],
+        'id' => (int) $assignment['playlist_id'],
+        'name' => $assignment['playlist_name'],
+        'source' => $assignment['source'],
     ],
     'items' => $formattedItems,
 ]);

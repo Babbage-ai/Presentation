@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily Cloud Signage Player Update Check
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=1d
+RandomizedDelaySec=30min
+Persistent=true
+Unit=cloud-signage-player-update.service
+
+[Install]
+WantedBy=timers.target

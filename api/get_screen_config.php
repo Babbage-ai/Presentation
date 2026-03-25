@@ -19,14 +19,21 @@ if (!$screen) {
     json_response(false, 'Invalid screen code.', [], 401);
 }
 
+if ((int) ($screen['active'] ?? 1) !== 1) {
+    json_response(false, 'Screen is inactive.', [], 403);
+}
+
+$assignment = resolve_screen_playlist_assignment($db, $screen);
+
 $playlistSummary = null;
-if (!empty($screen['playlist_id'])) {
-    $items = fetch_playlist_items($db, (int) $screen['playlist_id']);
+if (!empty($assignment['playlist_id'])) {
+    $items = fetch_playlist_items($db, (int) $assignment['playlist_id']);
     $playlistSummary = [
-        'id' => (int) $screen['playlist_id'],
-        'name' => $screen['playlist_name'],
+        'id' => (int) $assignment['playlist_id'],
+        'name' => $assignment['playlist_name'],
         'active' => (int) ($screen['playlist_active'] ?? 0) === 1,
         'item_count' => count($items),
+        'source' => $assignment['source'],
     ];
 }
 
@@ -35,11 +42,14 @@ json_response(true, 'Screen configuration loaded.', [
         'id' => (int) $screen['id'],
         'name' => $screen['name'],
         'location' => $screen['location'],
+        'active' => (int) ($screen['active'] ?? 1) === 1,
         'status' => screen_is_online($screen['last_seen']) ? 'online' : 'offline',
         'last_seen' => $screen['last_seen'],
         'resolution' => $screen['resolution'],
         'player_version' => $screen['player_version'],
         'sync_revision' => (int) $screen['sync_revision'],
+        'schedule_timezone' => $assignment['schedule_timezone'],
+        'schedule_rule' => $assignment['schedule_rule'],
     ],
     'playlist' => $playlistSummary,
 ]);

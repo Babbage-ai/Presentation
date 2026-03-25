@@ -1,0 +1,11 @@
+[Unit]
+Description=Update Cloud Signage Player Files
+After=network-online.target
+Wants=network-online.target
+Before=cloud-signage-player.service
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=-/etc/default/displayflow
+ExecStart=/usr/local/bin/cloud-signage-player-update.sh ${DISPLAYFLOW_API_BASE_URL}

@@ -1,216 +1,173 @@
 # Raspberry Pi Setup Guide
 
+## Architecture Summary
+
+- `displayflow-boot.service` decides whether the Pi should run in normal player mode or setup mode.
+- Device provisioning lives in `/etc/displayflow/config.json`.
+- The player still reads `/home/pi/cloud-signage/player/config.json`, but that file is generated from the protected device config.
+- Setup mode starts a temporary Wi-Fi hotspot with `hostapd` + `dnsmasq` and serves a mobile setup UI at `http://192.168.4.1`.
+- Repeated Wi-Fi or backend failures automatically push the Pi back into setup mode.
+
 ## 1. Install Raspberry Pi OS
 
 1. Flash Raspberry Pi OS Lite or Desktop using Raspberry Pi Imager.
-2. Boot the Pi and complete the basic setup.
-3. Update packages:
+2. Use Raspberry Pi Imager advanced options to pre-create a username and password.
+3. Boot the Pi and update packages:
 
 ```bash
 sudo apt update
 sudo apt upgrade -y
 ```
 
-## 2. Install Chromium And Utilities
+## 2. Install The DisplayFlow Pi Runtime
+
+From a checkout of this repository on the Pi:
 
 ```bash
-sudo apt install -y chromium-browser xserver-xorg x11-xserver-utils unclutter python3
+sudo bash raspberry-pi/bin/install-displayflow-pi.sh
 ```
 
-On some Raspberry Pi OS versions the package name is `chromium` instead of `chromium-browser`.
+The installer:
 
-## 3. Copy The Player Files
+- installs Chromium, `hostapd`, `dnsmasq`, and the Pi runtime dependencies
+- copies the player files to `/home/pi/cloud-signage/player`
+- installs the Pi scripts to `/usr/local/lib/displayflow`
+- installs the systemd units
+- configures Chromium kiosk autostart
 
-Copy the repository's `/player` folder to the Pi, for example:
+If your cloud base URL differs from the default, edit:
 
 ```bash
-mkdir -p /home/pi/cloud-signage
-cp -R player /home/pi/cloud-signage/
+sudo nano /etc/default/displayflow
 ```
 
-Create the runtime config:
+Set `DISPLAYFLOW_API_BASE_URL` to the correct backend base URL.
 
-```bash
-cp /home/pi/cloud-signage/player/config.json.example /home/pi/cloud-signage/player/config.json
-nano /home/pi/cloud-signage/player/config.json
-```
+## 3. First Boot And Provisioning
 
-Set:
+On each boot, the Pi checks `/etc/displayflow/config.json` for:
 
-- `api_base_url`
+- `wifi_ssid`
+- `wifi_password`
 - `screen_code`
-- optional refresh and heartbeat intervals
 
-## 4. Serve The Player Locally
+If any are missing or invalid, or setup mode is forced, it starts a temporary hotspot such as `DisplayFlow-Setup-AB12`.
 
-The player should be served from a local HTTP URL instead of `file://` so Chromium can use IndexedDB reliably for cached media.
+From the installer’s phone:
 
-Quick option:
+1. Join the setup hotspot.
+2. Open `http://192.168.4.1`.
+3. Enter the venue Wi-Fi name, venue Wi-Fi password, and screen code.
+4. Submit the form.
+5. The Pi saves the config atomically, tests venue Wi-Fi, verifies the cloud backend, then reboots into player mode.
+
+If the Wi-Fi or backend check fails, the Pi returns to setup mode and brings the hotspot back automatically.
+
+## 4. Services Installed
+
+The runtime installs these services:
+
+- `displayflow-boot.service`
+- `displayflow-setup-ap.service`
+- `displayflow-setup-web.service`
+- `cloud-signage-player.service`
+- `cloud-signage-player-update.service`
+- `cloud-signage-player-update.timer`
+
+Useful checks:
 
 ```bash
-cd /home/pi/cloud-signage
-python3 -m http.server 8080
+systemctl status displayflow-boot.service
+systemctl status displayflow-setup-web.service
+systemctl status cloud-signage-player.service
 ```
 
-Player URL:
+## 5. Keep The Display Awake
 
-```text
-http://127.0.0.1:8080/player/player.html
-```
-
-For production, run that command under `systemd` or replace it with another lightweight static web server.
-
-## 5. Autostart Chromium In Kiosk Mode
-
-Create an autostart file:
-
-```bash
-mkdir -p /home/pi/.config/lxsession/LXDE-pi
-nano /home/pi/.config/lxsession/LXDE-pi/autostart
-```
-
-Add:
-
-```text
-@xset s off
-@xset -dpms
-@xset s noblank
-@unclutter -idle 0.1 -root
-@chromium-browser --kiosk --disable-infobars --autoplay-policy=no-user-gesture-required --overscroll-history-navigation=0 http://127.0.0.1:8080/player/player.html
-```
-
-If your distribution uses `chromium` instead, replace `chromium-browser` with `chromium`.
-
-## 6. Keep The Display Awake
-
-The `xset` commands above disable screen blanking and DPMS power saving. If HDMI still sleeps on some hardware, add this to `/boot/firmware/cmdline.txt` or `/boot/cmdline.txt` as needed for the Pi image:
+The autostart file disables screen blanking and DPMS power saving. If HDMI still sleeps on some hardware, add this to `/boot/firmware/cmdline.txt` or `/boot/cmdline.txt`:
 
 ```text
 consoleblank=0
 ```
 
-## 7. Auto-Launch On Boot With systemd
-
-Create a small local web server service:
-
-```bash
-sudo nano /etc/systemd/system/cloud-signage-player.service
-```
-
-Use:
-
-```ini
-[Unit]
-Description=Cloud Signage Local Player Server
-After=network.target
-
-[Service]
-User=pi
-WorkingDirectory=/home/pi/cloud-signage
-ExecStart=/usr/bin/python3 -m http.server 8080
-Restart=always
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable it:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable cloud-signage-player.service
-sudo systemctl start cloud-signage-player.service
-```
-
-## 8. Operational Notes
+## 6. Operational Notes
 
 - Create one screen record per Pi in the admin panel.
-- Paste the matching screen code into `player/config.json`.
-- Heartbeats update the screen's `last_seen`, `resolution`, IP, and player version.
-- Cached media remains available in Chromium's local profile even if the WAN connection drops.
+- Give the installer the matching screen code.
+- Heartbeats update the screen’s `last_seen`, resolution, IP, and player version.
+- Cached media remains available in Chromium’s local profile even if WAN access drops.
+- If Wi-Fi or backend verification fails repeatedly on future boots, the Pi falls back into setup mode automatically.
+
+## 7. Manual Reset And Forced Setup Mode
+
+Wipe the saved Wi-Fi and pairing details completely:
+
+```bash
+sudo displayflow-reset-provisioning
+sudo reboot
+```
+
+Force setup mode without deleting the saved config:
+
+```bash
+sudo touch /etc/displayflow/force-setup
+sudo reboot
+```
+
+If you still have access to the boot partition, either of these flag files also works:
+
+- `/boot/displayflow-force-setup`
+- `/boot/displayflow-reset-provisioning`
+
+## 8. Troubleshooting
+
+Logs and state:
+
+```bash
+sudo journalctl -u displayflow-boot.service -b
+sudo journalctl -u displayflow-setup-web.service -b
+sudo journalctl -u cloud-signage-player.service -b
+sudo cat /var/lib/displayflow/state.json
+```
+
+Common checks:
+
+- Verify `/etc/default/displayflow` contains the correct `DISPLAYFLOW_API_BASE_URL`.
+- Verify `/etc/displayflow/config.json` contains the expected screen code.
+- Verify `wlan0` is the correct wireless interface on the Pi image.
+- Verify the screen code exists in the cloud admin.
 
 ## 9. Fresh SD Card Workflow
 
 If the Pi has not booted yet and the SD card is still in your PC, use the first-boot method documented in [`raspberry-pi-firstboot.md`](/workspaces/Presentation/raspberry-pi-firstboot.md).
 
-That workflow lets you place the player files and provisioning script onto the boot partition first, then have the Pi install the kiosk stack automatically during its initial boot.
+That workflow lets you place both the player files and the Pi runtime onto the boot partition so the Pi installs the full setup stack automatically during its initial boot.
 
 ## 10. Auto-Update Player On Boot And Daily
 
 If you want each Pi to refresh its local player files from the live website before Chromium launches, and also check daily for player code updates:
 
-1. Copy [`raspberry-pi-player-update.sh`](/workspaces/Presentation/raspberry-pi-player-update.sh) to the Pi, for example:
+1. Copy [`raspberry-pi-player-update.sh`](/workspaces/Presentation/raspberry-pi-player-update.sh) to the Pi:
 
 ```bash
 sudo cp raspberry-pi-player-update.sh /usr/local/bin/cloud-signage-player-update.sh
 sudo chmod 755 /usr/local/bin/cloud-signage-player-update.sh
 ```
 
-2. Install the example `systemd` unit files:
+2. Install the shipped unit files:
 
 ```bash
-sudo cp raspberry-pi-player-update.service.example /etc/systemd/system/cloud-signage-player-update.service
-sudo cp raspberry-pi-player-update.timer.example /etc/systemd/system/cloud-signage-player-update.timer
+sudo cp raspberry-pi/systemd/cloud-signage-player-update.service /etc/systemd/system/cloud-signage-player-update.service
+sudo cp raspberry-pi/systemd/cloud-signage-player-update.timer /etc/systemd/system/cloud-signage-player-update.timer
 ```
 
-If you need a different live URL, edit the service file and change the `ExecStart` value.
+3. Edit `/etc/default/displayflow` if the API base URL differs from the default.
 
-3. The service file should look like this:
-
-```bash
-sudo nano /etc/systemd/system/cloud-signage-player-update.service
-```
-
-Use:
-
-```ini
-[Unit]
-Description=Update Cloud Signage Player Files
-After=network-online.target
-Wants=network-online.target
-Before=cloud-signage-player.service
-
-[Service]
-Type=oneshot
-User=root
-ExecStart=/usr/local/bin/cloud-signage-player-update.sh https://babbage-ai.co.uk/Present
-
-[Install]
-WantedBy=multi-user.target
-```
-
-4. The timer file should look like this:
-
-```bash
-sudo nano /etc/systemd/system/cloud-signage-player-update.timer
-```
-
-Use:
-
-```ini
-[Unit]
-Description=Daily Cloud Signage Player Update Check
-
-[Timer]
-OnBootSec=10min
-OnUnitActiveSec=1d
-RandomizedDelaySec=30min
-Persistent=true
-Unit=cloud-signage-player-update.service
-
-[Install]
-WantedBy=timers.target
-```
-
-5. Enable the boot-time refresh and the daily timer:
+4. Enable the timer:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable cloud-signage-player-update.service
 sudo systemctl enable --now cloud-signage-player-update.timer
 ```
 
-This updates `player.html`, `player.js`, and `player.css` on each boot, then checks again daily. It does not overwrite the Pi's local `config.json`.
-
-The updater script now skips unchanged files, so the daily check is safe to leave running permanently.
+This updates `player.html`, `player.js`, and `player.css` on each boot and then checks again daily. It does not overwrite the Pi’s local provisioning data.

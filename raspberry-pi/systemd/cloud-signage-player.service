@@ -1,0 +1,17 @@
+[Unit]
+Description=Cloud Signage local player server
+After=network.target displayflow-boot.service
+Wants=displayflow-boot.service
+
+[Service]
+Type=simple
+User=__PI_USER__
+WorkingDirectory=__PI_HOME__/cloud-signage
+ExecStart=/usr/bin/python3 -m http.server __PLAYER_PORT__
+Restart=always
+RestartSec=3
+StandardOutput=append:/var/log/displayflow/player.log
+StandardError=append:/var/log/displayflow/player.log
+
+[Install]
+WantedBy=multi-user.target

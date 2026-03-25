@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS cloud_signage CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE cloud_signage;
+CREATE DATABASE IF NOT EXISTS cloud_signage_present CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE cloud_signage_present;
 
 CREATE TABLE IF NOT EXISTS admins (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -84,6 +84,20 @@ CREATE TABLE IF NOT EXISTS playlist_items (
         ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS schedules (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    owner_admin_id INT UNSIGNED NOT NULL,
+    name VARCHAR(120) NOT NULL,
+    active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_schedules_owner_name (owner_admin_id, name),
+    KEY idx_schedules_owner_active (owner_admin_id, active),
+    CONSTRAINT fk_schedules_owner_admin
+        FOREIGN KEY (owner_admin_id) REFERENCES admins(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS screens (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     owner_admin_id INT UNSIGNED NOT NULL,
@@ -92,6 +106,8 @@ CREATE TABLE IF NOT EXISTS screens (
     screen_token VARCHAR(128) NOT NULL,
     location VARCHAR(255) NOT NULL DEFAULT '',
     playlist_id INT UNSIGNED NULL,
+    schedule_id INT UNSIGNED NULL,
+    active TINYINT(1) NOT NULL DEFAULT 1,
     resolution VARCHAR(50) NULL,
     last_seen DATETIME NULL,
     last_ip VARCHAR(45) NULL,
@@ -101,14 +117,41 @@ CREATE TABLE IF NOT EXISTS screens (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_screens_screen_code (screen_code),
     UNIQUE KEY uq_screens_screen_token (screen_token),
+    KEY idx_screens_owner_active (owner_admin_id, active),
     KEY idx_screens_owner_playlist (owner_admin_id, playlist_id),
+    KEY idx_screens_owner_schedule (owner_admin_id, schedule_id),
     KEY idx_screens_owner_status_last_seen (owner_admin_id, status, last_seen),
     CONSTRAINT fk_screens_owner_admin
         FOREIGN KEY (owner_admin_id) REFERENCES admins(id)
         ON DELETE CASCADE,
     CONSTRAINT fk_screens_playlist
         FOREIGN KEY (playlist_id) REFERENCES playlists(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_screens_schedule
+        FOREIGN KEY (schedule_id) REFERENCES schedules(id)
         ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS schedule_rules (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    schedule_id INT UNSIGNED NOT NULL,
+    playlist_id INT UNSIGNED NOT NULL,
+    label VARCHAR(120) NOT NULL DEFAULT '',
+    day_mask TINYINT UNSIGNED NOT NULL DEFAULT 127,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    priority INT UNSIGNED NOT NULL DEFAULT 1,
+    active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_schedule_rules_schedule_priority (schedule_id, active, priority, start_time),
+    KEY idx_schedule_rules_playlist (playlist_id),
+    CONSTRAINT fk_schedule_rules_schedule
+        FOREIGN KEY (schedule_id) REFERENCES schedules(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_schedule_rules_playlist
+        FOREIGN KEY (playlist_id) REFERENCES playlists(id)
+        ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS screen_logs (

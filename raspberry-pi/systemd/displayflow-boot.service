@@ -1,0 +1,15 @@
+[Unit]
+Description=DisplayFlow boot mode controller
+After=local-fs.target systemd-machine-id-commit.service
+Before=multi-user.target graphical.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/displayflow/bin/displayflow-mode.sh boot
+StandardOutput=append:/var/log/displayflow/boot.log
+StandardError=append:/var/log/displayflow/boot.log
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target

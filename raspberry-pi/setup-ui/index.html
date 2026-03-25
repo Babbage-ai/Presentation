@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DisplayFlow Setup</title>
+    <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+    <main class="shell">
+        <section class="card">
+            <div class="brand">DisplayFlow</div>
+            <h1>Screen setup</h1>
+            <p class="intro">Connect this screen to the venue Wi-Fi and pair it to the correct screen code.</p>
+
+            <div id="status-banner" class="status-banner" hidden></div>
+
+            <form id="setup-form" novalidate>
+                <label for="wifi_ssid">Venue Wi-Fi name</label>
+                <input id="wifi_ssid" name="wifi_ssid" type="text" autocomplete="organization" maxlength="32" required>
+                <div class="field-error" data-error-for="wifi_ssid"></div>
+
+                <label for="wifi_password">Venue Wi-Fi password</label>
+                <input id="wifi_password" name="wifi_password" type="password" autocomplete="current-password" maxlength="63" required>
+                <div class="field-error" data-error-for="wifi_password"></div>
+
+                <label for="screen_code">Screen code</label>
+                <input id="screen_code" name="screen_code" type="text" autocapitalize="characters" autocomplete="off" maxlength="64" required>
+                <div class="field-error" data-error-for="screen_code"></div>
+
+                <button id="submit-button" type="submit">Save and connect</button>
+            </form>
+
+            <div id="working-state" class="working-state" hidden>
+                <div class="spinner"></div>
+                <p id="working-message">Saving settings…</p>
+            </div>
+
+            <section class="support">
+                <h2>Support</h2>
+                <ul>
+                    <li>Setup URL: <strong>http://192.168.4.1</strong></li>
+                    <li>If the hotspot disconnects after you submit, wait 60 seconds.</li>
+                    <li>If setup fails, reconnect to the DisplayFlow setup hotspot and reload this page.</li>
+                </ul>
+            </section>
+        </section>
+    </main>
+
+    <script src="/app.js"></script>
+</body>
+</html>

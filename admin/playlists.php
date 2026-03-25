@@ -47,8 +47,12 @@ if (is_post_request()) {
         $playlistId = (int) ($_POST['playlist_id'] ?? 0);
         $name = trim((string) ($_POST['name'] ?? ''));
         $active = isset($_POST['active']) ? 1 : 0;
+        $ajaxRequest = is_ajax_request();
 
         if ($playlistId < 1 || $name === '') {
+            if ($ajaxRequest) {
+                json_response(false, 'Playlist update failed.', [], 400);
+            }
             set_flash('danger', 'Playlist update failed.');
             redirect('/admin/playlists.php');
         }
@@ -58,6 +62,28 @@ if (is_post_request()) {
         $statement->execute();
         $statement->close();
         bump_playlist_screen_sync_revision($db, $playlistId, $adminId);
+
+        if ($ajaxRequest) {
+            $statement = $db->prepare("SELECT id, name, active, updated_at
+                FROM playlists
+                WHERE id = ? AND owner_admin_id = ?
+                LIMIT 1");
+            $statement->bind_param('ii', $playlistId, $adminId);
+            $statement->execute();
+            $playlist = $statement->get_result()->fetch_assoc() ?: null;
+            $statement->close();
+
+            if (!$playlist) {
+                json_response(false, 'Playlist not found.', [], 404);
+            }
+
+            json_response(true, 'Playlist updated.', [
+                'playlist_id' => (int) $playlist['id'],
+                'name' => (string) $playlist['name'],
+                'active' => (int) $playlist['active'] === 1,
+                'updated_at' => format_datetime($playlist['updated_at']),
+            ]);
+        }
 
         set_flash('success', 'Playlist updated.');
         redirect('/admin/playlists.php?playlist_id=' . $playlistId);
@@ -117,54 +143,13 @@ if (is_post_request()) {
         redirect('/admin/playlists.php');
     }
 
-    if ($action === 'add_playlist_media_item') {
+    if ($action === 'add_playlist_item') {
         $playlistId = (int) ($_POST['playlist_id'] ?? 0);
-        $mediaId = (int) ($_POST['media_id'] ?? 0);
+        $selection = trim((string) ($_POST['item_selection'] ?? ''));
         $imageDuration = max(1, normalize_int($_POST['image_duration'] ?? null, 10));
 
-        if ($playlistId < 1 || $mediaId < 1) {
-            set_flash('danger', 'A valid playlist and media item are required.');
-            redirect('/admin/playlists.php' . ($playlistId > 0 ? '?playlist_id=' . $playlistId : ''));
-        }
-
-        $statement = $db->prepare("SELECT COUNT(*) AS total
-            FROM playlists p
-            INNER JOIN media m ON m.id = ?
-            WHERE p.id = ? AND p.owner_admin_id = ? AND m.owner_admin_id = ?");
-        $statement->bind_param('iiii', $mediaId, $playlistId, $adminId, $adminId);
-        $statement->execute();
-        $validRelation = (int) $statement->get_result()->fetch_assoc()['total'] === 1;
-        $statement->close();
-
-        if (!$validRelation) {
-            set_flash('danger', 'The selected media or playlist does not belong to your presentation system.');
-            redirect('/admin/playlists.php?playlist_id=' . $playlistId);
-        }
-
-        $sortOrder = $nextPlaylistSortOrder($db, $playlistId, $adminId);
-
-        $statement = $db->prepare("INSERT INTO playlist_items (playlist_id, item_type, media_id, quiz_question_id, sort_order, image_duration, active, created_at)
-            VALUES (?, 'media', ?, NULL, ?, ?, 1, UTC_TIMESTAMP())");
-        $statement->bind_param('iiii', $playlistId, $mediaId, $sortOrder, $imageDuration);
-        $statement->execute();
-        $statement->close();
-        bump_playlist_screen_sync_revision($db, $playlistId, $adminId);
-
-        set_flash('success', 'Media item added to playlist.');
-        redirect('/admin/playlists.php?playlist_id=' . $playlistId);
-    }
-
-    if ($action === 'add_playlist_quiz_item') {
-        $playlistId = (int) ($_POST['playlist_id'] ?? 0);
-        $quizSelectionMode = (string) ($_POST['quiz_selection_mode'] ?? 'fixed');
-        $quizId = (int) ($_POST['quiz_question_id'] ?? 0);
-
-        if (!in_array($quizSelectionMode, ['fixed', 'random'], true)) {
-            $quizSelectionMode = 'fixed';
-        }
-
-        if ($playlistId < 1) {
-            set_flash('danger', 'A valid playlist is required.');
+        if ($playlistId < 1 || $selection === '') {
+            set_flash('danger', 'A valid playlist and item selection are required.');
             redirect('/admin/playlists.php' . ($playlistId > 0 ? '?playlist_id=' . $playlistId : ''));
         }
 
@@ -181,25 +166,41 @@ if (is_post_request()) {
             redirect('/admin/playlists.php?playlist_id=' . $playlistId);
         }
 
-        if ($quizSelectionMode === 'fixed') {
-            if ($quizId < 1) {
-                set_flash('danger', 'Select a quiz question or choose the random marker option.');
+        $sortOrder = $nextPlaylistSortOrder($db, $playlistId, $adminId);
+
+        if (str_starts_with($selection, 'media:')) {
+            $mediaId = (int) substr($selection, 6);
+
+            if ($mediaId < 1) {
+                set_flash('danger', 'Select a valid media item.');
                 redirect('/admin/playlists.php?playlist_id=' . $playlistId);
             }
 
             $statement = $db->prepare("SELECT COUNT(*) AS total
-                FROM quiz_questions
+                FROM media
                 WHERE id = ? AND owner_admin_id = ?");
-            $statement->bind_param('ii', $quizId, $adminId);
+            $statement->bind_param('ii', $mediaId, $adminId);
             $statement->execute();
-            $quizExists = (int) $statement->get_result()->fetch_assoc()['total'] === 1;
+            $mediaExists = (int) $statement->get_result()->fetch_assoc()['total'] === 1;
             $statement->close();
 
-            if (!$quizExists) {
-                set_flash('danger', 'The selected quiz question was not found in your presentation system.');
+            if (!$mediaExists) {
+                set_flash('danger', 'The selected media item was not found in your presentation system.');
                 redirect('/admin/playlists.php?playlist_id=' . $playlistId);
             }
-        } else {
+
+            $statement = $db->prepare("INSERT INTO playlist_items (playlist_id, item_type, media_id, quiz_question_id, sort_order, image_duration, active, created_at)
+                VALUES (?, 'media', ?, NULL, ?, ?, 1, UTC_TIMESTAMP())");
+            $statement->bind_param('iiii', $playlistId, $mediaId, $sortOrder, $imageDuration);
+            $statement->execute();
+            $statement->close();
+            bump_playlist_screen_sync_revision($db, $playlistId, $adminId);
+
+            set_flash('success', 'Media item added to playlist.');
+            redirect('/admin/playlists.php?playlist_id=' . $playlistId);
+        }
+
+        if ($selection === 'random_quiz') {
             $statement = $db->prepare("SELECT COUNT(*) AS total
                 FROM quiz_questions
                 WHERE owner_admin_id = ? AND active = 1");
@@ -213,25 +214,18 @@ if (is_post_request()) {
                 redirect('/admin/playlists.php?playlist_id=' . $playlistId);
             }
 
-            $quizId = 0;
-        }
-
-        $sortOrder = $nextPlaylistSortOrder($db, $playlistId, $adminId);
-
-        if ($quizSelectionMode === 'random') {
             $statement = $db->prepare("INSERT INTO playlist_items (playlist_id, item_type, quiz_selection_mode, media_id, quiz_question_id, sort_order, image_duration, active, created_at)
                 VALUES (?, 'quiz', 'random', NULL, NULL, ?, 10, 1, UTC_TIMESTAMP())");
             $statement->bind_param('ii', $playlistId, $sortOrder);
-        } else {
-            $statement = $db->prepare("INSERT INTO playlist_items (playlist_id, item_type, quiz_selection_mode, media_id, quiz_question_id, sort_order, image_duration, active, created_at)
-                VALUES (?, 'quiz', 'fixed', NULL, ?, ?, 10, 1, UTC_TIMESTAMP())");
-            $statement->bind_param('iii', $playlistId, $quizId, $sortOrder);
-        }
-        $statement->execute();
-        $statement->close();
-        bump_playlist_screen_sync_revision($db, $playlistId, $adminId);
+            $statement->execute();
+            $statement->close();
+            bump_playlist_screen_sync_revision($db, $playlistId, $adminId);
 
-        set_flash('success', $quizSelectionMode === 'random' ? 'Random quiz marker added to playlist.' : 'Quiz question added to playlist.');
+            set_flash('success', 'Random quiz marker added to playlist.');
+            redirect('/admin/playlists.php?playlist_id=' . $playlistId);
+        }
+
+        set_flash('danger', 'Select a valid media item or random quiz option.');
         redirect('/admin/playlists.php?playlist_id=' . $playlistId);
     }
 
@@ -330,6 +324,63 @@ if (is_post_request()) {
         }
 
         set_flash('success', 'Playlist item updated.');
+        redirect('/admin/playlists.php?playlist_id=' . $playlistId . '#playlist-item-row-' . $itemId);
+    }
+
+    if ($action === 'replace_playlist_media_item') {
+        $playlistId = (int) ($_POST['playlist_id'] ?? 0);
+        $itemId = (int) ($_POST['item_id'] ?? 0);
+        $mediaId = (int) ($_POST['media_id'] ?? 0);
+
+        if ($playlistId < 1 || $itemId < 1 || $mediaId < 1) {
+            set_flash('danger', 'Select a valid playlist item and replacement media.');
+            redirect('/admin/playlists.php' . ($playlistId > 0 ? '?playlist_id=' . $playlistId : ''));
+        }
+
+        $statement = $db->prepare("SELECT pi.id, pi.media_id
+            FROM playlist_items pi
+            INNER JOIN playlists p ON p.id = pi.playlist_id
+            WHERE pi.id = ? AND pi.playlist_id = ? AND pi.item_type = 'media' AND p.owner_admin_id = ?
+            LIMIT 1");
+        $statement->bind_param('iii', $itemId, $playlistId, $adminId);
+        $statement->execute();
+        $playlistItem = $statement->get_result()->fetch_assoc() ?: null;
+        $statement->close();
+
+        if (!$playlistItem) {
+            set_flash('danger', 'Media playlist item not found.');
+            redirect('/admin/playlists.php?playlist_id=' . $playlistId);
+        }
+
+        $statement = $db->prepare("SELECT id
+            FROM media
+            WHERE id = ? AND owner_admin_id = ? AND active = 1
+            LIMIT 1");
+        $statement->bind_param('ii', $mediaId, $adminId);
+        $statement->execute();
+        $replacementMedia = $statement->get_result()->fetch_assoc() ?: null;
+        $statement->close();
+
+        if (!$replacementMedia) {
+            set_flash('danger', 'Replacement media was not found in your active library.');
+            redirect('/admin/playlists.php?playlist_id=' . $playlistId . '#playlist-item-row-' . $itemId);
+        }
+
+        if ((int) $playlistItem['media_id'] === $mediaId) {
+            set_flash('info', 'This playlist item already uses the selected media.');
+            redirect('/admin/playlists.php?playlist_id=' . $playlistId . '#playlist-item-row-' . $itemId);
+        }
+
+        $statement = $db->prepare("UPDATE playlist_items pi
+            INNER JOIN playlists p ON p.id = pi.playlist_id
+            SET pi.media_id = ?
+            WHERE pi.id = ? AND pi.playlist_id = ? AND p.owner_admin_id = ?");
+        $statement->bind_param('iiii', $mediaId, $itemId, $playlistId, $adminId);
+        $statement->execute();
+        $statement->close();
+        bump_playlist_screen_sync_revision($db, $playlistId, $adminId);
+
+        set_flash('success', 'Playlist media item replaced.');
         redirect('/admin/playlists.php?playlist_id=' . $playlistId . '#playlist-item-row-' . $itemId);
     }
 
@@ -493,11 +544,85 @@ foreach ($playlists as $playlist) {
 $pageTitle = 'Playlists';
 require_once __DIR__ . '/../includes/header.php';
 ?>
+<style>
+    .playlist-admin-page { display: grid; gap: 0.75rem; }
+    .playlist-admin-page .section-heading { margin-bottom: 0; }
+    .playlist-admin-page .stat-card .card-body { padding: 0.72rem 0.82rem 0.76rem; }
+    .playlist-admin-page .table-card .card-body,
+    .playlist-admin-page .section-card .card-body,
+    .playlist-admin-page .list-card .card-body,
+    .playlist-admin-page .hero-card .card-body { padding: 0.82rem; }
+    .playlist-admin-page .table-card .card-body.p-0,
+    .playlist-admin-page .list-card .card-body.p-0 { padding: 0 !important; }
+    .playlist-item-table { table-layout: fixed; }
+    .playlist-item-table td,
+    .playlist-item-table th { vertical-align: top; }
+    .playlist-item-table th:nth-child(1),
+    .playlist-item-table td:nth-child(1) { width: 34%; }
+    .playlist-item-table th:nth-child(2),
+    .playlist-item-table td:nth-child(2) { width: 10%; }
+    .playlist-item-table th:nth-child(3),
+    .playlist-item-table td:nth-child(3) { width: 9%; }
+    .playlist-item-table th:nth-child(4),
+    .playlist-item-table td:nth-child(4) { width: 12%; }
+    .playlist-item-table th:nth-child(5),
+    .playlist-item-table td:nth-child(5) { width: 11%; }
+    .playlist-item-table th:nth-child(6),
+    .playlist-item-table td:nth-child(6) { width: 24%; }
+    .playlist-item-table .item-selector-form,
+    .playlist-item-table .item-selector-form .form-select { width: 100%; }
+    .playlist-item-table .icon-actions { flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+    .playlist-edit-inline { display: grid; grid-template-columns: minmax(12rem, 2fr) auto auto auto auto; gap: 0.55rem; align-items: end; }
+    .playlist-inline-group { min-width: 0; }
+    .playlist-inline-group .summary-label { display: block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--admin-text-soft); margin-bottom: 0.25rem; }
+    .playlist-inline-static { font-weight: 600; color: var(--admin-text-strong); white-space: nowrap; }
+    .playlist-inline-name { min-width: 0; }
+    .playlist-inline-name input { min-width: 0; }
+    .playlist-edit-inline .form-check { margin-bottom: 0.55rem; white-space: nowrap; }
+    .playlist-selected-item { padding: 0.85rem 1rem; background: #141d33; color: #fff; }
+    .playlist-selected-item .playlist-edit-inline { grid-template-columns: minmax(14rem, 2.2fr) auto auto auto auto; }
+    .playlist-selected-item .summary-label { color: rgba(226, 232, 240, 0.72); }
+    .playlist-selected-item .playlist-inline-static,
+    .playlist-selected-item .form-check-label { color: #fff; }
+    .playlist-selected-item .form-control { background: rgba(255, 255, 255, 0.96); border-color: rgba(255, 255, 255, 0.22); }
+    .playlist-selected-item .btn-outline-danger { border-color: rgba(248, 113, 113, 0.8); color: #fecaca; }
+    .playlist-selected-item .btn-outline-danger:hover,
+    .playlist-selected-item .btn-outline-danger:focus { color: #fff; background: rgba(220, 38, 38, 0.85); border-color: rgba(220, 38, 38, 0.85); }
+    @media (max-width: 991px) {
+        .playlist-admin-page { gap: 0.6rem; }
+        .playlist-admin-page .row.g-2 { --bs-gutter-x: 0.6rem; --bs-gutter-y: 0.6rem; }
+        .playlist-admin-page .table-responsive { overflow: visible; }
+        .playlist-item-table thead { display: none; }
+        .playlist-item-table,
+        .playlist-item-table tbody,
+        .playlist-item-table tr,
+        .playlist-item-table td { display: block; width: 100%; }
+        .playlist-item-table tbody { padding: 0.55rem; }
+        .playlist-item-table tr { margin-bottom: 0.55rem; padding: 0.72rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 0.9rem; background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)); }
+        .playlist-item-table tr:last-child { margin-bottom: 0; }
+        .playlist-item-table td { border: 0; padding: 0; margin-top: 0.42rem; }
+        .playlist-item-table td:first-child { margin-top: 0; }
+        .playlist-item-table td::before { content: attr(data-label); display: block; margin-bottom: 0.14rem; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--admin-text-soft); }
+        .playlist-item-table .icon-actions { justify-content: flex-start; }
+        .playlist-item-table .item-selector-form .form-select,
+        .playlist-item-table input.form-control,
+        .playlist-item-table .icon-actions > form,
+        .playlist-item-table .icon-actions > button { width: 100%; }
+        .playlist-edit-inline,
+        .playlist-selected-item .playlist-edit-inline { grid-template-columns: 1fr; }
+        .playlist-edit-inline .form-check { margin-bottom: 0; }
+        .playlist-inline-static { white-space: normal; }
+    }
+</style>
 <div class="section-heading">
     <div>
         <h1 class="h3">Playlists</h1>
         <div class="section-subtitle">Manage playlists, add content, and reorder items from one cleaner workspace.</div>
     </div>
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#createPlaylistModal">
+        <i class="bi bi-plus-circle"></i>
+        <span class="ms-1">Add Playlist</span>
+    </button>
 </div>
 <div class="playlist-admin-page">
 <div class="row g-2">
@@ -538,223 +663,105 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
     </div>
 </div>
-<div class="card top-create-card">
-    <div class="card-header"><h2 class="h5 mb-0">Add New Playlist</h2></div>
-    <div class="card-body">
-        <form class="dense-form" method="post">
-            <?= csrf_field() ?>
-            <input type="hidden" name="action" value="create_playlist">
-            <div class="row g-3 align-items-end">
-                <div class="col-lg-8">
-                    <label class="form-label" for="playlist_name">Name</label>
-                    <input class="form-control" id="playlist_name" name="name" type="text" required>
-                </div>
-                <div class="col-lg-2">
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" id="playlist_active" name="active" type="checkbox" checked>
-                        <label class="form-check-label" for="playlist_active">Active</label>
-                    </div>
-                </div>
-                <div class="col-lg-2">
-                    <button class="btn btn-primary w-100" type="submit">
-                        <i class="bi bi-plus-circle"></i>
-                        <span class="ms-1">Create</span>
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-<div class="row g-2">
-    <div class="col-xl-3 col-lg-4">
-        <div class="admin-side-panel panel-stack">
-            <div class="card list-card">
-                <div class="card-header"><h2 class="h5 mb-0">Existing Playlists</h2></div>
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                        <?php if (!$playlists): ?>
-                            <div class="list-group-item text-muted">No playlists created yet.</div>
-                        <?php else: ?>
-                            <?php foreach ($playlists as $playlist): ?>
-                                <a class="list-group-item list-group-item-action <?= (int) $playlist['id'] === $selectedPlaylistId ? 'active' : '' ?>" href="<?= e(app_path('/admin/playlists.php?playlist_id=' . (int) $playlist['id'])) ?>">
-                                    <div class="d-flex justify-content-between align-items-start gap-2">
-                                        <div class="muted-stack">
-                                            <strong><?= e($playlist['name']) ?></strong>
-                                            <span class="small"><?= (int) $playlist['active'] === 1 ? 'Active playlist' : 'Inactive playlist' ?></span>
-                                        </div>
-                                        <span class="badge <?= (int) $playlist['active'] === 1 ? 'text-bg-success' : 'text-bg-secondary' ?>"><?= (int) $playlist['item_count'] ?> items</span>
-                                    </div>
-                                </a>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
+<div class="card list-card">
+    <div class="card-header"><h2 class="h5 mb-0">Existing Playlists</h2></div>
+    <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+            <?php if (!$playlists): ?>
+                <div class="list-group-item text-muted">No playlists created yet.</div>
+            <?php else: ?>
+                <?php foreach ($playlists as $playlist): ?>
+                    <?php if ((int) $playlist['id'] === $selectedPlaylistId): ?>
+                        <form method="post" id="playlist-inline-delete-form" class="dense-form" onsubmit="return confirm('Delete this playlist? Assigned screens will become unassigned and playlist items will be removed.');">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="delete_playlist">
+                            <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
+                        </form>
+                        <form class="list-group-item playlist-selected-item dense-form m-0" method="post" id="playlist-inline-form">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="update_playlist">
+                            <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
+                            <div class="playlist-edit-inline">
+                                <div class="playlist-inline-group playlist-inline-name">
+                                    <label class="summary-label" for="selected_playlist_name">Name</label>
+                                    <input class="form-control" id="selected_playlist_name" name="name" type="text" value="<?= e($selectedPlaylist['name']) ?>" required>
+                                </div>
+                                <div class="playlist-inline-group">
+                                    <span class="summary-label">Updated</span>
+                                    <div class="playlist-inline-static" id="selected-playlist-updated"><?= e(format_datetime($selectedPlaylist['updated_at'])) ?></div>
+                                </div>
+                                <div class="playlist-inline-group">
+                                    <span class="summary-label">Items</span>
+                                    <div class="playlist-inline-static"><?= count($playlistItems) ?></div>
+                                </div>
+                                <div class="form-check playlist-inline-group">
+                                    <input class="form-check-input" id="selected_playlist_active" name="active" type="checkbox" <?= (int) $selectedPlaylist['active'] === 1 ? 'checked' : '' ?>>
+                                    <label class="form-check-label" for="selected_playlist_active">Active</label>
+                                </div>
+                                <div class="playlist-inline-group">
+                                    <span class="summary-label">Delete</span>
+                                    <button class="btn btn-outline-danger" type="submit" form="playlist-inline-delete-form">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    <?php else: ?>
+                        <a class="list-group-item list-group-item-action" href="<?= e(app_path('/admin/playlists.php?playlist_id=' . (int) $playlist['id'])) ?>">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <div class="muted-stack">
+                                    <strong><?= e($playlist['name']) ?></strong>
+                                    <span class="small"><?= (int) $playlist['active'] === 1 ? 'Active playlist' : 'Inactive playlist' ?></span>
+                                </div>
+                                <span class="badge <?= (int) $playlist['active'] === 1 ? 'text-bg-success' : 'text-bg-secondary' ?>"><?= (int) $playlist['item_count'] ?> items</span>
+                            </div>
+                        </a>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
+</div>
 
-    <div class="col-xl-9 col-lg-8">
-        <?php if (!$selectedPlaylist): ?>
-            <div class="card">
-                <div class="card-body text-muted">Select a playlist to edit settings and manage its items.</div>
-            </div>
-        <?php else: ?>
-            <div class="card hero-card">
-                <div class="card-header"><h2 class="h5 mb-0">Selected Playlist</h2></div>
+<?php if (!$selectedPlaylist): ?>
+    <div class="card">
+        <div class="card-body text-muted">Select a playlist to edit settings and manage its items.</div>
+    </div>
+<?php else: ?>
+            <div class="card section-card">
+                <div class="card-header"><h2 class="h5 mb-0">Add Item To Playlist</h2></div>
                 <div class="card-body">
-                    <div class="dashboard-box-grid">
-                        <section class="dashboard-box">
-                            <div class="dashboard-box-head">
-                                <div>
-                                    <h3>Playlist Summary</h3>
-                                    <p>The selected playlist at a glance.</p>
-                                </div>
-                            </div>
-                            <div class="dashboard-box-body">
-                                <div class="summary-list">
-                                    <div class="summary-row">
-                                        <div class="summary-label">Name</div>
-                                        <div class="summary-value"><?= e($selectedPlaylist['name']) ?></div>
-                                    </div>
-                                    <div class="summary-row">
-                                        <div class="summary-label">Status</div>
-                                        <div class="summary-value"><?= (int) $selectedPlaylist['active'] === 1 ? 'Active' : 'Inactive' ?></div>
-                                    </div>
-                                    <div class="summary-row">
-                                        <div class="summary-label">Items</div>
-                                        <div class="summary-value"><?= count($playlistItems) ?></div>
-                                    </div>
-                                    <div class="summary-row">
-                                        <div class="summary-label">Updated</div>
-                                        <div class="summary-value"><?= e(format_datetime($selectedPlaylist['updated_at'])) ?></div>
-                                    </div>
-                                </div>
-                            </div>
+                    <form method="post" class="row g-3 dense-form">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="add_playlist_item">
+                        <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
+                        <div class="col-12">
+                            <label class="form-label" for="item_selection">Item</label>
+                            <select class="form-select" id="item_selection" name="item_selection" required>
+                                <option value="">Select media item or random quiz question</option>
+                                <option value="random_quiz">Random quiz question</option>
+                                <?php foreach ($mediaOptions as $media): ?>
+                                    <option value="media:<?= (int) $media['id'] ?>"><?= e($media['title']) ?> (<?= e($media['media_type']) ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
-                        <section class="dashboard-box">
-                            <div class="dashboard-box-head">
-                                <div>
-                                    <h3>Edit Playlist</h3>
-                                    <p>Update the name, status, or remove the playlist entirely.</p>
-                                </div>
-                            </div>
-                            <div class="dashboard-box-body">
-                                <form class="dense-form" method="post">
-                                    <?= csrf_field() ?>
-                                    <input type="hidden" name="action" value="update_playlist">
-                                    <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
-                                    <div class="row g-3">
-                                        <div class="col-md-8">
-                                            <label class="form-label" for="selected_playlist_name">Name</label>
-                                            <input class="form-control" id="selected_playlist_name" name="name" type="text" value="<?= e($selectedPlaylist['name']) ?>" required>
-                                        </div>
-                                        <div class="col-md-4 d-flex align-items-end">
-                                            <div class="form-check mb-2">
-                                                <input class="form-check-input" id="selected_playlist_active" name="active" type="checkbox" <?= (int) $selectedPlaylist['active'] === 1 ? 'checked' : '' ?>>
-                                                <label class="form-check-label" for="selected_playlist_active">Playlist active</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="compact-form-actions mt-3">
-                                        <button class="btn btn-primary" type="submit">
-                                            <i class="bi bi-check2"></i>
-                                            <span class="ms-1">Save Playlist</span>
-                                        </button>
-                                    </div>
-                                </form>
-                                <form method="post" class="mt-3 dense-form" onsubmit="return confirm('Delete this playlist? Assigned screens will become unassigned and playlist items will be removed.');">
-                                    <?= csrf_field() ?>
-                                    <input type="hidden" name="action" value="delete_playlist">
-                                    <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
-                                    <button class="btn btn-outline-danger" type="submit">
-                                        <i class="bi bi-trash"></i>
-                                        <span class="ms-1">Delete Playlist</span>
-                                    </button>
-                                </form>
-                            </div>
-                        </section>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row g-2">
-                <div class="col-xl-6">
-                    <div class="card section-card h-100">
-                        <div class="card-header"><h2 class="h5 mb-0">Add Media To Playlist</h2></div>
-                        <div class="card-body">
-                            <form method="post" class="row g-3 dense-form">
-                                <?= csrf_field() ?>
-                                <input type="hidden" name="action" value="add_playlist_media_item">
-                                <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
-                                <div class="col-12">
-                                    <label class="form-label" for="media_id">Media</label>
-                                    <select class="form-select" id="media_id" name="media_id" required>
-                                        <option value="">Select media</option>
-                                        <?php foreach ($mediaOptions as $media): ?>
-                                            <option value="<?= (int) $media['id'] ?>"><?= e($media['title']) ?> (<?= e($media['media_type']) ?>)</option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label" for="image_duration">Image Duration</label>
-                                    <input class="form-control" id="image_duration" name="image_duration" type="number" min="1" value="10" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-text pt-4">Added items go to the end of the playlist automatically.</div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="form-text">Videos ignore image duration and play until completion.</div>
-                                </div>
-                                <div class="col-12">
-                                    <button class="btn btn-primary" type="submit">
-                                        <i class="bi bi-plus-circle"></i>
-                                        <span class="ms-1">Add Media Item</span>
-                                    </button>
-                                </div>
-                            </form>
+                        <div class="col-md-6">
+                            <label class="form-label" for="image_duration">Image Duration</label>
+                            <input class="form-control" id="image_duration" name="image_duration" type="number" min="1" value="10" required>
                         </div>
-                    </div>
-                </div>
-
-                <div class="col-xl-6">
-                    <div class="card section-card h-100">
-                        <div class="card-header"><h2 class="h5 mb-0">Add Quiz To Playlist</h2></div>
-                        <div class="card-body">
-                            <form method="post" class="row g-3 dense-form">
-                                <?= csrf_field() ?>
-                                <input type="hidden" name="action" value="add_playlist_quiz_item">
-                                <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
-                                <div class="col-md-6">
-                                    <label class="form-label" for="quiz_selection_mode">Quiz Mode</label>
-                                    <select class="form-select" id="quiz_selection_mode" name="quiz_selection_mode">
-                                        <option value="fixed">Specific question</option>
-                                        <option value="random">Random marker</option>
-                                    </select>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label" for="quiz_question_id">Quiz Question</label>
-                                    <select class="form-select" id="quiz_question_id" name="quiz_question_id">
-                                        <option value="">Select quiz question</option>
-                                        <?php foreach ($quizOptions as $quiz): ?>
-                                            <option value="<?= (int) $quiz['id'] ?>"><?= e(substr($quiz['question_text'], 0, 80)) ?><?= strlen($quiz['question_text']) > 80 ? '...' : '' ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-text pt-4">Random markers pull from your active quiz bank when the player syncs.</div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-text pt-4">Added items go to the end of the playlist automatically.</div>
-                                </div>
-                                <div class="col-12">
-                                    <button class="btn btn-primary" type="submit">
-                                        <i class="bi bi-plus-circle"></i>
-                                        <span class="ms-1">Add Quiz Item</span>
-                                    </button>
-                                </div>
-                            </form>
+                        <div class="col-md-6">
+                            <div class="form-text pt-4">Added items go to the end of the playlist automatically.</div>
                         </div>
-                    </div>
+                        <div class="col-12">
+                            <div class="form-text">Image duration is used for media items. Random quiz questions use the quiz timing configured on the selected question.</div>
+                        </div>
+                        <div class="col-12">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="bi bi-plus-circle"></i>
+                                <span class="ms-1">Add Item</span>
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
 
@@ -769,12 +776,11 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-sm page-table mb-0">
+                        <table class="table table-sm page-table mb-0 playlist-item-table">
                             <thead>
                                 <tr>
                                     <th>Item</th>
                                     <th>Type</th>
-                                    <th>Details</th>
                                     <th>Order</th>
                                     <th>Duration</th>
                                     <th>Active</th>
@@ -783,45 +789,41 @@ require_once __DIR__ . '/../includes/header.php';
                             </thead>
                             <tbody>
                             <?php if (!$playlistItems): ?>
-                                <tr><td colspan="7" class="text-center py-4 text-muted">No items in this playlist.</td></tr>
+                                <tr><td colspan="6" class="text-center py-4 text-muted">No items in this playlist.</td></tr>
                             <?php else: ?>
                                 <?php foreach ($playlistItems as $item): ?>
                                     <?php $formId = 'playlist-item-form-' . (int) $item['id']; ?>
+                                    <?php $replaceFormId = 'playlist-item-replace-form-' . (int) $item['id']; ?>
                                     <tr id="playlist-item-row-<?= (int) $item['id'] ?>">
-                                        <td>
-                                            <div class="muted-stack">
-                                                <strong>
-                                                    <?php if ($item['item_type'] === 'quiz'): ?>
-                                                        <?= $item['quiz_selection_mode'] === 'random' ? 'Random quiz marker' : e($item['question_text']) ?>
-                                                    <?php else: ?>
-                                                        <?= e($item['media_title']) ?>
-                                                    <?php endif; ?>
-                                                </strong>
-                                                <span class="small">
-                                                    <?php if ($item['item_type'] === 'quiz'): ?>
-                                                        <?= $item['quiz_selection_mode'] === 'random' ? 'Pulls a random active quiz at sync time.' : 'Correct answer ' . e($item['correct_option']) ?> 
-                                                    <?php else: ?>
-                                                        <?= e($item['filename']) ?>
-                                                    <?php endif; ?>
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td><?= e($item['item_type'] === 'quiz' ? 'quiz' : $item['media_type']) ?></td>
-                                        <td class="small text-muted">
+                                        <td data-label="Item">
                                             <?php if ($item['item_type'] === 'quiz'): ?>
-                                                <?php if ($item['quiz_selection_mode'] === 'random'): ?>
-                                                    Pulls one active quiz question at random on player sync.
-                                                <?php else: ?>
-                                                    Answer <?= e($item['correct_option']) ?>, countdown <?= (int) $item['countdown_seconds'] ?>s, reveal <?= (int) $item['reveal_duration'] ?>s
-                                                <?php endif; ?>
+                                                <div class="muted-stack">
+                                                    <strong><?= $item['quiz_selection_mode'] === 'random' ? 'Random quiz marker' : e($item['question_text']) ?></strong>
+                                                    <span class="small">
+                                                        <?= $item['quiz_selection_mode'] === 'random' ? 'Pulls a random active quiz at sync time.' : 'Correct answer ' . e($item['correct_option']) ?>
+                                                    </span>
+                                                </div>
                                             <?php else: ?>
-                                                <?= e($item['filename']) ?>
+                                                <form method="post" id="<?= e($replaceFormId) ?>" class="item-selector-form m-0">
+                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="action" value="replace_playlist_media_item">
+                                                    <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
+                                                    <input type="hidden" name="item_id" value="<?= (int) $item['id'] ?>">
+                                                    <select class="form-select form-select-sm" name="media_id" aria-label="Replace media item" onchange="this.form.submit()">
+                                                        <?php foreach ($mediaOptions as $media): ?>
+                                                            <option value="<?= (int) $media['id'] ?>" <?= (int) $media['id'] === (int) $item['media_id'] ? 'selected' : '' ?>>
+                                                                <?= e($media['title']) ?>
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                </form>
                                             <?php endif; ?>
                                         </td>
-                                        <td>
+                                        <td data-label="Type"><?= e($item['item_type'] === 'quiz' ? 'quiz' : $item['media_type']) ?></td>
+                                        <td data-label="Order">
                                             <input class="form-control form-control-sm" name="sort_order" type="number" min="1" value="<?= (int) $item['sort_order'] ?>" required form="<?= e($formId) ?>">
                                         </td>
-                                        <td>
+                                        <td data-label="Duration">
                                             <?php if ($item['item_type'] === 'quiz'): ?>
                                                 <?php if ($item['quiz_selection_mode'] === 'random'): ?>
                                                     <span class="small text-muted">Uses the selected quiz timing</span>
@@ -833,13 +835,13 @@ require_once __DIR__ . '/../includes/header.php';
                                                 <input class="form-control form-control-sm" name="image_duration" type="number" min="1" value="<?= (int) $item['image_duration'] ?>" required form="<?= e($formId) ?>">
                                             <?php endif; ?>
                                         </td>
-                                        <td>
+                                        <td data-label="Active">
                                             <div class="form-check">
                                                 <input class="form-check-input" id="active_item_<?= (int) $item['id'] ?>" name="active" type="checkbox" <?= (int) $item['active'] === 1 ? 'checked' : '' ?> form="<?= e($formId) ?>">
                                                 <label class="form-check-label small" for="active_item_<?= (int) $item['id'] ?>">Active</label>
                                             </div>
                                         </td>
-                                        <td>
+                                        <td data-label="Actions">
                                             <div class="icon-actions">
                                                 <form method="post" id="<?= e($formId) ?>" class="m-0">
                                                     <?= csrf_field() ?>
@@ -878,14 +880,41 @@ require_once __DIR__ . '/../includes/header.php';
                     </div>
                 </div>
             </div>
-        <?php endif; ?>
-    </div>
+<?php endif; ?>
 </div>
+<div class="modal fade" id="createPlaylistModal" tabindex="-1" aria-labelledby="createPlaylistModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5 mb-0" id="createPlaylistModalLabel">Add Playlist</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form class="dense-form" method="post">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="create_playlist">
+                    <div class="mb-3">
+                        <label class="form-label" for="playlist_name">Name</label>
+                        <input class="form-control" id="playlist_name" name="name" type="text" required>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" id="playlist_active" name="active" type="checkbox" checked>
+                        <label class="form-check-label" for="playlist_active">Playlist active</label>
+                    </div>
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-plus-circle"></i>
+                        <span class="ms-1">Create Playlist</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const itemForms = document.querySelectorAll('form[id^="playlist-item-form-"]');
     const tableBody = document.querySelector('.table tbody');
+    const playlistInlineForm = document.getElementById('playlist-inline-form');
 
     function reorderRows() {
         if (!tableBody) {
@@ -998,6 +1027,78 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     });
+
+    if (playlistInlineForm) {
+        const playlistControls = Array.from(playlistInlineForm.elements).filter(function (control) {
+            return control.name && control.type !== 'hidden';
+        });
+        let isSavingPlaylist = false;
+
+        function setPlaylistControlsDisabled(disabled) {
+            playlistControls.forEach(function (control) {
+                control.disabled = disabled;
+            });
+        }
+
+        async function submitPlaylistInlineForm() {
+            if (isSavingPlaylist) {
+                return;
+            }
+
+            try {
+                const payload = new URLSearchParams();
+                Array.from(playlistInlineForm.elements).forEach(function (control) {
+                    if (!control.name || control.disabled) {
+                        return;
+                    }
+
+                    if ((control.type === 'checkbox' || control.type === 'radio') && !control.checked) {
+                        return;
+                    }
+
+                    payload.append(control.name, control.value);
+                });
+
+                isSavingPlaylist = true;
+                setPlaylistControlsDisabled(true);
+
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    body: payload.toString(),
+                    credentials: 'same-origin'
+                });
+
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error((result && result.message) || 'Playlist save failed.');
+                }
+
+                const data = result.data || {};
+                const updatedAtElement = document.getElementById('selected-playlist-updated');
+                if (updatedAtElement && data.updated_at) {
+                    updatedAtElement.textContent = data.updated_at;
+                }
+            } catch (error) {
+                console.error(error);
+                window.alert(error.message || 'Playlist save failed.');
+            } finally {
+                setPlaylistControlsDisabled(false);
+                isSavingPlaylist = false;
+            }
+        }
+
+        playlistControls.forEach(function (control) {
+            const eventName = control.type === 'checkbox' || control.tagName === 'SELECT' ? 'change' : 'change';
+            control.addEventListener(eventName, function () {
+                void submitPlaylistInlineForm();
+            });
+        });
+    }
 });
 </script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

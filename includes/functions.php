@@ -462,9 +462,10 @@ function find_screen_by_token(mysqli $db, string $token): ?array
 
     $screenCode = normalize_screen_code($token);
 
-    $sql = "SELECT s.*, p.name AS playlist_name, p.active AS playlist_active
+    $sql = "SELECT s.*, p.name AS playlist_name, p.active AS playlist_active, sc.name AS schedule_name, sc.active AS schedule_active
             FROM screens s
             LEFT JOIN playlists p ON p.id = s.playlist_id AND p.owner_admin_id = s.owner_admin_id
+            LEFT JOIN schedules sc ON sc.id = s.schedule_id AND sc.owner_admin_id = s.owner_admin_id
             WHERE s.screen_code = ?
                OR s.screen_token = ?
             LIMIT 1";
@@ -553,6 +554,251 @@ function bump_playlist_screen_sync_revision(mysqli $db, int $playlistId, int $ad
     $statement->close();
 
     return $updated;
+}
+
+function bump_schedule_screen_sync_revision(mysqli $db, int $scheduleId, int $adminId): int
+{
+    $statement = $db->prepare("UPDATE screens
+        SET sync_revision = sync_revision + 1
+        WHERE schedule_id = ? AND owner_admin_id = ?");
+    $statement->bind_param('ii', $scheduleId, $adminId);
+    $statement->execute();
+    $updated = $statement->affected_rows;
+    $statement->close();
+
+    return $updated;
+}
+
+function app_timezone_name(): string
+{
+    $candidates = [];
+
+    if (defined('APP_TIMEZONE') && is_string(APP_TIMEZONE) && APP_TIMEZONE !== '') {
+        $candidates[] = APP_TIMEZONE;
+    }
+
+    $configured = getenv('APP_TIMEZONE');
+    if (is_string($configured) && $configured !== '') {
+        $candidates[] = $configured;
+    }
+
+    $candidates[] = date_default_timezone_get() ?: 'UTC';
+    $candidates[] = 'UTC';
+
+    foreach ($candidates as $candidate) {
+        try {
+            new DateTimeZone($candidate);
+            return $candidate;
+        } catch (Throwable $exception) {
+        }
+    }
+
+    return 'UTC';
+}
+
+function schedule_day_names(): array
+{
+    return [
+        0 => 'Mon',
+        1 => 'Tue',
+        2 => 'Wed',
+        3 => 'Thu',
+        4 => 'Fri',
+        5 => 'Sat',
+        6 => 'Sun',
+    ];
+}
+
+function normalize_schedule_day_mask(int $dayMask): int
+{
+    return max(0, min(127, $dayMask));
+}
+
+function build_schedule_day_mask(array $days): int
+{
+    $mask = 0;
+
+    foreach ($days as $day) {
+        $dayIndex = max(0, min(6, (int) $day));
+        $mask |= 1 << $dayIndex;
+    }
+
+    return normalize_schedule_day_mask($mask);
+}
+
+function schedule_day_mask_days(int $dayMask): array
+{
+    $dayMask = normalize_schedule_day_mask($dayMask);
+    $days = [];
+
+    foreach (schedule_day_names() as $dayIndex => $label) {
+        if (($dayMask & (1 << $dayIndex)) !== 0) {
+            $days[] = $dayIndex;
+        }
+    }
+
+    return $days;
+}
+
+function schedule_day_mask_summary(int $dayMask): string
+{
+    $dayMask = normalize_schedule_day_mask($dayMask);
+
+    if ($dayMask === 127) {
+        return 'Daily';
+    }
+
+    if ($dayMask === 31) {
+        return 'Weekdays';
+    }
+
+    if ($dayMask === 96) {
+        return 'Weekends';
+    }
+
+    $labels = [];
+    foreach (schedule_day_names() as $dayIndex => $label) {
+        if (($dayMask & (1 << $dayIndex)) !== 0) {
+            $labels[] = $label;
+        }
+    }
+
+    return $labels ? implode(', ', $labels) : 'No days';
+}
+
+function schedule_time_label(?string $time): string
+{
+    if (!$time) {
+        return '--:--';
+    }
+
+    $timestamp = strtotime($time);
+    if ($timestamp === false) {
+        return $time;
+    }
+
+    return gmdate('H:i', $timestamp);
+}
+
+function fetch_schedule_rules(mysqli $db, int $scheduleId, int $adminId): array
+{
+    $statement = $db->prepare("SELECT sr.*, p.name AS playlist_name
+        FROM schedule_rules sr
+        INNER JOIN schedules sc ON sc.id = sr.schedule_id
+        INNER JOIN playlists p ON p.id = sr.playlist_id AND p.owner_admin_id = sc.owner_admin_id
+        WHERE sr.schedule_id = ? AND sc.owner_admin_id = ?
+        ORDER BY sr.priority ASC, sr.start_time ASC, sr.id ASC");
+    $statement->bind_param('ii', $scheduleId, $adminId);
+    $statement->execute();
+    $result = $statement->get_result();
+    $rules = [];
+
+    while ($row = $result->fetch_assoc()) {
+        $row['id'] = (int) $row['id'];
+        $row['schedule_id'] = (int) $row['schedule_id'];
+        $row['playlist_id'] = (int) $row['playlist_id'];
+        $row['day_mask'] = (int) $row['day_mask'];
+        $row['priority'] = (int) $row['priority'];
+        $row['active'] = (int) $row['active'];
+        $rules[] = $row;
+    }
+
+    $statement->close();
+
+    return $rules;
+}
+
+function screen_schedule_rule_matches(array $rule, DateTimeImmutable $localNow): bool
+{
+    if ((int) ($rule['active'] ?? 0) !== 1) {
+        return false;
+    }
+
+    $dayMask = normalize_schedule_day_mask((int) ($rule['day_mask'] ?? 0));
+    if ($dayMask === 0) {
+        return false;
+    }
+
+    $currentDayIndex = (int) $localNow->format('N') - 1;
+    $previousDayIndex = ($currentDayIndex + 6) % 7;
+    $timeNow = $localNow->format('H:i:s');
+    $startTime = (string) ($rule['start_time'] ?? '00:00:00');
+    $endTime = (string) ($rule['end_time'] ?? '23:59:59');
+
+    if ($startTime === $endTime) {
+        return ($dayMask & (1 << $currentDayIndex)) !== 0;
+    }
+
+    if ($startTime < $endTime) {
+        return ($dayMask & (1 << $currentDayIndex)) !== 0
+            && $timeNow >= $startTime
+            && $timeNow < $endTime;
+    }
+
+    if (($dayMask & (1 << $currentDayIndex)) !== 0 && $timeNow >= $startTime) {
+        return true;
+    }
+
+    return ($dayMask & (1 << $previousDayIndex)) !== 0 && $timeNow < $endTime;
+}
+
+function resolve_screen_playlist_assignment(mysqli $db, array $screen, ?DateTimeImmutable $now = null): array
+{
+    $resolved = [
+        'source' => 'direct',
+        'playlist_id' => !empty($screen['playlist_id']) ? (int) $screen['playlist_id'] : null,
+        'playlist_name' => !empty($screen['playlist_name']) ? (string) $screen['playlist_name'] : null,
+        'schedule_id' => !empty($screen['schedule_id']) ? (int) $screen['schedule_id'] : null,
+        'schedule_name' => !empty($screen['schedule_name']) ? (string) $screen['schedule_name'] : null,
+        'schedule_rule' => null,
+        'schedule_timezone' => app_timezone_name(),
+    ];
+
+    $screenId = (int) ($screen['id'] ?? 0);
+    $adminId = (int) ($screen['owner_admin_id'] ?? 0);
+    $scheduleId = (int) ($screen['schedule_id'] ?? 0);
+
+    if ($screenId < 1 || $adminId < 1) {
+        return $resolved;
+    }
+
+    if ($scheduleId < 1) {
+        return $resolved;
+    }
+
+    $rules = fetch_schedule_rules($db, $scheduleId, $adminId);
+    if (!$rules) {
+        $resolved['source'] = 'schedule';
+        $resolved['playlist_id'] = null;
+        $resolved['playlist_name'] = null;
+        return $resolved;
+    }
+
+    $localNow = ($now ?? new DateTimeImmutable('now', new DateTimeZone('UTC')))
+        ->setTimezone(new DateTimeZone($resolved['schedule_timezone']));
+
+    foreach ($rules as $rule) {
+        if (!screen_schedule_rule_matches($rule, $localNow)) {
+            continue;
+        }
+
+        $resolved['source'] = 'schedule';
+        $resolved['playlist_id'] = (int) $rule['playlist_id'];
+        $resolved['playlist_name'] = (string) ($rule['playlist_name'] ?? '');
+        $resolved['schedule_rule'] = [
+            'id' => (int) $rule['id'],
+            'label' => (string) ($rule['label'] ?? ''),
+            'day_mask' => (int) $rule['day_mask'],
+            'day_summary' => schedule_day_mask_summary((int) $rule['day_mask']),
+            'start_time' => (string) $rule['start_time'],
+            'end_time' => (string) $rule['end_time'],
+            'time_range' => schedule_time_label((string) $rule['start_time']) . ' - ' . schedule_time_label((string) $rule['end_time']),
+            'priority' => (int) $rule['priority'],
+        ];
+        return $resolved;
+    }
+
+    return $resolved;
 }
 
 function fetch_active_quiz_bank(mysqli $db, int $adminId): array

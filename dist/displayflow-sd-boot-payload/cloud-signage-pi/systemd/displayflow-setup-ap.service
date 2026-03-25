@@ -1,0 +1,15 @@
+[Unit]
+Description=DisplayFlow setup hotspot
+After=network-pre.target
+Before=displayflow-setup-web.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/displayflow/bin/displayflow-setup-ap.sh start
+ExecStop=/usr/local/lib/displayflow/bin/displayflow-setup-ap.sh stop
+RemainAfterExit=yes
+StandardOutput=append:/var/log/displayflow/setup-ap.log
+StandardError=append:/var/log/displayflow/setup-ap.log
+
+[Install]
+WantedBy=multi-user.target

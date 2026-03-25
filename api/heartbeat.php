@@ -24,6 +24,10 @@ if (!$screen) {
     json_response(false, 'Invalid screen code.', [], 401);
 }
 
+if ((int) ($screen['active'] ?? 1) !== 1) {
+    json_response(false, 'Screen is inactive.', [], 403);
+}
+
 $status = 'online';
 $statement = $db->prepare("UPDATE screens
                            SET last_seen = UTC_TIMESTAMP(),
