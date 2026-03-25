@@ -879,6 +879,7 @@ function resolve_screen_ticker(mysqli $db, array $screen, ?DateTimeImmutable $no
         $row['priority'] = (int) $row['priority'];
         $row['active'] = (int) $row['active'];
         $row['applies_to_all_screens'] = (int) $row['applies_to_all_screens'];
+        $row['position'] = ($row['position'] ?? 'bottom') === 'top' ? 'top' : 'bottom';
         $rows[] = $row;
     }
 
@@ -909,6 +910,7 @@ function resolve_screen_ticker(mysqli $db, array $screen, ?DateTimeImmutable $no
             'time_range' => schedule_time_label((string) $row['start_time']) . ' - ' . schedule_time_label((string) $row['end_time']),
             'starts_at' => $row['starts_at'],
             'ends_at' => $row['ends_at'],
+            'position' => ($row['position'] ?? 'bottom') === 'top' ? 'top' : 'bottom',
             'applies_to_all_screens' => (int) $row['applies_to_all_screens'],
         ];
     }

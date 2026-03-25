@@ -76,6 +76,7 @@
         const heartbeatInterval = Number.parseInt(params.get('heartbeat_interval_seconds') || '', 10);
         const announcementText = (params.get('announcement_text') || '').trim();
         const announcementSpeedSeconds = Number.parseInt(params.get('announcement_speed_seconds') || '', 10);
+        const announcementPosition = (params.get('announcement_position') || '').trim().toLowerCase();
 
         return {
             api_base_url: apiBaseUrl || null,
@@ -84,7 +85,8 @@
             refresh_interval_seconds: Number.isFinite(refreshInterval) && refreshInterval > 0 ? refreshInterval : null,
             heartbeat_interval_seconds: Number.isFinite(heartbeatInterval) && heartbeatInterval > 0 ? heartbeatInterval : null,
             announcement_text: announcementText || null,
-            announcement_speed_seconds: Number.isFinite(announcementSpeedSeconds) && announcementSpeedSeconds > 0 ? announcementSpeedSeconds : null
+            announcement_speed_seconds: Number.isFinite(announcementSpeedSeconds) && announcementSpeedSeconds > 0 ? announcementSpeedSeconds : null,
+            announcement_position: announcementPosition === 'top' ? 'top' : (announcementPosition === 'bottom' ? 'bottom' : null)
         };
     }
 
@@ -107,6 +109,7 @@
             cache_namespace: 'default',
             announcement_text: '',
             announcement_speed_seconds: 28,
+            announcement_position: 'bottom',
             ...fileConfig
         };
 
@@ -134,6 +137,9 @@
         if (urlConfig.announcement_speed_seconds) {
             config.announcement_speed_seconds = urlConfig.announcement_speed_seconds;
         }
+        if (urlConfig.announcement_position !== null) {
+            config.announcement_position = urlConfig.announcement_position;
+        }
 
         if (!config.api_base_url || !config.screen_token) {
             throw new Error('Provide screen code and api_base_url in the URL or in config.json.');
@@ -156,6 +162,8 @@
             announcementBarEl.classList.add('hidden');
             announcementBarEl.setAttribute('aria-hidden', 'true');
             document.body.classList.remove('has-announcement');
+            document.body.classList.remove('has-announcement-top', 'has-announcement-bottom');
+            announcementBarEl.classList.remove('is-top', 'is-bottom');
             announcementTrackEl.innerHTML = '';
             return;
         }
@@ -163,9 +171,15 @@
         const speedSource = state.apiAnnouncement && state.apiAnnouncement.speed_seconds
             ? state.apiAnnouncement.speed_seconds
             : state.config.announcement_speed_seconds;
+        const positionSource = state.apiAnnouncement && state.apiAnnouncement.position
+            ? state.apiAnnouncement.position
+            : state.config.announcement_position;
         const speedSeconds = Math.max(10, Number.parseInt(speedSource, 10) || 28);
+        const position = positionSource === 'top' ? 'top' : 'bottom';
         announcementBarEl.style.setProperty('--announcement-duration', speedSeconds + 's');
         announcementTrackEl.innerHTML = '';
+        announcementBarEl.classList.remove('is-top', 'is-bottom');
+        announcementBarEl.classList.add(position === 'top' ? 'is-top' : 'is-bottom');
 
         for (let index = 0; index < 6; index += 1) {
             const item = document.createElement('div');
@@ -177,6 +191,8 @@
         announcementBarEl.classList.remove('hidden');
         announcementBarEl.setAttribute('aria-hidden', 'false');
         document.body.classList.add('has-announcement');
+        document.body.classList.toggle('has-announcement-top', position === 'top');
+        document.body.classList.toggle('has-announcement-bottom', position === 'bottom');
     }
 
     function apiUrl(path) {

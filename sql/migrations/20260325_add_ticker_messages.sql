@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS ticker_messages (
     end_time TIME NOT NULL DEFAULT '23:59:59',
     starts_at DATETIME NULL,
     ends_at DATETIME NULL,
+    position ENUM('top', 'bottom') NOT NULL DEFAULT 'bottom',
     speed_seconds INT UNSIGNED NOT NULL DEFAULT 28,
     priority INT UNSIGNED NOT NULL DEFAULT 1,
     active TINYINT(1) NOT NULL DEFAULT 1,
@@ -22,6 +23,9 @@ CREATE TABLE IF NOT EXISTS ticker_messages (
         FOREIGN KEY (owner_admin_id) REFERENCES admins(id)
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE ticker_messages
+    ADD COLUMN IF NOT EXISTS position ENUM('top', 'bottom') NOT NULL DEFAULT 'bottom' AFTER ends_at;
 
 CREATE TABLE IF NOT EXISTS ticker_message_screens (
     ticker_message_id INT UNSIGNED NOT NULL,

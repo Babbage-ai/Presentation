@@ -164,6 +164,7 @@ CREATE TABLE IF NOT EXISTS ticker_messages (
     end_time TIME NOT NULL DEFAULT '23:59:59',
     starts_at DATETIME NULL,
     ends_at DATETIME NULL,
+    position ENUM('top', 'bottom') NOT NULL DEFAULT 'bottom',
     speed_seconds INT UNSIGNED NOT NULL DEFAULT 28,
     priority INT UNSIGNED NOT NULL DEFAULT 1,
     active TINYINT(1) NOT NULL DEFAULT 1,
