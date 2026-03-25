@@ -186,8 +186,14 @@
         const speedSeconds = Math.max(10, Number.parseInt(speedSource, 10) || 28);
         const position = positionSource === 'top' ? 'top' : 'bottom';
         const heightPx = Math.max(40, Math.min(220, Number.parseInt(heightSource, 10) || 72));
+        const fontSizePx = Math.max(18, Math.round(heightPx * 0.58));
+        const chipHeightPx = Math.max(22, Math.round(heightPx * 0.42));
+        const chipFontSizePx = Math.max(10, Math.round(heightPx * 0.22));
         announcementBarEl.style.setProperty('--announcement-duration', speedSeconds + 's');
         announcementBarEl.style.setProperty('--announcement-height', heightPx + 'px');
+        announcementBarEl.style.setProperty('--announcement-font-size', fontSizePx + 'px');
+        announcementBarEl.style.setProperty('--announcement-chip-height', chipHeightPx + 'px');
+        announcementBarEl.style.setProperty('--announcement-chip-font-size', chipFontSizePx + 'px');
         document.body.style.setProperty('--announcement-height', heightPx + 'px');
         announcementTrackEl.innerHTML = '';
         announcementBarEl.classList.remove('is-top', 'is-bottom');
