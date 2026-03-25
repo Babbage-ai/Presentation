@@ -6,5 +6,6 @@
   "cache_namespace": "screen-main",
   "announcement_text": "",
   "announcement_speed_seconds": 28,
-  "announcement_position": "bottom"
+  "announcement_position": "bottom",
+  "announcement_height_px": 72
 }

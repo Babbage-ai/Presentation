@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS ticker_messages (
     starts_at DATETIME NULL,
     ends_at DATETIME NULL,
     position ENUM('top', 'bottom') NOT NULL DEFAULT 'bottom',
+    height_px INT UNSIGNED NOT NULL DEFAULT 72,
     speed_seconds INT UNSIGNED NOT NULL DEFAULT 28,
     priority INT UNSIGNED NOT NULL DEFAULT 1,
     active TINYINT(1) NOT NULL DEFAULT 1,
@@ -26,6 +27,9 @@ CREATE TABLE IF NOT EXISTS ticker_messages (
 
 ALTER TABLE ticker_messages
     ADD COLUMN IF NOT EXISTS position ENUM('top', 'bottom') NOT NULL DEFAULT 'bottom' AFTER ends_at;
+
+ALTER TABLE ticker_messages
+    ADD COLUMN IF NOT EXISTS height_px INT UNSIGNED NOT NULL DEFAULT 72 AFTER position;
 
 CREATE TABLE IF NOT EXISTS ticker_message_screens (
     ticker_message_id INT UNSIGNED NOT NULL,

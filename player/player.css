@@ -7,7 +7,7 @@ body {
     color: #fff;
     overflow: hidden;
     font-family: Arial, sans-serif;
-    --announcement-height: clamp(52px, 6vh, 84px);
+    --announcement-height: 72px;
     --announcement-edge-offset: clamp(12px, 1.8vw, 24px);
 }
 
@@ -16,6 +16,18 @@ body {
     width: 100%;
     height: 100%;
     background: #000;
+}
+
+#app {
+    box-sizing: border-box;
+}
+
+body.has-announcement-top #app {
+    padding-top: calc(var(--announcement-height) + (var(--announcement-edge-offset) * 2));
+}
+
+body.has-announcement-bottom #app {
+    padding-bottom: calc(var(--announcement-height) + (var(--announcement-edge-offset) * 2));
 }
 
 #stage {
@@ -389,7 +401,7 @@ body.has-announcement-bottom #overlay {
     }
 
     .announcement-bar {
-        height: 52px;
+        height: var(--announcement-height);
         left: 10px;
         right: 10px;
         border-radius: 12px;

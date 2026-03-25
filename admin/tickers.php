@@ -176,6 +176,7 @@ if (is_post_request()) {
         $startsAt = trim((string) ($_POST['starts_at'] ?? ''));
         $endsAt = trim((string) ($_POST['ends_at'] ?? ''));
         $position = (string) ($_POST['position'] ?? 'bottom') === 'top' ? 'top' : 'bottom';
+        $heightPx = max(40, min(220, normalize_int((string) ($_POST['height_px'] ?? '72'), 72)));
         $speedSeconds = max(10, normalize_int((string) ($_POST['speed_seconds'] ?? '28'), 28));
         $priority = max(1, normalize_int((string) ($_POST['priority'] ?? '1'), 1));
         $active = isset($_POST['active']) ? 1 : 0;
@@ -238,10 +239,10 @@ if (is_post_request()) {
 
         if ($action === 'create_ticker') {
             $statement = $db->prepare("INSERT INTO ticker_messages
-                (owner_admin_id, name, message_text, day_mask, start_time, end_time, starts_at, ends_at, position, speed_seconds, priority, active, applies_to_all_screens, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())");
+                (owner_admin_id, name, message_text, day_mask, start_time, end_time, starts_at, ends_at, position, height_px, speed_seconds, priority, active, applies_to_all_screens, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())");
             $statement->bind_param(
-                'ississsssiiii',
+                'ississsssiiiii',
                 $adminId,
                 $name,
                 $messageText,
@@ -251,6 +252,7 @@ if (is_post_request()) {
                 $startsAt,
                 $endsAt,
                 $position,
+                $heightPx,
                 $speedSeconds,
                 $priority,
                 $active,
@@ -272,10 +274,10 @@ if (is_post_request()) {
         }
 
         $statement = $db->prepare("UPDATE ticker_messages
-            SET name = ?, message_text = ?, day_mask = ?, start_time = ?, end_time = ?, starts_at = ?, ends_at = ?, position = ?, speed_seconds = ?, priority = ?, active = ?, applies_to_all_screens = ?, updated_at = UTC_TIMESTAMP()
+            SET name = ?, message_text = ?, day_mask = ?, start_time = ?, end_time = ?, starts_at = ?, ends_at = ?, position = ?, height_px = ?, speed_seconds = ?, priority = ?, active = ?, applies_to_all_screens = ?, updated_at = UTC_TIMESTAMP()
             WHERE id = ? AND owner_admin_id = ?");
         $statement->bind_param(
-            'ssisssssiiiiii',
+            'ssisssssiiiiiii',
             $name,
             $messageText,
             $dayMask,
@@ -284,6 +286,7 @@ if (is_post_request()) {
             $startsAt,
             $endsAt,
             $position,
+            $heightPx,
             $speedSeconds,
             $priority,
             $active,
@@ -469,6 +472,10 @@ require_once __DIR__ . '/../includes/header.php';
                                 <input class="form-control" id="ticker_speed_seconds" name="speed_seconds" type="number" min="10" value="<?= (int) $selectedTicker['speed_seconds'] ?>" required>
                             </div>
                             <div class="ticker-span-4">
+                                <label class="form-label" for="ticker_height_px">Ticker Height (px)</label>
+                                <input class="form-control" id="ticker_height_px" name="height_px" type="number" min="40" max="220" value="<?= (int) ($selectedTicker['height_px'] ?? 72) ?>" required>
+                            </div>
+                            <div class="ticker-span-4">
                                 <label class="form-label" for="ticker_start_time">Daily Start Time</label>
                                 <input class="form-control" id="ticker_start_time" name="start_time" type="time" value="<?= e(substr((string) $selectedTicker['start_time'], 0, 5)) ?>" required>
                             </div>
@@ -532,6 +539,7 @@ require_once __DIR__ . '/../includes/header.php';
                                     <div class="ticker-summary-card"><strong>Assignment</strong><span><?= (int) $selectedTicker['applies_to_all_screens'] === 1 ? 'All screens' : count($selectedTickerScreenIds) . ' selected screen(s)' ?></span></div>
                                     <div class="ticker-summary-card"><strong>Status</strong><span><?= (int) $selectedTicker['active'] === 1 ? 'Active' : 'Inactive' ?></span></div>
                                     <div class="ticker-summary-card"><strong>Placement</strong><span><?= e(ucfirst((string) (($selectedTicker['position'] ?? 'bottom') === 'top' ? 'top' : 'bottom'))) ?></span></div>
+                                    <div class="ticker-summary-card"><strong>Height</strong><span><?= (int) ($selectedTicker['height_px'] ?? 72) ?>px</span></div>
                                 </div>
                             </div>
                         </div>
@@ -587,6 +595,10 @@ require_once __DIR__ . '/../includes/header.php';
                         <div class="ticker-span-4">
                             <label class="form-label" for="create_ticker_speed">Scroll Speed Seconds</label>
                             <input class="form-control" id="create_ticker_speed" name="speed_seconds" type="number" min="10" value="28" required>
+                        </div>
+                        <div class="ticker-span-4">
+                            <label class="form-label" for="create_ticker_height">Ticker Height (px)</label>
+                            <input class="form-control" id="create_ticker_height" name="height_px" type="number" min="40" max="220" value="72" required>
                         </div>
                         <div class="ticker-span-4">
                             <label class="form-label" for="create_ticker_start_time">Daily Start Time</label>

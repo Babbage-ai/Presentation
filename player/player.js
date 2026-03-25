@@ -77,6 +77,7 @@
         const announcementText = (params.get('announcement_text') || '').trim();
         const announcementSpeedSeconds = Number.parseInt(params.get('announcement_speed_seconds') || '', 10);
         const announcementPosition = (params.get('announcement_position') || '').trim().toLowerCase();
+        const announcementHeightPx = Number.parseInt(params.get('announcement_height_px') || '', 10);
 
         return {
             api_base_url: apiBaseUrl || null,
@@ -86,7 +87,8 @@
             heartbeat_interval_seconds: Number.isFinite(heartbeatInterval) && heartbeatInterval > 0 ? heartbeatInterval : null,
             announcement_text: announcementText || null,
             announcement_speed_seconds: Number.isFinite(announcementSpeedSeconds) && announcementSpeedSeconds > 0 ? announcementSpeedSeconds : null,
-            announcement_position: announcementPosition === 'top' ? 'top' : (announcementPosition === 'bottom' ? 'bottom' : null)
+            announcement_position: announcementPosition === 'top' ? 'top' : (announcementPosition === 'bottom' ? 'bottom' : null),
+            announcement_height_px: Number.isFinite(announcementHeightPx) && announcementHeightPx > 0 ? announcementHeightPx : null
         };
     }
 
@@ -110,6 +112,7 @@
             announcement_text: '',
             announcement_speed_seconds: 28,
             announcement_position: 'bottom',
+            announcement_height_px: 72,
             ...fileConfig
         };
 
@@ -139,6 +142,9 @@
         }
         if (urlConfig.announcement_position !== null) {
             config.announcement_position = urlConfig.announcement_position;
+        }
+        if (urlConfig.announcement_height_px) {
+            config.announcement_height_px = urlConfig.announcement_height_px;
         }
 
         if (!config.api_base_url || !config.screen_token) {
@@ -174,9 +180,15 @@
         const positionSource = state.apiAnnouncement && state.apiAnnouncement.position
             ? state.apiAnnouncement.position
             : state.config.announcement_position;
+        const heightSource = state.apiAnnouncement && state.apiAnnouncement.height_px
+            ? state.apiAnnouncement.height_px
+            : state.config.announcement_height_px;
         const speedSeconds = Math.max(10, Number.parseInt(speedSource, 10) || 28);
         const position = positionSource === 'top' ? 'top' : 'bottom';
+        const heightPx = Math.max(40, Math.min(220, Number.parseInt(heightSource, 10) || 72));
         announcementBarEl.style.setProperty('--announcement-duration', speedSeconds + 's');
+        announcementBarEl.style.setProperty('--announcement-height', heightPx + 'px');
+        document.body.style.setProperty('--announcement-height', heightPx + 'px');
         announcementTrackEl.innerHTML = '';
         announcementBarEl.classList.remove('is-top', 'is-bottom');
         announcementBarEl.classList.add(position === 'top' ? 'is-top' : 'is-bottom');

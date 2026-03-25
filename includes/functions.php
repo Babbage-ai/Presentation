@@ -876,6 +876,7 @@ function resolve_screen_ticker(mysqli $db, array $screen, ?DateTimeImmutable $no
         $row['owner_admin_id'] = (int) $row['owner_admin_id'];
         $row['day_mask'] = (int) $row['day_mask'];
         $row['speed_seconds'] = (int) $row['speed_seconds'];
+        $row['height_px'] = (int) ($row['height_px'] ?? 72);
         $row['priority'] = (int) $row['priority'];
         $row['active'] = (int) $row['active'];
         $row['applies_to_all_screens'] = (int) $row['applies_to_all_screens'];
@@ -902,6 +903,7 @@ function resolve_screen_ticker(mysqli $db, array $screen, ?DateTimeImmutable $no
             'name' => (string) $row['name'],
             'message_text' => (string) $row['message_text'],
             'speed_seconds' => max(10, (int) $row['speed_seconds']),
+            'height_px' => max(40, min(220, (int) ($row['height_px'] ?? 72))),
             'priority' => (int) $row['priority'],
             'day_mask' => (int) $row['day_mask'],
             'day_summary' => schedule_day_mask_summary((int) $row['day_mask']),
