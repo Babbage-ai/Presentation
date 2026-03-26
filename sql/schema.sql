@@ -114,6 +114,7 @@ CREATE TABLE IF NOT EXISTS screens (
     status ENUM('online', 'offline') NOT NULL DEFAULT 'offline',
     player_version VARCHAR(50) NULL,
     sync_revision INT UNSIGNED NOT NULL DEFAULT 0,
+    reload_revision INT UNSIGNED NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_screens_screen_code (screen_code),
     UNIQUE KEY uq_screens_screen_token (screen_token),

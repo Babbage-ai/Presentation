@@ -134,6 +134,7 @@ function screen_admin_payload(mysqli $db, array $screen): array
         'online' => $online,
         'status_label' => $online ? 'Online' : 'Offline',
         'view_url' => player_browser_test_url($screenCode),
+        'reload_revision' => (int) ($screen['reload_revision'] ?? 0),
     ];
 }
 
@@ -258,6 +259,31 @@ if (is_post_request()) {
 
         json_response(true, 'Screen deleted.', [
             'screen_id' => $screenId,
+            'counts' => fetch_screen_counts($db, $adminId),
+        ]);
+    }
+
+    if ($action === 'force_reload_screen') {
+        $screenId = (int) ($_POST['screen_id'] ?? 0);
+
+        if ($screenId < 1) {
+            json_response(false, 'Screen not found.', [], 404);
+        }
+
+        $screen = fetch_screen_row($db, $adminId, $screenId);
+        if (!$screen) {
+            json_response(false, 'Screen not found.', [], 404);
+        }
+
+        if (!bump_screen_reload_revision($db, $screenId, $adminId)) {
+            json_response(false, 'Could not queue a player reload.', [], 500);
+        }
+
+        log_screen_event($db, $screenId, 'player_reload_requested', 'Player reload requested from admin.');
+        $screen = fetch_screen_row($db, $adminId, $screenId);
+
+        json_response(true, 'Player reload queued. The Pi will hard refresh on its next heartbeat.', [
+            'screen' => $screen ? screen_admin_payload($db, $screen) : null,
             'counts' => fetch_screen_counts($db, $adminId),
         ]);
     }
@@ -557,6 +583,9 @@ require_once __DIR__ . '/../includes/header.php';
                                 <td class="screen-controls-cell" data-label="Controls">
                                     <div class="screen-controls">
                                         <a class="screen-code-link" href="<?= e($screenPayload['view_url']) ?>" target="_blank" rel="noopener noreferrer" title="View screen by code" data-role="code-link"><?= e($screenPayload['screen_code']) ?></a>
+                                        <button class="btn btn-outline-secondary btn-sm icon-btn icon-btn-sm js-screen-reload" type="button" title="Force player reload">
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                        </button>
                                         <label class="screen-inline-toggle screen-toggle-cell" title="Active">
                                             <input class="form-check-input js-screen-field" type="checkbox" name="active" value="1" <?= (int) $screen['active'] === 1 ? 'checked' : '' ?>>
                                         </label>
@@ -708,7 +737,7 @@ function setRowBusy(row, busy) {
     row.classList.toggle('is-saving', busy);
 
     row.querySelectorAll('input, select, button').forEach((element) => {
-        if (element.classList.contains('js-screen-delete') || element.classList.contains('js-screen-field')) {
+        if (element.classList.contains('js-screen-delete') || element.classList.contains('js-screen-reload') || element.classList.contains('js-screen-field')) {
             element.disabled = busy;
         }
     });
@@ -960,6 +989,34 @@ async function deleteRow(row) {
     }
 }
 
+async function reloadRow(row) {
+    if (!row || row.dataset.busy === '1') {
+        return;
+    }
+
+    setRowBusy(row, true);
+    setRowMessage(row, 'Queueing reload...');
+
+    try {
+        const data = await postScreenAction({
+            action: 'force_reload_screen',
+            csrf_token: csrfToken,
+            screen_id: row.dataset.screenId || '',
+        });
+
+        if (data.screen) {
+            updateRowFromPayload(row, data.screen, data.message || 'Player reload queued');
+        } else {
+            setRowMessage(row, data.message || 'Player reload queued', 'success');
+        }
+        updateCounts(data.counts || null);
+    } catch (error) {
+        setRowMessage(row, error.message || 'Reload request failed.', 'error');
+    } finally {
+        setRowBusy(row, false);
+    }
+}
+
 if (!tableBody) {
     return;
 }
@@ -1011,12 +1068,21 @@ tableBody.addEventListener('change', (event) => {
 });
 
 tableBody.addEventListener('click', (event) => {
-    const button = event.target instanceof Element ? event.target.closest('.js-screen-delete') : null;
-    if (!button) {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) {
         return;
     }
 
-    deleteRow(button.closest('.screen-row'));
+    const reloadButton = target.closest('.js-screen-reload');
+    if (reloadButton) {
+        reloadRow(reloadButton.closest('.screen-row'));
+        return;
+    }
+
+    const deleteButton = target.closest('.js-screen-delete');
+    if (deleteButton) {
+        deleteRow(deleteButton.closest('.screen-row'));
+    }
 });
 
 applyFilters();

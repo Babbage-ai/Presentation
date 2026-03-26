@@ -543,6 +543,19 @@ function bump_screen_sync_revision(mysqli $db, int $screenId, int $adminId): boo
     return $updated;
 }
 
+function bump_screen_reload_revision(mysqli $db, int $screenId, int $adminId): bool
+{
+    $statement = $db->prepare("UPDATE screens
+        SET reload_revision = reload_revision + 1
+        WHERE id = ? AND owner_admin_id = ?");
+    $statement->bind_param('ii', $screenId, $adminId);
+    $statement->execute();
+    $updated = $statement->affected_rows > 0;
+    $statement->close();
+
+    return $updated;
+}
+
 function bump_playlist_screen_sync_revision(mysqli $db, int $playlistId, int $adminId): int
 {
     $statement = $db->prepare("UPDATE screens

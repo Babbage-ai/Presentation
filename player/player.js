@@ -27,6 +27,7 @@
         idb: null,
         currentObjectUrl: null,
         syncRevision: 0,
+        reloadRevision: 0,
         syncPromise: null,
         playbackToken: 0,
         playlistBannerIdentity: null,
@@ -406,6 +407,7 @@
 
             state.playlist = nextPlaylist;
             state.syncRevision = Number.parseInt(data.screen && data.screen.sync_revision, 10) || 0;
+            state.reloadRevision = Number.parseInt(data.screen && data.screen.reload_revision, 10) || 0;
             state.playlistBannerIdentity = nextPlaylistBannerIdentity;
             state.apiAnnouncement = data.ticker || null;
             applyAnnouncementBar();
@@ -732,6 +734,12 @@
             });
 
             const latestRevision = Number.parseInt(response.sync_revision, 10) || 0;
+            const latestReloadRevision = Number.parseInt(response.reload_revision, 10) || 0;
+            if (latestReloadRevision > state.reloadRevision) {
+                window.location.reload();
+                return;
+            }
+
             if (latestRevision > state.syncRevision) {
                 await syncPlaylist({ restartPlayback: true });
             }

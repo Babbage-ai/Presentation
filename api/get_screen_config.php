@@ -48,6 +48,7 @@ json_response(true, 'Screen configuration loaded.', [
         'resolution' => $screen['resolution'],
         'player_version' => $screen['player_version'],
         'sync_revision' => (int) $screen['sync_revision'],
+        'reload_revision' => (int) ($screen['reload_revision'] ?? 0),
         'schedule_timezone' => $assignment['schedule_timezone'],
         'schedule_rule' => $assignment['schedule_rule'],
     ],
