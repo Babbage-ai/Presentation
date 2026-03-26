@@ -160,6 +160,25 @@ function ticker_list_excerpt(string $text, int $limit = 86): string
     return rtrim(substr($text, 0, $limit - 3)) . '...';
 }
 
+function ticker_preview_html(string $text): string
+{
+    $token = '[[live]]';
+    $parts = explode($token, $text);
+    $html = '';
+
+    foreach ($parts as $index => $part) {
+        if ($part !== '') {
+            $html .= e($part);
+        }
+
+        if ($index < count($parts) - 1) {
+            $html .= '<span class="ticker-inline-live-preview">Live</span>';
+        }
+    }
+
+    return $html;
+}
+
 $screens = fetch_admin_screens_basic($db, $adminId);
 
 if (is_post_request()) {
@@ -369,6 +388,10 @@ require_once __DIR__ . '/../includes/header.php';
     .ticker-preview { min-height: 4.5rem; padding: 0.72rem 0.85rem; border-radius: 0.9rem; background: linear-gradient(90deg, rgba(10, 10, 10, 0.94), rgba(24, 24, 24, 0.92)); border-top: 2px solid rgba(255, 166, 0, 0.42); color: #fff4dc; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); }
     .ticker-preview-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255, 208, 140, 0.88); }
     .ticker-preview-text { margin-top: 0.28rem; font-size: 0.96rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ticker-inline-live-preview { display: inline-flex; align-items: center; justify-content: center; min-height: 1.45rem; margin: 0 0.45rem; padding: 0 0.58rem; border-radius: 999px; background: #ff8c00; color: #111; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; vertical-align: middle; }
+    .ticker-shortcuts { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.55rem; }
+    .ticker-shortcut { border: 1px solid rgba(15, 23, 42, 0.12); background: rgba(248, 250, 252, 0.95); color: #0f172a; border-radius: 999px; padding: 0.32rem 0.72rem; font-size: 0.78rem; font-weight: 700; }
+    .ticker-shortcut:hover { background: #e2e8f0; }
     .ticker-summary-grid { display: grid; gap: 0.55rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .ticker-summary-card { padding: 0.7rem 0.76rem; border-radius: 0.82rem; background: rgba(248, 250, 252, 0.92); border: 1px solid rgba(15, 23, 42, 0.06); }
     .ticker-summary-card strong { display: block; font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--admin-text-soft); }
@@ -451,12 +474,16 @@ require_once __DIR__ . '/../includes/header.php';
                             <div class="ticker-span-12">
                                 <label class="form-label" for="ticker_message_text">Ticker Text</label>
                                 <textarea class="form-control" id="ticker_message_text" name="message_text" rows="4" required><?= e((string) $selectedTicker['message_text']) ?></textarea>
+                                <div class="ticker-shortcuts">
+                                    <button class="ticker-shortcut" type="button" data-ticker-shortcut-target="ticker_message_text" data-ticker-shortcut-value=" [[live]] ">Insert Live Icon</button>
+                                </div>
+                                <div class="form-text">Use `[[live]]` between phrases to drop an inline live icon into the ticker.</div>
                             </div>
 
                             <div class="ticker-span-12">
                                 <div class="ticker-preview">
                                     <div class="ticker-preview-label">Preview</div>
-                                    <div class="ticker-preview-text"><?= e((string) $selectedTicker['message_text']) ?></div>
+                                    <div class="ticker-preview-text"><?= ticker_preview_html((string) $selectedTicker['message_text']) ?></div>
                                 </div>
                             </div>
 
@@ -584,6 +611,10 @@ require_once __DIR__ . '/../includes/header.php';
                         <div class="ticker-span-12">
                             <label class="form-label" for="create_ticker_text">Ticker Text</label>
                             <textarea class="form-control" id="create_ticker_text" name="message_text" rows="4" required></textarea>
+                            <div class="ticker-shortcuts">
+                                <button class="ticker-shortcut" type="button" data-ticker-shortcut-target="create_ticker_text" data-ticker-shortcut-value=" [[live]] ">Insert Live Icon</button>
+                            </div>
+                            <div class="form-text">Use `[[live]]` between phrases to drop an inline live icon into the ticker.</div>
                         </div>
                         <div class="ticker-span-4">
                             <label class="form-label" for="create_ticker_position">Placement</label>
@@ -661,5 +692,29 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
     </div>
 </div>
+
+<script>
+document.querySelectorAll('[data-ticker-shortcut-target]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const targetId = button.getAttribute('data-ticker-shortcut-target');
+        const insertValue = button.getAttribute('data-ticker-shortcut-value') || '';
+        const textarea = targetId ? document.getElementById(targetId) : null;
+
+        if (!textarea) {
+            return;
+        }
+
+        const start = textarea.selectionStart || 0;
+        const end = textarea.selectionEnd || 0;
+        const currentValue = textarea.value || '';
+        textarea.value = currentValue.slice(0, start) + insertValue + currentValue.slice(end);
+
+        const nextCursor = start + insertValue.length;
+        textarea.focus();
+        textarea.setSelectionRange(nextCursor, nextCursor);
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+});
+</script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

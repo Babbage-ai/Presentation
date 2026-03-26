@@ -127,6 +127,32 @@ body.has-announcement-bottom #app {
     text-transform: uppercase;
 }
 
+.announcement-inline-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0.5em;
+    padding: 0.14em 0.52em;
+    border-radius: 999px;
+    background: rgba(255, 140, 0, 0.18);
+    color: #ffd69a;
+    font-size: 0.48em;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    line-height: 1;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
+.announcement-inline-live-dot {
+    width: 0.72em;
+    height: 0.72em;
+    border-radius: 50%;
+    background: #ff5a36;
+    box-shadow: 0 0 0.4em rgba(255, 90, 54, 0.65);
+    flex: 0 0 auto;
+}
+
 body.has-announcement-bottom #overlay {
     bottom: calc(var(--announcement-height) + (var(--announcement-edge-offset) * 2));
 }
@@ -428,6 +454,11 @@ body.has-announcement-bottom #overlay {
     .announcement-item::before {
         min-width: 52px;
         padding: 0 10px;
+    }
+
+    .announcement-inline-live {
+        gap: 8px;
+        padding: 0.14em 0.48em;
     }
 }
 

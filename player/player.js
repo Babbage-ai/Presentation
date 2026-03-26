@@ -5,6 +5,7 @@
     const CONFIG_PATH = './config.json';
     const DB_NAME = 'cloud_signage_player';
     const STORE_NAME = 'media_cache';
+    const ANNOUNCEMENT_LIVE_TOKEN = '[[live]]';
 
     const stage = document.getElementById('stage');
     const statusEl = document.getElementById('status');
@@ -204,7 +205,7 @@
         measureSegment.className = 'announcement-segment';
         const measureItem = document.createElement('div');
         measureItem.className = 'announcement-item';
-        measureItem.textContent = announcementText;
+        appendAnnouncementContent(measureItem, announcementText);
         measureSegment.appendChild(measureItem);
         announcementTrackEl.appendChild(measureSegment);
 
@@ -220,7 +221,7 @@
             for (let itemIndex = 0; itemIndex < repeatCount; itemIndex += 1) {
                 const item = document.createElement('div');
                 item.className = 'announcement-item';
-                item.textContent = announcementText;
+                appendAnnouncementContent(item, announcementText);
                 segment.appendChild(item);
             }
 
@@ -241,6 +242,27 @@
         document.body.classList.add('has-announcement');
         document.body.classList.toggle('has-announcement-top', position === 'top');
         document.body.classList.toggle('has-announcement-bottom', position === 'bottom');
+    }
+
+    function appendAnnouncementContent(container, text) {
+        const parts = String(text || '').split(ANNOUNCEMENT_LIVE_TOKEN);
+
+        parts.forEach((part, index) => {
+            if (part !== '') {
+                container.appendChild(document.createTextNode(part));
+            }
+
+            if (index < parts.length - 1) {
+                const liveMarker = document.createElement('span');
+                liveMarker.className = 'announcement-inline-live';
+
+                const liveDot = document.createElement('span');
+                liveDot.className = 'announcement-inline-live-dot';
+                liveMarker.appendChild(liveDot);
+                liveMarker.appendChild(document.createTextNode('Live'));
+                container.appendChild(liveMarker);
+            }
+        });
     }
 
     function scheduleAnnouncementLayoutRefresh() {
