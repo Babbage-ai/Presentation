@@ -30,7 +30,8 @@
         playbackToken: 0,
         playlistBannerIdentity: null,
         playlistBannerTimer: null,
-        apiAnnouncement: null
+        apiAnnouncement: null,
+        announcementResizeTimer: null
     };
 
     function setStatus(message, keepVisible = true) {
@@ -199,18 +200,62 @@
         announcementBarEl.classList.remove('is-top', 'is-bottom');
         announcementBarEl.classList.add(position === 'top' ? 'is-top' : 'is-bottom');
 
-        for (let index = 0; index < 6; index += 1) {
-            const item = document.createElement('div');
-            item.className = 'announcement-item';
-            item.textContent = announcementText;
-            announcementTrackEl.appendChild(item);
+        const measureSegment = document.createElement('div');
+        measureSegment.className = 'announcement-segment';
+        const measureItem = document.createElement('div');
+        measureItem.className = 'announcement-item';
+        measureItem.textContent = announcementText;
+        measureSegment.appendChild(measureItem);
+        announcementTrackEl.appendChild(measureSegment);
+
+        const barWidth = Math.max(announcementBarEl.clientWidth, 1);
+        const singleItemWidth = Math.max(Math.ceil(measureItem.getBoundingClientRect().width), 1);
+        const repeatCount = Math.max(1, Math.ceil(barWidth / singleItemWidth) + 1);
+        announcementTrackEl.innerHTML = '';
+
+        for (let segmentIndex = 0; segmentIndex < 2; segmentIndex += 1) {
+            const segment = document.createElement('div');
+            segment.className = 'announcement-segment';
+
+            for (let itemIndex = 0; itemIndex < repeatCount; itemIndex += 1) {
+                const item = document.createElement('div');
+                item.className = 'announcement-item';
+                item.textContent = announcementText;
+                segment.appendChild(item);
+            }
+
+            announcementTrackEl.appendChild(segment);
         }
+
+        const scrollDistance = Math.max(
+            Math.ceil(announcementTrackEl.firstElementChild.getBoundingClientRect().width),
+            1
+        );
+        announcementTrackEl.style.setProperty('--announcement-scroll-distance', scrollDistance + 'px');
+        announcementTrackEl.style.animation = 'none';
+        void announcementTrackEl.offsetWidth;
+        announcementTrackEl.style.animation = '';
 
         announcementBarEl.classList.remove('hidden');
         announcementBarEl.setAttribute('aria-hidden', 'false');
         document.body.classList.add('has-announcement');
         document.body.classList.toggle('has-announcement-top', position === 'top');
         document.body.classList.toggle('has-announcement-bottom', position === 'bottom');
+    }
+
+    function scheduleAnnouncementLayoutRefresh() {
+        if (!announcementBarEl || !announcementTrackEl) {
+            return;
+        }
+
+        if (state.announcementResizeTimer) {
+            window.clearTimeout(state.announcementResizeTimer);
+        }
+
+        state.announcementResizeTimer = window.setTimeout(() => {
+            state.announcementResizeTimer = null;
+            applyAnnouncementBar();
+        }, 120);
     }
 
     function apiUrl(path) {
@@ -717,6 +762,8 @@
             void sendHeartbeat();
         }
     });
+
+    window.addEventListener('resize', scheduleAnnouncementLayoutRefresh);
 
     boot();
 })();

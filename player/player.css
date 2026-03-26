@@ -86,7 +86,14 @@ body.has-announcement-bottom #app {
     padding: 1px 0;
     white-space: nowrap;
     will-change: transform;
+    transform: translate3d(0, 0, 0);
     animation: announcement-scroll var(--announcement-duration, 28s) linear infinite;
+}
+
+.announcement-segment {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
 }
 
 .announcement-item {
@@ -129,7 +136,7 @@ body.has-announcement-bottom #overlay {
         transform: translateX(0);
     }
     100% {
-        transform: translateX(-50%);
+        transform: translateX(calc(-1 * var(--announcement-scroll-distance, 50%)));
     }
 }
 
