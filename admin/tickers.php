@@ -521,7 +521,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 <label class="form-label" for="ticker_speed_seconds">Scroll Speed Seconds</label>
                                 <input class="form-control" id="ticker_speed_seconds" name="speed_seconds" type="number" min="10" value="<?= (int) $selectedTicker['speed_seconds'] ?>" required>
                             </div>
-                            <div class="ticker-span-4">
+                            <div class="ticker-span-4" id="ticker_flip_interval_wrap">
                                 <label class="form-label" for="ticker_flip_interval_seconds">Switch Interval (seconds)</label>
                                 <input class="form-control" id="ticker_flip_interval_seconds" name="flip_interval_seconds" type="number" min="60" value="<?= (int) ($selectedTicker['flip_interval_seconds'] ?? 1200) ?>" required>
                             </div>
@@ -656,7 +656,7 @@ require_once __DIR__ . '/../includes/header.php';
                             <label class="form-label" for="create_ticker_speed">Scroll Speed Seconds</label>
                             <input class="form-control" id="create_ticker_speed" name="speed_seconds" type="number" min="10" value="28" required>
                         </div>
-                        <div class="ticker-span-4">
+                        <div class="ticker-span-4" id="create_ticker_flip_interval_wrap">
                             <label class="form-label" for="create_ticker_flip_interval">Switch Interval (seconds)</label>
                             <input class="form-control" id="create_ticker_flip_interval" name="flip_interval_seconds" type="number" min="60" value="1200" required>
                         </div>
@@ -727,6 +727,34 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
+function toggleTickerFlipInterval(selectId, wrapperId, inputId) {
+    const select = document.getElementById(selectId);
+    const wrapper = document.getElementById(wrapperId);
+    const input = document.getElementById(inputId);
+
+    if (!select || !wrapper || !input) {
+        return;
+    }
+
+    const isSwitch = select.value === 'switch';
+    wrapper.classList.toggle('d-none', !isSwitch);
+    input.required = isSwitch;
+}
+
+[
+    ['ticker_position', 'ticker_flip_interval_wrap', 'ticker_flip_interval_seconds'],
+    ['create_ticker_position', 'create_ticker_flip_interval_wrap', 'create_ticker_flip_interval']
+].forEach(([selectId, wrapperId, inputId]) => {
+    const select = document.getElementById(selectId);
+    if (!select) {
+        return;
+    }
+
+    const sync = () => toggleTickerFlipInterval(selectId, wrapperId, inputId);
+    select.addEventListener('change', sync);
+    sync();
+});
+
 document.querySelectorAll('[data-ticker-shortcut-target]').forEach((button) => {
     button.addEventListener('click', () => {
         const targetId = button.getAttribute('data-ticker-shortcut-target');
