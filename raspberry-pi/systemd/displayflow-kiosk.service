@@ -1,0 +1,21 @@
+[Unit]
+Description=DisplayFlow Chromium kiosk
+After=graphical.target cloud-signage-player.service displayflow-boot.service
+Wants=cloud-signage-player.service
+
+[Service]
+Type=simple
+User=__PI_USER__
+WorkingDirectory=__PI_HOME__
+Environment=HOME=__PI_HOME__
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=__PI_HOME__/.Xauthority
+ExecStartPre=/bin/bash -lc 'xset s off || true; xset -dpms || true; xset s noblank || true'
+ExecStart=/bin/bash -lc 'pkill -x unclutter >/dev/null 2>&1 || true; unclutter -idle 0.1 -root >/dev/null 2>&1 & exec /usr/local/lib/displayflow/bin/displayflow-kiosk-launcher.sh __CHROMIUM_CMD__'
+Restart=always
+RestartSec=3
+StandardOutput=append:/var/log/displayflow/kiosk.log
+StandardError=append:/var/log/displayflow/kiosk.log
+
+[Install]
+WantedBy=graphical.target
