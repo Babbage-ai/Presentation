@@ -591,7 +591,6 @@ require_once __DIR__ . '/../includes/header.php';
                                     <div class="ticker-summary-card"><strong>Days</strong><span><?= e(schedule_day_mask_summary((int) $selectedTicker['day_mask'])) ?></span></div>
                                     <div class="ticker-summary-card"><strong>Time Window</strong><span><?= e(schedule_time_label((string) $selectedTicker['start_time']) . ' - ' . schedule_time_label((string) $selectedTicker['end_time'])) ?></span></div>
                                     <div class="ticker-summary-card"><strong>Assignment</strong><span><?= (int) $selectedTicker['applies_to_all_screens'] === 1 ? 'All screens' : count($selectedTickerScreenIds) . ' selected screen(s)' ?></span></div>
-                                    <div class="ticker-summary-card"><strong>Status</strong><span><?= (int) $selectedTicker['active'] === 1 ? 'Active' : 'Inactive' ?></span></div>
                                     <div class="ticker-summary-card"><strong>Placement</strong><span><?= e(ticker_position_label((string) ($selectedTicker['position'] ?? 'bottom'))) ?></span></div>
                                     <div class="ticker-summary-card"><strong>Switch Interval</strong><span><?= (int) ($selectedTicker['flip_interval_seconds'] ?? 1200) ?>s</span></div>
                                     <div class="ticker-summary-card"><strong>Height</strong><span><?= (int) ($selectedTicker['height_px'] ?? 72) ?>px</span></div>
