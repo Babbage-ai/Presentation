@@ -5,12 +5,15 @@
     const CONFIG_PATH = './config.json';
     const DB_NAME = 'cloud_signage_player';
     const STORE_NAME = 'media_cache';
+    const ANNOUNCEMENT_LIVE_TOKEN = '[[live]]';
 
     const stage = document.getElementById('stage');
     const statusEl = document.getElementById('status');
     const overlayEl = document.getElementById('overlay');
     const playlistBannerEl = document.getElementById('playlist-banner');
     const playlistBannerLabelEl = playlistBannerEl ? playlistBannerEl.querySelector('.playlist-banner-label') : null;
+    const announcementBarEl = document.getElementById('announcement-bar');
+    const announcementTrackEl = announcementBarEl ? announcementBarEl.querySelector('[data-announcement-track]') : null;
 
     const state = {
         config: null,
@@ -24,11 +27,34 @@
         idb: null,
         currentObjectUrl: null,
         syncRevision: 0,
+        reloadRevision: 0,
         syncPromise: null,
         playbackToken: 0,
         playlistBannerIdentity: null,
-        playlistBannerTimer: null
+        playlistBannerTimer: null,
+        apiAnnouncement: null,
+        announcementResizeTimer: null,
+        announcementFlipTimer: null,
+        announcementPositionOverride: null,
+        announcementFlipLastChangedAt: 0
     };
+
+    function parseBooleanFlag(value) {
+        const normalized = String(value || '').trim().toLowerCase();
+        if (normalized === '') {
+            return null;
+        }
+
+        if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+            return true;
+        }
+
+        if (['0', 'false', 'no', 'off'].includes(normalized)) {
+            return false;
+        }
+
+        return null;
+    }
 
     function setStatus(message, keepVisible = true) {
         statusEl.textContent = message;
@@ -71,13 +97,25 @@
         const cacheNamespace = (params.get('cache_namespace') || '').trim();
         const refreshInterval = Number.parseInt(params.get('refresh_interval_seconds') || '', 10);
         const heartbeatInterval = Number.parseInt(params.get('heartbeat_interval_seconds') || '', 10);
+        const announcementText = (params.get('announcement_text') || '').trim();
+        const announcementSpeedSeconds = Number.parseInt(params.get('announcement_speed_seconds') || '', 10);
+        const announcementPosition = (params.get('announcement_position') || '').trim().toLowerCase();
+        const announcementHeightPx = Number.parseInt(params.get('announcement_height_px') || '', 10);
+        const announcementAutoFlip = parseBooleanFlag(params.get('announcement_auto_flip'));
+        const announcementFlipInterval = Number.parseInt(params.get('announcement_flip_interval_seconds') || '', 10);
 
         return {
             api_base_url: apiBaseUrl || null,
             screen_token: screenToken || null,
             cache_namespace: cacheNamespace || null,
             refresh_interval_seconds: Number.isFinite(refreshInterval) && refreshInterval > 0 ? refreshInterval : null,
-            heartbeat_interval_seconds: Number.isFinite(heartbeatInterval) && heartbeatInterval > 0 ? heartbeatInterval : null
+            heartbeat_interval_seconds: Number.isFinite(heartbeatInterval) && heartbeatInterval > 0 ? heartbeatInterval : null,
+            announcement_text: announcementText || null,
+            announcement_speed_seconds: Number.isFinite(announcementSpeedSeconds) && announcementSpeedSeconds > 0 ? announcementSpeedSeconds : null,
+            announcement_position: announcementPosition === 'top' ? 'top' : (announcementPosition === 'bottom' ? 'bottom' : null),
+            announcement_height_px: Number.isFinite(announcementHeightPx) && announcementHeightPx > 0 ? announcementHeightPx : null,
+            announcement_auto_flip: announcementAutoFlip,
+            announcement_flip_interval_seconds: Number.isFinite(announcementFlipInterval) && announcementFlipInterval > 0 ? announcementFlipInterval : null
         };
     }
 
@@ -98,6 +136,12 @@
             refresh_interval_seconds: 300,
             heartbeat_interval_seconds: 60,
             cache_namespace: 'default',
+            announcement_text: '',
+            announcement_speed_seconds: 28,
+            announcement_position: 'bottom',
+            announcement_height_px: 72,
+            announcement_auto_flip: false,
+            announcement_flip_interval_seconds: 1200,
             ...fileConfig
         };
 
@@ -119,12 +163,272 @@
         if (urlConfig.heartbeat_interval_seconds) {
             config.heartbeat_interval_seconds = urlConfig.heartbeat_interval_seconds;
         }
+        if (urlConfig.announcement_text !== null) {
+            config.announcement_text = urlConfig.announcement_text;
+        }
+        if (urlConfig.announcement_speed_seconds) {
+            config.announcement_speed_seconds = urlConfig.announcement_speed_seconds;
+        }
+        if (urlConfig.announcement_position !== null) {
+            config.announcement_position = urlConfig.announcement_position;
+        }
+        if (urlConfig.announcement_height_px) {
+            config.announcement_height_px = urlConfig.announcement_height_px;
+        }
+        if (urlConfig.announcement_auto_flip !== null) {
+            config.announcement_auto_flip = urlConfig.announcement_auto_flip;
+        }
+        if (urlConfig.announcement_flip_interval_seconds) {
+            config.announcement_flip_interval_seconds = urlConfig.announcement_flip_interval_seconds;
+        }
 
         if (!config.api_base_url || !config.screen_token) {
             throw new Error('Provide screen code and api_base_url in the URL or in config.json.');
         }
 
         return config;
+    }
+
+    function clearAnnouncementFlipTimer() {
+        if (!state.announcementFlipTimer) {
+            return;
+        }
+
+        window.clearTimeout(state.announcementFlipTimer);
+        state.announcementFlipTimer = null;
+    }
+
+    function nextAnnouncementPosition(position) {
+        return position === 'top' ? 'bottom' : 'top';
+    }
+
+    function maybeFlipAnnouncementPosition(basePosition, intervalMs) {
+        const activePosition = state.announcementPositionOverride || basePosition;
+        const lastChangedAt = Number(state.announcementFlipLastChangedAt || 0);
+
+        if (lastChangedAt > 0 && (Date.now() - lastChangedAt) < intervalMs) {
+            return false;
+        }
+
+        state.announcementPositionOverride = nextAnnouncementPosition(activePosition);
+        state.announcementFlipLastChangedAt = Date.now();
+        applyAnnouncementBar();
+        return true;
+    }
+
+    function scheduleAnnouncementFlip(basePosition, hasAnnouncementText) {
+        clearAnnouncementFlipTimer();
+
+        if (!hasAnnouncementText) {
+            state.announcementPositionOverride = null;
+            state.announcementFlipLastChangedAt = 0;
+            return;
+        }
+
+        if (!state.config || !state.config.announcement_auto_flip) {
+            state.announcementPositionOverride = null;
+            state.announcementFlipLastChangedAt = 0;
+            return;
+        }
+
+        const intervalSeconds = Math.max(60, Number.parseInt(state.config.announcement_flip_interval_seconds, 10) || 1200);
+        const intervalMs = intervalSeconds * 1000;
+        const activePosition = state.announcementPositionOverride || basePosition;
+
+        if (!state.announcementPositionOverride) {
+            state.announcementPositionOverride = activePosition;
+        }
+        if (!state.announcementFlipLastChangedAt) {
+            state.announcementFlipLastChangedAt = Date.now();
+        }
+
+        const tick = () => {
+            state.announcementFlipTimer = null;
+
+            if (!state.config || !state.config.announcement_auto_flip) {
+                state.announcementPositionOverride = null;
+                state.announcementFlipLastChangedAt = 0;
+                return;
+            }
+
+            if (maybeFlipAnnouncementPosition(basePosition, intervalMs)) {
+                return;
+            }
+
+            const elapsedMs = Date.now() - state.announcementFlipLastChangedAt;
+            const remainingMs = Math.max(1000, Math.min(10000, intervalMs - elapsedMs));
+            state.announcementFlipTimer = window.setTimeout(tick, remainingMs);
+        };
+
+        const elapsedMs = Date.now() - state.announcementFlipLastChangedAt;
+        const remainingMs = Math.max(1000, Math.min(10000, intervalMs - elapsedMs));
+        state.announcementFlipTimer = window.setTimeout(tick, remainingMs);
+    }
+
+    function resolveAnnouncementBehavior() {
+        const apiPosition = state.apiAnnouncement && state.apiAnnouncement.position
+            ? String(state.apiAnnouncement.position).trim().toLowerCase()
+            : '';
+        const configPosition = String(state.config && state.config.announcement_position ? state.config.announcement_position : 'bottom').trim().toLowerCase();
+        const behaviorPosition = ['top', 'bottom', 'switch'].includes(apiPosition)
+            ? apiPosition
+            : (['top', 'bottom'].includes(configPosition) ? configPosition : 'bottom');
+        const autoFlip = behaviorPosition === 'switch'
+            || Boolean(state.config && state.config.announcement_auto_flip);
+        const basePosition = behaviorPosition === 'top' ? 'top' : 'bottom';
+        const flipIntervalSource = state.apiAnnouncement && state.apiAnnouncement.flip_interval_seconds
+            ? state.apiAnnouncement.flip_interval_seconds
+            : (state.config ? state.config.announcement_flip_interval_seconds : null);
+        const flipIntervalSeconds = Math.max(60, Number.parseInt(flipIntervalSource, 10) || 1200);
+
+        return {
+            autoFlip: autoFlip,
+            basePosition: basePosition,
+            flipIntervalSeconds: flipIntervalSeconds
+        };
+    }
+
+    function applyAnnouncementBar() {
+        if (!announcementBarEl || !announcementTrackEl) {
+            return;
+        }
+
+        const apiAnnouncementText = String(state.apiAnnouncement && state.apiAnnouncement.message_text ? state.apiAnnouncement.message_text : '').trim();
+        const announcementText = apiAnnouncementText !== ''
+            ? apiAnnouncementText
+            : String(state.config.announcement_text || '').trim();
+
+        if (announcementText === '') {
+            clearAnnouncementFlipTimer();
+            state.announcementPositionOverride = null;
+            state.announcementFlipLastChangedAt = 0;
+            announcementBarEl.classList.add('hidden');
+            announcementBarEl.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('has-announcement');
+            document.body.classList.remove('has-announcement-top', 'has-announcement-bottom');
+            announcementBarEl.classList.remove('is-top', 'is-bottom');
+            announcementTrackEl.innerHTML = '';
+            return;
+        }
+
+        const speedSource = state.apiAnnouncement && state.apiAnnouncement.speed_seconds
+            ? state.apiAnnouncement.speed_seconds
+            : state.config.announcement_speed_seconds;
+        const heightSource = state.apiAnnouncement && state.apiAnnouncement.height_px
+            ? state.apiAnnouncement.height_px
+            : state.config.announcement_height_px;
+        const speedSeconds = Math.max(10, Number.parseInt(speedSource, 10) || 28);
+        const behavior = resolveAnnouncementBehavior();
+        const basePosition = behavior.basePosition;
+        const position = behavior.autoFlip
+            ? (state.announcementPositionOverride || basePosition)
+            : basePosition;
+        const heightPx = Math.max(40, Math.min(220, Number.parseInt(heightSource, 10) || 72));
+        const fontSizePx = Math.max(18, Math.round(heightPx * 0.58));
+        const chipHeightPx = Math.max(20, Math.round(heightPx * 0.36));
+        const chipFontSizePx = Math.max(10, Math.round(heightPx * 0.22));
+        announcementBarEl.style.setProperty('--announcement-duration', speedSeconds + 's');
+        announcementBarEl.style.setProperty('--announcement-height', heightPx + 'px');
+        announcementBarEl.style.setProperty('--announcement-font-size', fontSizePx + 'px');
+        announcementBarEl.style.setProperty('--announcement-chip-height', chipHeightPx + 'px');
+        announcementBarEl.style.setProperty('--announcement-chip-font-size', chipFontSizePx + 'px');
+        document.body.style.setProperty('--announcement-height', heightPx + 'px');
+        announcementTrackEl.innerHTML = '';
+        announcementBarEl.classList.remove('is-top', 'is-bottom');
+        announcementBarEl.classList.add(position === 'top' ? 'is-top' : 'is-bottom');
+        announcementBarEl.classList.remove('hidden');
+        announcementBarEl.setAttribute('aria-hidden', 'false');
+        announcementBarEl.style.visibility = 'hidden';
+        void announcementBarEl.offsetWidth;
+
+        const measureSegment = document.createElement('div');
+        measureSegment.className = 'announcement-segment';
+        const measureItem = document.createElement('div');
+        measureItem.className = 'announcement-item';
+        appendAnnouncementContent(measureItem, announcementText);
+        measureSegment.appendChild(measureItem);
+        announcementTrackEl.appendChild(measureSegment);
+
+        const barWidth = Math.max(announcementBarEl.clientWidth, 1);
+        const singleItemWidth = Math.max(Math.ceil(measureItem.getBoundingClientRect().width), 1);
+        const repeatCount = Math.max(1, Math.ceil(barWidth / singleItemWidth) + 1);
+        announcementTrackEl.innerHTML = '';
+
+        for (let segmentIndex = 0; segmentIndex < 2; segmentIndex += 1) {
+            const segment = document.createElement('div');
+            segment.className = 'announcement-segment';
+
+            for (let itemIndex = 0; itemIndex < repeatCount; itemIndex += 1) {
+                const item = document.createElement('div');
+                item.className = 'announcement-item';
+                appendAnnouncementContent(item, announcementText);
+                segment.appendChild(item);
+            }
+
+            announcementTrackEl.appendChild(segment);
+        }
+
+        const scrollDistance = Math.max(
+            Math.ceil(announcementTrackEl.firstElementChild.getBoundingClientRect().width),
+            1
+        );
+        announcementTrackEl.style.setProperty('--announcement-scroll-distance', scrollDistance + 'px');
+        announcementTrackEl.style.animation = 'none';
+        void announcementTrackEl.offsetWidth;
+        announcementTrackEl.style.animation = '';
+
+        announcementBarEl.style.visibility = '';
+        document.body.classList.add('has-announcement');
+        document.body.classList.toggle('has-announcement-top', position === 'top');
+        document.body.classList.toggle('has-announcement-bottom', position === 'bottom');
+        if (state.config) {
+            state.config.announcement_auto_flip = behavior.autoFlip;
+            state.config.announcement_flip_interval_seconds = behavior.flipIntervalSeconds;
+        }
+        scheduleAnnouncementFlip(basePosition, true);
+    }
+
+    function appendAnnouncementContent(container, text) {
+        container.appendChild(createAnnouncementLiveMarker());
+
+        const parts = String(text || '').split(ANNOUNCEMENT_LIVE_TOKEN);
+
+        parts.forEach((part, index) => {
+            if (part !== '') {
+                container.appendChild(document.createTextNode(part));
+            }
+
+            if (index < parts.length - 1) {
+                container.appendChild(createAnnouncementLiveMarker());
+            }
+        });
+    }
+
+    function createAnnouncementLiveMarker() {
+        const liveMarker = document.createElement('span');
+        liveMarker.className = 'announcement-inline-live';
+
+        const liveDot = document.createElement('span');
+        liveDot.className = 'announcement-inline-live-dot';
+        liveMarker.appendChild(liveDot);
+        liveMarker.appendChild(document.createTextNode('Live'));
+
+        return liveMarker;
+    }
+
+    function scheduleAnnouncementLayoutRefresh() {
+        if (!announcementBarEl || !announcementTrackEl) {
+            return;
+        }
+
+        if (state.announcementResizeTimer) {
+            window.clearTimeout(state.announcementResizeTimer);
+        }
+
+        state.announcementResizeTimer = window.setTimeout(() => {
+            state.announcementResizeTimer = null;
+            applyAnnouncementBar();
+        }, 120);
     }
 
     function apiUrl(path) {
@@ -253,7 +557,10 @@
 
             state.playlist = nextPlaylist;
             state.syncRevision = Number.parseInt(data.screen && data.screen.sync_revision, 10) || 0;
+            state.reloadRevision = Number.parseInt(data.screen && data.screen.reload_revision, 10) || 0;
             state.playlistBannerIdentity = nextPlaylistBannerIdentity;
+            state.apiAnnouncement = data.ticker || null;
+            applyAnnouncementBar();
 
             if (state.playlist.length === 0) {
                 state.currentIndex = 0;
@@ -577,6 +884,12 @@
             });
 
             const latestRevision = Number.parseInt(response.sync_revision, 10) || 0;
+            const latestReloadRevision = Number.parseInt(response.reload_revision, 10) || 0;
+            if (latestReloadRevision > state.reloadRevision) {
+                window.location.reload();
+                return;
+            }
+
             if (latestRevision > state.syncRevision) {
                 await syncPlaylist({ restartPlayback: true });
             }
@@ -607,6 +920,7 @@
     async function boot() {
         try {
             state.config = await loadConfig();
+            applyAnnouncementBar();
             state.idb = await openDatabase();
             await syncPlaylist();
             await sendHeartbeat();
@@ -628,6 +942,8 @@
             void sendHeartbeat();
         }
     });
+
+    window.addEventListener('resize', scheduleAnnouncementLayoutRefresh);
 
     boot();
 })();

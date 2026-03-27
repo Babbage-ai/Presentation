@@ -7,7 +7,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 CHROMIUM_CMD="${1:-chromium-browser}"
 PLAYER_URL="http://127.0.0.1:${DISPLAYFLOW_PLAYER_PORT}/player/player.html"
-SETUP_URL="http://${DISPLAYFLOW_AP_HOST}/screen"
+# The Pi's own Chromium should use localhost for the setup UI.
+# Phones and laptops still reach the same service via the hotspot address.
+SETUP_URL="http://127.0.0.1:${DISPLAYFLOW_SETUP_PORT}/screen"
 WAIT_SECONDS=30
 
 pick_url() {

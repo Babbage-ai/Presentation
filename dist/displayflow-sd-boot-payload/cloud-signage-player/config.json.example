@@ -3,5 +3,11 @@
   "screen_code": "ABC123",
   "refresh_interval_seconds": 300,
   "heartbeat_interval_seconds": 60,
-  "cache_namespace": "screen-main"
+  "cache_namespace": "screen-main",
+  "announcement_text": "",
+  "announcement_speed_seconds": 28,
+  "announcement_position": "bottom",
+  "announcement_height_px": 72,
+  "announcement_auto_flip": false,
+  "announcement_flip_interval_seconds": 1200
 }
