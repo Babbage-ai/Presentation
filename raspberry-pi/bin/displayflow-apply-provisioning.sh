@@ -9,7 +9,7 @@ displayflow_require_root
 displayflow_init_state_if_missing
 
 displayflow_log "Applying newly submitted provisioning data."
-displayflow_state_merge '{"mode":"transition","provisioning_status":"applying","last_error":"","last_message":"Switching from setup hotspot to venue Wi-Fi."}'
+displayflow_state_merge '{"mode":"transition","provisioning_status":"applying","last_error":"","last_message":"Switching from setup hotspot to venue Wi-Fi.","setup_hotspot_ready":false}'
 
 rm -f "$DISPLAYFLOW_FORCE_SETUP_FLAG"
 systemctl stop displayflow-setup-web.service >/dev/null 2>&1 || true
@@ -26,7 +26,7 @@ systemctl restart dhcpcd.service >/dev/null 2>&1 || true
 
 if ! displayflow_wait_for_wifi; then
     displayflow_log "Provisioning failed: Wi-Fi association timed out."
-    displayflow_state_merge '{"mode":"setup","provisioning_status":"failed","last_error":"Could not join the venue Wi-Fi network.","last_message":"Venue Wi-Fi connection failed. Reconnect to the setup hotspot and try again.","consecutive_failures":0}'
+    displayflow_state_merge '{"mode":"setup","provisioning_status":"failed","last_error":"Could not join the venue Wi-Fi network.","last_message":"Venue Wi-Fi connection failed. Reconnect to the setup hotspot and try again.","consecutive_failures":0,"setup_hotspot_ready":false}'
     systemctl start displayflow-setup-ap.service
     systemctl start displayflow-setup-web.service
     exit 1
@@ -38,7 +38,7 @@ fi
 
 if ! displayflow_verify_backend; then
     displayflow_log "Provisioning failed: backend verification failed."
-    displayflow_state_merge '{"mode":"setup","provisioning_status":"failed","last_error":"Venue Wi-Fi connected, but the DisplayFlow backend could not be reached.","last_message":"Cloud verification failed. Reconnect to the setup hotspot and check internet access, firewall rules, and the screen code.","consecutive_failures":0}'
+    displayflow_state_merge '{"mode":"setup","provisioning_status":"failed","last_error":"Venue Wi-Fi connected, but the DisplayFlow backend could not be reached.","last_message":"Cloud verification failed. Reconnect to the setup hotspot and check internet access, firewall rules, and the screen code.","consecutive_failures":0,"setup_hotspot_ready":false}'
     systemctl start displayflow-setup-ap.service
     systemctl start displayflow-setup-web.service
     exit 1
@@ -63,7 +63,7 @@ tmp_path.replace(config_path)
 PY
 
 displayflow_sync_player_config
-displayflow_state_merge '{"mode":"normal","provisioning_status":"provisioned","last_error":"","last_message":"Provisioning complete. Rebooting into player mode.","consecutive_failures":0}'
+displayflow_state_merge '{"mode":"normal","provisioning_status":"provisioned","last_error":"","last_message":"Provisioning complete. Rebooting into player mode.","consecutive_failures":0,"setup_hotspot_ready":false}'
 systemctl start cloud-signage-player-update.service >/dev/null 2>&1 || true
 systemctl start cloud-signage-player.service
 

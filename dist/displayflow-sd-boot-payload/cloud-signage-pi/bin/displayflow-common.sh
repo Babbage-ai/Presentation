@@ -140,6 +140,7 @@ payload = {
     "last_error": "",
     "last_message": "Waiting for first provisioning",
     "setup_ssid": ssid,
+    "setup_hotspot_ready": False,
     "updated_at": ""
 }
 
@@ -210,6 +211,7 @@ if state_path.exists():
 
 current.update(updates)
 current["setup_ssid"] = current.get("setup_ssid") or ""
+current["setup_hotspot_ready"] = bool(current.get("setup_hotspot_ready", False))
 current["updated_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 tmp_path = state_path.with_suffix(".tmp")

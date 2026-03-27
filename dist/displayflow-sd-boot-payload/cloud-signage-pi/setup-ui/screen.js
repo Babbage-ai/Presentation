@@ -3,6 +3,8 @@
 
     const ssidEl = document.getElementById('setup-ssid');
     const statusEl = document.getElementById('screen-status');
+    const waitingEl = document.getElementById('setup-waiting');
+    const instructionsEl = document.getElementById('setup-instructions');
 
     function showStatus(message, isError) {
         if (!message) {
@@ -13,6 +15,13 @@
         statusEl.textContent = message;
         statusEl.hidden = false;
         statusEl.classList.toggle('is-error', Boolean(isError));
+    }
+
+    function updateSetupState(state) {
+        const isReady = Boolean(state && state.setup_hotspot_ready);
+
+        waitingEl.hidden = isReady;
+        instructionsEl.hidden = !isReady;
     }
 
     async function loadStatus() {
@@ -28,8 +37,10 @@
                 ssidEl.textContent = state.setup_ssid;
             }
 
+            updateSetupState(state);
             showStatus(state.last_message || '', Boolean(state.last_error));
         } catch (error) {
+            updateSetupState({ setup_hotspot_ready: false });
             showStatus('Open http://192.168.4.1 on your phone if setup does not appear automatically.', false);
         }
     }

@@ -40,7 +40,23 @@ log-dhcp
 EOF
     chmod 0600 "$DNSMASQ_RUNTIME_CONF"
 
-    displayflow_state_merge "{\"setup_ssid\":$(displayflow_json_quote "$ssid"),\"mode\":\"setup\",\"last_message\":\"Setup hotspot active.\"}"
+    displayflow_state_merge "{\"setup_ssid\":$(displayflow_json_quote "$ssid"),\"mode\":\"setup\",\"setup_hotspot_ready\":false,\"last_error\":\"\",\"last_message\":\"Starting setup hotspot.\"}"
+}
+
+wait_for_hotspot_ready() {
+    local attempts
+
+    for attempts in $(seq 1 15); do
+        if ip -4 addr show dev "$DISPLAYFLOW_INTERFACE" | grep -Fq "$DISPLAYFLOW_AP_HOST" \
+            && pgrep -x hostapd >/dev/null 2>&1 \
+            && pgrep -x dnsmasq >/dev/null 2>&1; then
+            return 0
+        fi
+
+        sleep 1
+    done
+
+    return 1
 }
 
 start_ap() {
@@ -69,6 +85,12 @@ start_ap() {
     hostapd -B "$HOSTAPD_RUNTIME_CONF"
     dnsmasq --conf-file="$DNSMASQ_RUNTIME_CONF"
 
+    if wait_for_hotspot_ready; then
+        displayflow_state_merge "{\"setup_ssid\":$(displayflow_json_quote "$(displayflow_setup_ssid)"),\"mode\":\"setup\",\"setup_hotspot_ready\":true,\"last_error\":\"\",\"last_message\":\"Setup hotspot active.\"}"
+    else
+        displayflow_state_merge '{"mode":"setup","setup_hotspot_ready":false,"last_error":"Setup hotspot did not become ready in time.","last_message":"Still starting the setup hotspot. Wait a moment and refresh if needed."}'
+    fi
+
     displayflow_log "Setup hotspot started on ${DISPLAYFLOW_INTERFACE} as $(displayflow_setup_ssid)."
 }
 
@@ -84,6 +106,8 @@ stop_ap() {
     systemctl restart wpa_supplicant.service >/dev/null 2>&1 || true
     systemctl restart "wpa_supplicant@${DISPLAYFLOW_INTERFACE}.service" >/dev/null 2>&1 || true
     systemctl restart dhcpcd.service >/dev/null 2>&1 || true
+
+    displayflow_state_merge '{"setup_hotspot_ready":false}'
 
     displayflow_log "Setup hotspot stopped on ${DISPLAYFLOW_INTERFACE}."
 }

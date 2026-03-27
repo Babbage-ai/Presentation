@@ -73,6 +73,7 @@ def merge_state(updates: dict) -> dict:
             "last_error": "",
             "last_message": "",
             "setup_ssid": "",
+            "setup_hotspot_ready": False,
         },
     )
     current.update(updates)

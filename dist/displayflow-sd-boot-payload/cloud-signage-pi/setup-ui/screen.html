@@ -14,19 +14,29 @@
             <h1>Connect your phone to finish setup</h1>
             <p class="intro">This screen is waiting for Wi-Fi details and a screen code.</p>
 
-            <div class="screen-panel">
-                <p class="panel-label">1. Join hotspot</p>
-                <p id="setup-ssid" class="screen-ssid">DisplayFlow-Setup-XXXX</p>
+            <div id="setup-waiting" class="screen-panel">
+                <p class="panel-label">Preparing setup hotspot</p>
+                <div class="working-state">
+                    <div class="spinner" aria-hidden="true"></div>
+                    <p class="screen-copy">This Pi is bringing up its local hotspot now. Instructions will appear as soon as it is ready.</p>
+                </div>
             </div>
 
-            <div class="screen-panel">
-                <p class="panel-label">2. Open on your phone</p>
-                <p class="screen-url">http://192.168.4.1</p>
-            </div>
+            <div id="setup-instructions" hidden>
+                <div class="screen-panel">
+                    <p class="panel-label">1. Join hotspot</p>
+                    <p id="setup-ssid" class="screen-ssid">DisplayFlow-Setup-XXXX</p>
+                </div>
 
-            <div class="screen-panel">
-                <p class="panel-label">3. Enter</p>
-                <p class="screen-copy">Venue Wi-Fi name, venue Wi-Fi password, and screen code.</p>
+                <div class="screen-panel">
+                    <p class="panel-label">2. Open on your phone</p>
+                    <p class="screen-url">http://192.168.4.1</p>
+                </div>
+
+                <div class="screen-panel">
+                    <p class="panel-label">3. Enter</p>
+                    <p class="screen-copy">Venue Wi-Fi name, venue Wi-Fi password, and screen code.</p>
+                </div>
             </div>
 
             <div id="screen-status" class="status-banner" hidden></div>

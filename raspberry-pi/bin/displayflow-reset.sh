@@ -41,6 +41,7 @@ payload = {
     "last_error": "",
     "last_message": "Provisioning reset. Device will return to setup mode on next boot.",
     "setup_ssid": ssid,
+    "setup_hotspot_ready": False,
     "updated_at": ""
 }
 

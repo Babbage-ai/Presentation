@@ -11,7 +11,7 @@ enter_setup_mode() {
     local reason="$1"
 
     displayflow_log "Entering setup mode: ${reason}"
-    displayflow_state_merge "{\"mode\":\"setup\",\"provisioning_status\":\"needs_setup\",\"last_error\":$(displayflow_json_quote "$reason"),\"last_message\":$(displayflow_json_quote "$reason")}"
+    displayflow_state_merge "{\"mode\":\"setup\",\"provisioning_status\":\"needs_setup\",\"last_error\":$(displayflow_json_quote "$reason"),\"last_message\":\"Starting setup hotspot.\",\"setup_hotspot_ready\":false}"
 
     systemctl stop cloud-signage-player.service >/dev/null 2>&1 || true
     systemctl stop cloud-signage-player-update.service >/dev/null 2>&1 || true
@@ -67,7 +67,7 @@ boot_flow() {
         failures="$(displayflow_json_get "$DISPLAYFLOW_STATE_FILE" "consecutive_failures" 2>/dev/null || printf '0\n')"
         failures=$((failures + 1))
         reason="Wi-Fi connection failed after ${DISPLAYFLOW_CONNECT_TIMEOUT} seconds."
-        displayflow_state_merge "{\"mode\":\"degraded\",\"provisioning_status\":\"provisioned\",\"consecutive_failures\":${failures},\"last_error\":$(displayflow_json_quote "$reason"),\"last_message\":$(displayflow_json_quote "$reason")}"
+        displayflow_state_merge "{\"mode\":\"degraded\",\"provisioning_status\":\"provisioned\",\"consecutive_failures\":${failures},\"last_error\":$(displayflow_json_quote "$reason"),\"last_message\":$(displayflow_json_quote "$reason"),\"setup_hotspot_ready\":false}"
 
         if [ "$failures" -ge "$DISPLAYFLOW_FAILURE_THRESHOLD" ]; then
             enter_setup_mode "Wi-Fi failed repeatedly. Re-entering setup mode."
@@ -87,7 +87,7 @@ boot_flow() {
         failures="$(displayflow_json_get "$DISPLAYFLOW_STATE_FILE" "consecutive_failures" 2>/dev/null || printf '0\n')"
         failures=$((failures + 1))
         reason="Cloud backend verification failed."
-        displayflow_state_merge "{\"mode\":\"degraded\",\"provisioning_status\":\"provisioned\",\"consecutive_failures\":${failures},\"last_error\":$(displayflow_json_quote "$reason"),\"last_message\":$(displayflow_json_quote "$reason")}"
+        displayflow_state_merge "{\"mode\":\"degraded\",\"provisioning_status\":\"provisioned\",\"consecutive_failures\":${failures},\"last_error\":$(displayflow_json_quote "$reason"),\"last_message\":$(displayflow_json_quote "$reason"),\"setup_hotspot_ready\":false}"
 
         if [ "$failures" -ge "$DISPLAYFLOW_FAILURE_THRESHOLD" ]; then
             enter_setup_mode "Backend verification failed repeatedly. Re-entering setup mode."
@@ -99,7 +99,7 @@ boot_flow() {
         exit 0
     fi
 
-    displayflow_state_merge '{"mode":"normal","provisioning_status":"provisioned","consecutive_failures":0,"last_error":"","last_message":"Device ready for playback."}'
+    displayflow_state_merge '{"mode":"normal","provisioning_status":"provisioned","consecutive_failures":0,"last_error":"","last_message":"Device ready for playback.","setup_hotspot_ready":false}'
     systemctl start cloud-signage-player-update.service >/dev/null 2>&1 || true
     systemctl start cloud-signage-player.service
 }
