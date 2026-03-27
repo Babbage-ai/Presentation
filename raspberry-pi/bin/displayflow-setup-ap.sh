@@ -47,14 +47,36 @@ wait_for_hotspot_ready() {
     local attempts
 
     for attempts in $(seq 1 15); do
-        if ip -4 addr show dev "$DISPLAYFLOW_INTERFACE" | grep -Fq "$DISPLAYFLOW_AP_HOST" \
-            && pgrep -x hostapd >/dev/null 2>&1 \
-            && pgrep -x dnsmasq >/dev/null 2>&1; then
+        if hotspot_is_ready; then
             return 0
         fi
 
         sleep 1
     done
+
+    return 1
+}
+
+hotspot_is_ready() {
+    if ! ip -4 addr show dev "$DISPLAYFLOW_INTERFACE" | grep -Fq "$DISPLAYFLOW_AP_HOST"; then
+        return 1
+    fi
+
+    if ! pgrep -x hostapd >/dev/null 2>&1 || ! pgrep -x dnsmasq >/dev/null 2>&1; then
+        return 1
+    fi
+
+    if command -v hostapd_cli >/dev/null 2>&1; then
+        if hostapd_cli -i "$DISPLAYFLOW_INTERFACE" status 2>/dev/null | grep -q '^state=ENABLED$'; then
+            return 0
+        fi
+
+        return 1
+    fi
+
+    if iw dev "$DISPLAYFLOW_INTERFACE" info 2>/dev/null | grep -q 'type AP'; then
+        return 0
+    fi
 
     return 1
 }
