@@ -145,6 +145,7 @@ function screen_admin_payload(mysqli $db, array $screen): array
         'schedule_name' => (string) ($screen['schedule_name'] ?? ''),
         'ticker_id' => (int) ($screen['ticker_message_id'] ?? 0),
         'ticker_name' => (string) ($screen['ticker_name'] ?? ''),
+        'assignment' => screen_assignment_value($screen),
         'assignment_value' => screen_assignment_value($screen),
         'screen_code' => $screenCode,
         'last_seen_display' => format_datetime($screen['last_seen'] ?? null),
@@ -164,6 +165,7 @@ function screen_state_payload(array $screen): array
         'playlist_id' => (int) ($screen['playlist_id'] ?? 0),
         'schedule_id' => (int) ($screen['schedule_id'] ?? 0),
         'ticker_id' => (int) ($screen['ticker_message_id'] ?? 0),
+        'assignment' => screen_assignment_value($screen),
         'assignment_value' => screen_assignment_value($screen),
         'active' => (int) ($screen['active'] ?? 1),
     ];
