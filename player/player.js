@@ -336,6 +336,10 @@
         announcementTrackEl.innerHTML = '';
         announcementBarEl.classList.remove('is-top', 'is-bottom');
         announcementBarEl.classList.add(position === 'top' ? 'is-top' : 'is-bottom');
+        announcementBarEl.classList.remove('hidden');
+        announcementBarEl.setAttribute('aria-hidden', 'false');
+        announcementBarEl.style.visibility = 'hidden';
+        void announcementBarEl.offsetWidth;
 
         const measureSegment = document.createElement('div');
         measureSegment.className = 'announcement-segment';
@@ -373,8 +377,7 @@
         void announcementTrackEl.offsetWidth;
         announcementTrackEl.style.animation = '';
 
-        announcementBarEl.classList.remove('hidden');
-        announcementBarEl.setAttribute('aria-hidden', 'false');
+        announcementBarEl.style.visibility = '';
         document.body.classList.add('has-announcement');
         document.body.classList.toggle('has-announcement-top', position === 'top');
         document.body.classList.toggle('has-announcement-bottom', position === 'bottom');
