@@ -107,6 +107,7 @@ CREATE TABLE IF NOT EXISTS screens (
     location VARCHAR(255) NOT NULL DEFAULT '',
     playlist_id INT UNSIGNED NULL,
     schedule_id INT UNSIGNED NULL,
+    ticker_message_id INT UNSIGNED NULL,
     active TINYINT(1) NOT NULL DEFAULT 1,
     resolution VARCHAR(50) NULL,
     last_seen DATETIME NULL,
@@ -121,6 +122,7 @@ CREATE TABLE IF NOT EXISTS screens (
     KEY idx_screens_owner_active (owner_admin_id, active),
     KEY idx_screens_owner_playlist (owner_admin_id, playlist_id),
     KEY idx_screens_owner_schedule (owner_admin_id, schedule_id),
+    KEY idx_screens_owner_ticker (owner_admin_id, ticker_message_id),
     KEY idx_screens_owner_status_last_seen (owner_admin_id, status, last_seen),
     CONSTRAINT fk_screens_owner_admin
         FOREIGN KEY (owner_admin_id) REFERENCES admins(id)
@@ -194,6 +196,11 @@ CREATE TABLE IF NOT EXISTS ticker_message_screens (
         FOREIGN KEY (screen_id) REFERENCES screens(id)
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE screens
+    ADD CONSTRAINT fk_screens_ticker_message
+        FOREIGN KEY (ticker_message_id) REFERENCES ticker_messages(id)
+        ON DELETE SET NULL;
 
 CREATE TABLE IF NOT EXISTS screen_logs (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

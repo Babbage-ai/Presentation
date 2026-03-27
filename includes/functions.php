@@ -462,10 +462,12 @@ function find_screen_by_token(mysqli $db, string $token): ?array
 
     $screenCode = normalize_screen_code($token);
 
-    $sql = "SELECT s.*, p.name AS playlist_name, p.active AS playlist_active, sc.name AS schedule_name, sc.active AS schedule_active
+    $sql = "SELECT s.*, p.name AS playlist_name, p.active AS playlist_active, sc.name AS schedule_name, sc.active AS schedule_active,
+                   tm.name AS ticker_name
             FROM screens s
             LEFT JOIN playlists p ON p.id = s.playlist_id AND p.owner_admin_id = s.owner_admin_id
             LEFT JOIN schedules sc ON sc.id = s.schedule_id AND sc.owner_admin_id = s.owner_admin_id
+            LEFT JOIN ticker_messages tm ON tm.id = s.ticker_message_id AND tm.owner_admin_id = s.owner_admin_id
             WHERE s.screen_code = ?
                OR s.screen_token = ?
             LIMIT 1";
@@ -865,6 +867,7 @@ function resolve_screen_ticker(mysqli $db, array $screen, ?DateTimeImmutable $no
 {
     $screenId = (int) ($screen['id'] ?? 0);
     $adminId = (int) ($screen['owner_admin_id'] ?? 0);
+    $directTickerId = (int) ($screen['ticker_message_id'] ?? 0);
 
     if ($screenId < 1 || $adminId < 1) {
         return null;
@@ -908,6 +911,54 @@ function resolve_screen_ticker(mysqli $db, array $screen, ?DateTimeImmutable $no
 
     $localNow = ($now ?? new DateTimeImmutable('now', new DateTimeZone('UTC')))
         ->setTimezone(new DateTimeZone(app_timezone_name()));
+
+    if ($directTickerId > 0) {
+        $statement = $db->prepare("SELECT *
+            FROM ticker_messages
+            WHERE id = ?
+              AND owner_admin_id = ?
+            LIMIT 1");
+        $statement->bind_param('ii', $directTickerId, $adminId);
+        $statement->execute();
+        $directTicker = $statement->get_result()->fetch_assoc() ?: null;
+        $statement->close();
+
+        if ($directTicker) {
+            $directTicker['day_mask'] = (int) ($directTicker['day_mask'] ?? 127);
+            $directTicker['speed_seconds'] = (int) ($directTicker['speed_seconds'] ?? 28);
+            $directTicker['flip_interval_seconds'] = (int) ($directTicker['flip_interval_seconds'] ?? 1200);
+            $directTicker['height_px'] = (int) ($directTicker['height_px'] ?? 72);
+            $directTicker['priority'] = (int) ($directTicker['priority'] ?? 1);
+            $directTicker['active'] = (int) ($directTicker['active'] ?? 1);
+            $directTicker['applies_to_all_screens'] = (int) ($directTicker['applies_to_all_screens'] ?? 0);
+            $directTicker['position'] = in_array(($directTicker['position'] ?? 'bottom'), ['top', 'bottom', 'switch'], true)
+                ? (string) $directTicker['position']
+                : 'bottom';
+
+            if (scheduled_window_matches($directTicker, $localNow)) {
+                return [
+                    'id' => (int) $directTicker['id'],
+                    'name' => (string) $directTicker['name'],
+                    'message_text' => (string) $directTicker['message_text'],
+                    'speed_seconds' => max(10, (int) $directTicker['speed_seconds']),
+                    'flip_interval_seconds' => max(60, (int) ($directTicker['flip_interval_seconds'] ?? 1200)),
+                    'height_px' => max(40, min(220, (int) ($directTicker['height_px'] ?? 72))),
+                    'priority' => (int) $directTicker['priority'],
+                    'day_mask' => (int) $directTicker['day_mask'],
+                    'day_summary' => schedule_day_mask_summary((int) $directTicker['day_mask']),
+                    'start_time' => (string) $directTicker['start_time'],
+                    'end_time' => (string) $directTicker['end_time'],
+                    'time_range' => schedule_time_label((string) $directTicker['start_time']) . ' - ' . schedule_time_label((string) $directTicker['end_time']),
+                    'starts_at' => $directTicker['starts_at'],
+                    'ends_at' => $directTicker['ends_at'],
+                    'position' => in_array(($directTicker['position'] ?? 'bottom'), ['top', 'bottom', 'switch'], true)
+                        ? (string) $directTicker['position']
+                        : 'bottom',
+                    'applies_to_all_screens' => (int) $directTicker['applies_to_all_screens'],
+                ];
+            }
+        }
+    }
 
     foreach ($rows as $row) {
         if (!scheduled_window_matches($row, $localNow)) {

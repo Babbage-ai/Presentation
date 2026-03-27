@@ -38,6 +38,21 @@ function screen_schedule_exists(mysqli $db, int $adminId, int $scheduleId): bool
     return $exists;
 }
 
+function screen_ticker_exists(mysqli $db, int $adminId, int $tickerId): bool
+{
+    if ($tickerId < 1) {
+        return true;
+    }
+
+    $statement = $db->prepare("SELECT COUNT(*) AS total FROM ticker_messages WHERE id = ? AND owner_admin_id = ? AND active = 1");
+    $statement->bind_param('ii', $tickerId, $adminId);
+    $statement->execute();
+    $exists = (int) ($statement->get_result()->fetch_assoc()['total'] ?? 0) === 1;
+    $statement->close();
+
+    return $exists;
+}
+
 function parse_screen_assignment_value(string $value): array
 {
     $value = trim($value);
@@ -96,10 +111,11 @@ function fetch_screen_counts(mysqli $db, int $adminId): array
 
 function fetch_screen_row(mysqli $db, int $adminId, int $screenId): ?array
 {
-    $statement = $db->prepare("SELECT s.*, p.name AS playlist_name, sc.name AS schedule_name
+    $statement = $db->prepare("SELECT s.*, p.name AS playlist_name, sc.name AS schedule_name, tm.name AS ticker_name
         FROM screens s
         LEFT JOIN playlists p ON p.id = s.playlist_id AND p.owner_admin_id = s.owner_admin_id
         LEFT JOIN schedules sc ON sc.id = s.schedule_id AND sc.owner_admin_id = s.owner_admin_id
+        LEFT JOIN ticker_messages tm ON tm.id = s.ticker_message_id AND tm.owner_admin_id = s.owner_admin_id
         WHERE s.id = ? AND s.owner_admin_id = ?
         LIMIT 1");
     $statement->bind_param('ii', $screenId, $adminId);
@@ -127,6 +143,8 @@ function screen_admin_payload(mysqli $db, array $screen): array
         'playlist_name' => (string) ($screen['playlist_name'] ?? ''),
         'schedule_id' => (int) ($screen['schedule_id'] ?? 0),
         'schedule_name' => (string) ($screen['schedule_name'] ?? ''),
+        'ticker_id' => (int) ($screen['ticker_message_id'] ?? 0),
+        'ticker_name' => (string) ($screen['ticker_name'] ?? ''),
         'assignment_value' => screen_assignment_value($screen),
         'screen_code' => $screenCode,
         'last_seen_display' => format_datetime($screen['last_seen'] ?? null),
@@ -145,6 +163,7 @@ function screen_state_payload(array $screen): array
         'location' => (string) ($screen['location'] ?? ''),
         'playlist_id' => (int) ($screen['playlist_id'] ?? 0),
         'schedule_id' => (int) ($screen['schedule_id'] ?? 0),
+        'ticker_id' => (int) ($screen['ticker_message_id'] ?? 0),
         'assignment_value' => screen_assignment_value($screen),
         'active' => (int) ($screen['active'] ?? 1),
     ];
@@ -160,6 +179,7 @@ if (is_post_request()) {
         $assignment = parse_screen_assignment_value((string) ($_POST['assignment'] ?? 'none'));
         $playlistId = $assignment['playlist_id'];
         $scheduleId = $assignment['schedule_id'];
+        $tickerId = max(0, (int) ($_POST['ticker_id'] ?? 0));
         $active = isset($_POST['active']) ? 1 : 0;
         $screenCode = generate_unique_screen_code($db);
         $token = generate_screen_token();
@@ -179,10 +199,15 @@ if (is_post_request()) {
             redirect('/admin/screens.php');
         }
 
+        if ($tickerId > 0 && !screen_ticker_exists($db, $adminId, $tickerId)) {
+            set_flash('danger', 'Selected ticker was not found in your presentation system.');
+            redirect('/admin/screens.php');
+        }
+
         $statement = $db->prepare("INSERT INTO screens
-            (owner_admin_id, name, screen_code, screen_token, location, playlist_id, schedule_id, active, resolution, last_seen, last_ip, status, player_version, created_at)
-            VALUES (?, ?, ?, ?, ?, NULLIF(?, 0), NULLIF(?, 0), ?, NULL, NULL, NULL, 'offline', NULL, UTC_TIMESTAMP())");
-        $statement->bind_param('issssiii', $adminId, $name, $screenCode, $token, $location, $playlistId, $scheduleId, $active);
+            (owner_admin_id, name, screen_code, screen_token, location, playlist_id, schedule_id, ticker_message_id, active, resolution, last_seen, last_ip, status, player_version, created_at)
+            VALUES (?, ?, ?, ?, ?, NULLIF(?, 0), NULLIF(?, 0), NULLIF(?, 0), ?, NULL, NULL, NULL, 'offline', NULL, UTC_TIMESTAMP())");
+        $statement->bind_param('issssiiii', $adminId, $name, $screenCode, $token, $location, $playlistId, $scheduleId, $tickerId, $active);
         $statement->execute();
         $statement->close();
 
@@ -197,6 +222,7 @@ if (is_post_request()) {
         $assignment = parse_screen_assignment_value((string) ($_POST['assignment'] ?? 'none'));
         $playlistId = $assignment['playlist_id'];
         $scheduleId = $assignment['schedule_id'];
+        $tickerId = max(0, (int) ($_POST['ticker_id'] ?? 0));
         $active = isset($_POST['active']) && (string) $_POST['active'] === '1' ? 1 : 0;
 
         if ($screenId < 1 || $name === '') {
@@ -211,15 +237,19 @@ if (is_post_request()) {
             json_response(false, 'Selected schedule was not found in your presentation system.', [], 422);
         }
 
+        if ($tickerId > 0 && !screen_ticker_exists($db, $adminId, $tickerId)) {
+            json_response(false, 'Selected ticker was not found in your presentation system.', [], 422);
+        }
+
         $existingScreen = fetch_screen_row($db, $adminId, $screenId);
         if (!$existingScreen) {
             json_response(false, 'Screen not found.', [], 404);
         }
 
         $statement = $db->prepare("UPDATE screens
-            SET name = ?, location = ?, playlist_id = NULLIF(?, 0), schedule_id = NULLIF(?, 0), active = ?
+            SET name = ?, location = ?, playlist_id = NULLIF(?, 0), schedule_id = NULLIF(?, 0), ticker_message_id = NULLIF(?, 0), active = ?
             WHERE id = ? AND owner_admin_id = ?");
-        $statement->bind_param('ssiiiii', $name, $location, $playlistId, $scheduleId, $active, $screenId, $adminId);
+        $statement->bind_param('ssiiiiii', $name, $location, $playlistId, $scheduleId, $tickerId, $active, $screenId, $adminId);
         $statement->execute();
         $updated = $statement->affected_rows > 0;
         $statement->close();
@@ -309,11 +339,22 @@ while ($row = $result->fetch_assoc()) {
 }
 $statement->close();
 
+$tickers = [];
+$statement = $db->prepare("SELECT id, name FROM ticker_messages WHERE owner_admin_id = ? AND active = 1 ORDER BY priority ASC, name ASC, id ASC");
+$statement->bind_param('i', $adminId);
+$statement->execute();
+$result = $statement->get_result();
+while ($row = $result->fetch_assoc()) {
+    $tickers[] = $row;
+}
+$statement->close();
+
 $screens = [];
-$statement = $db->prepare("SELECT s.*, p.name AS playlist_name, sc.name AS schedule_name
+$statement = $db->prepare("SELECT s.*, p.name AS playlist_name, sc.name AS schedule_name, tm.name AS ticker_name
     FROM screens s
     LEFT JOIN playlists p ON p.id = s.playlist_id AND p.owner_admin_id = s.owner_admin_id
     LEFT JOIN schedules sc ON sc.id = s.schedule_id AND sc.owner_admin_id = s.owner_admin_id
+    LEFT JOIN ticker_messages tm ON tm.id = s.ticker_message_id AND tm.owner_admin_id = s.owner_admin_id
     WHERE s.owner_admin_id = ?
     ORDER BY s.status = 'online' DESC, s.name ASC, s.id DESC");
 $statement->bind_param('i', $adminId);
@@ -345,7 +386,7 @@ require_once __DIR__ . '/../includes/header.php';
     .screen-filter-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--admin-text-soft); }
     .screen-filter-select { width: 6.4rem; min-width: 6.4rem; min-height: 1.8rem; font-size: 0.8rem; padding: 0.16rem 1.7rem 0.16rem 0.52rem; border-radius: 0.8rem; }
     .screen-filter-summary { color: var(--admin-text-soft); font-size: 0.8rem; white-space: nowrap; }
-    .screen-admin-table { min-width: 920px; }
+    .screen-admin-table { min-width: 1080px; }
     .screen-admin-table .form-control,
     .screen-admin-table .form-select { min-width: 140px; min-height: 2.1rem; padding-top: 0.34rem; padding-bottom: 0.34rem; }
     .screen-admin-table thead th { padding: 0.52rem 0.65rem; }
@@ -525,6 +566,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <th>Screen Name</th>
                         <th>Screen Location</th>
                         <th>Assignment</th>
+                        <th>Ticker</th>
                         <th>Last Seen</th>
                         <th>Controls</th>
                     </tr>
@@ -532,7 +574,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <tbody id="screensTableBody">
                     <?php if (!$screens): ?>
                         <tr id="screensEmptyRow">
-                            <td colspan="5" class="text-muted p-3">No screens created yet.</td>
+                            <td colspan="6" class="text-muted p-3">No screens created yet.</td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($screens as $screen): ?>
@@ -570,6 +612,14 @@ require_once __DIR__ . '/../includes/header.php';
                                                 <?php endforeach; ?>
                                             </optgroup>
                                         <?php endif; ?>
+                                    </select>
+                                </td>
+                                <td data-label="Ticker">
+                                    <select class="form-select js-screen-field" name="ticker_id">
+                                        <option value="0">No direct ticker</option>
+                                        <?php foreach ($tickers as $ticker): ?>
+                                            <option value="<?= (int) $ticker['id'] ?>" <?= (int) ($screenPayload['ticker_id'] ?? 0) === (int) $ticker['id'] ? 'selected' : '' ?>><?= e($ticker['name']) ?></option>
+                                        <?php endforeach; ?>
                                     </select>
                                 </td>
                                 <td data-label="Last Seen">
@@ -643,6 +693,15 @@ require_once __DIR__ . '/../includes/header.php';
                             <?php endif; ?>
                         </select>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="create_screen_ticker">Ticker</label>
+                        <select class="form-select" id="create_screen_ticker" name="ticker_id">
+                            <option value="0">No direct ticker</option>
+                            <?php foreach ($tickers as $ticker): ?>
+                                <option value="<?= (int) $ticker['id'] ?>"><?= e($ticker['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                     <div class="form-check mb-3">
                         <input class="form-check-input" id="create_screen_active" name="active" type="checkbox" checked>
                         <label class="form-check-label" for="create_screen_active">Screen active</label>
@@ -689,6 +748,7 @@ function currentRowState(row) {
         name: nameField ? nameField.value.trim() : '',
         location: locationField ? locationField.value.trim() : '',
         assignment: assignmentField ? assignmentField.value : 'none',
+        ticker_id: row.querySelector('[name="ticker_id"]') ? row.querySelector('[name="ticker_id"]').value : '0',
         active: activeField && activeField.checked ? 1 : 0,
     };
 }
@@ -698,6 +758,7 @@ function applyRowState(row, state) {
         name: state.name || '',
         location: state.location || '',
         assignment: state.assignment || 'none',
+        ticker_id: String(state.ticker_id || '0'),
         active: Number.parseInt(state.active, 10) === 1 ? 1 : 0,
     };
 
@@ -705,6 +766,7 @@ function applyRowState(row, state) {
     const locationField = row.querySelector('[name="location"]');
     const assignmentField = row.querySelector('[name="assignment"]');
     const activeField = row.querySelector('[name="active"]');
+    const tickerField = row.querySelector('[name="ticker_id"]');
 
     if (nameField) {
         nameField.value = normalizedState.name;
@@ -714,6 +776,9 @@ function applyRowState(row, state) {
     }
     if (assignmentField) {
         assignmentField.value = normalizedState.assignment;
+    }
+    if (tickerField) {
+        tickerField.value = normalizedState.ticker_id;
     }
     if (activeField) {
         activeField.checked = normalizedState.active === 1;
@@ -729,6 +794,7 @@ function stateChanged(row) {
     return current.name !== (stored.name || '')
         || current.location !== (stored.location || '')
         || current.assignment !== (stored.assignment || 'none')
+        || current.ticker_id !== String(stored.ticker_id || '0')
         || current.active !== (Number.parseInt(stored.active, 10) === 1 ? 1 : 0);
 }
 
@@ -915,6 +981,7 @@ async function saveRow(row, revertOnError = false) {
             name: nextState.name,
             location: nextState.location,
             assignment: nextState.assignment,
+            ticker_id: nextState.ticker_id,
             active: String(nextState.active),
         });
 
@@ -978,7 +1045,7 @@ async function deleteRow(row) {
         if (tableBody && !tableBody.querySelector('.screen-row')) {
             const emptyRow = document.createElement('tr');
             emptyRow.id = 'screensEmptyRow';
-            emptyRow.innerHTML = '<td colspan="5" class="text-muted p-3">No screens created yet.</td>';
+            emptyRow.innerHTML = '<td colspan="6" class="text-muted p-3">No screens created yet.</td>';
             tableBody.appendChild(emptyRow);
         }
 
