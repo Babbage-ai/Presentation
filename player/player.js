@@ -35,7 +35,8 @@
         apiAnnouncement: null,
         announcementResizeTimer: null,
         announcementFlipTimer: null,
-        announcementPositionOverride: null
+        announcementPositionOverride: null,
+        announcementFlipLastChangedAt: 0
     };
 
     function parseBooleanFlag(value) {
@@ -201,28 +202,67 @@
         return position === 'top' ? 'bottom' : 'top';
     }
 
+    function maybeFlipAnnouncementPosition(basePosition, intervalMs) {
+        const activePosition = state.announcementPositionOverride || basePosition;
+        const lastChangedAt = Number(state.announcementFlipLastChangedAt || 0);
+
+        if (lastChangedAt > 0 && (Date.now() - lastChangedAt) < intervalMs) {
+            return false;
+        }
+
+        state.announcementPositionOverride = nextAnnouncementPosition(activePosition);
+        state.announcementFlipLastChangedAt = Date.now();
+        applyAnnouncementBar();
+        return true;
+    }
+
     function scheduleAnnouncementFlip(basePosition, hasAnnouncementText) {
         clearAnnouncementFlipTimer();
 
         if (!hasAnnouncementText) {
             state.announcementPositionOverride = null;
+            state.announcementFlipLastChangedAt = 0;
             return;
         }
 
         if (!state.config || !state.config.announcement_auto_flip) {
             state.announcementPositionOverride = null;
+            state.announcementFlipLastChangedAt = 0;
             return;
         }
 
         const intervalSeconds = Math.max(60, Number.parseInt(state.config.announcement_flip_interval_seconds, 10) || 1200);
+        const intervalMs = intervalSeconds * 1000;
         const activePosition = state.announcementPositionOverride || basePosition;
-        state.announcementPositionOverride = activePosition;
 
-        state.announcementFlipTimer = window.setTimeout(() => {
+        if (!state.announcementPositionOverride) {
+            state.announcementPositionOverride = activePosition;
+        }
+        if (!state.announcementFlipLastChangedAt) {
+            state.announcementFlipLastChangedAt = Date.now();
+        }
+
+        const tick = () => {
             state.announcementFlipTimer = null;
-            state.announcementPositionOverride = nextAnnouncementPosition(activePosition);
-            applyAnnouncementBar();
-        }, intervalSeconds * 1000);
+
+            if (!state.config || !state.config.announcement_auto_flip) {
+                state.announcementPositionOverride = null;
+                state.announcementFlipLastChangedAt = 0;
+                return;
+            }
+
+            if (maybeFlipAnnouncementPosition(basePosition, intervalMs)) {
+                return;
+            }
+
+            const elapsedMs = Date.now() - state.announcementFlipLastChangedAt;
+            const remainingMs = Math.max(1000, Math.min(10000, intervalMs - elapsedMs));
+            state.announcementFlipTimer = window.setTimeout(tick, remainingMs);
+        };
+
+        const elapsedMs = Date.now() - state.announcementFlipLastChangedAt;
+        const remainingMs = Math.max(1000, Math.min(10000, intervalMs - elapsedMs));
+        state.announcementFlipTimer = window.setTimeout(tick, remainingMs);
     }
 
     function resolveAnnouncementBehavior() {
@@ -261,6 +301,7 @@
         if (announcementText === '') {
             clearAnnouncementFlipTimer();
             state.announcementPositionOverride = null;
+            state.announcementFlipLastChangedAt = 0;
             announcementBarEl.classList.add('hidden');
             announcementBarEl.setAttribute('aria-hidden', 'true');
             document.body.classList.remove('has-announcement');
