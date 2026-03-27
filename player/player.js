@@ -225,6 +225,29 @@
         }, intervalSeconds * 1000);
     }
 
+    function resolveAnnouncementBehavior() {
+        const apiPosition = state.apiAnnouncement && state.apiAnnouncement.position
+            ? String(state.apiAnnouncement.position).trim().toLowerCase()
+            : '';
+        const configPosition = String(state.config && state.config.announcement_position ? state.config.announcement_position : 'bottom').trim().toLowerCase();
+        const behaviorPosition = ['top', 'bottom', 'switch'].includes(apiPosition)
+            ? apiPosition
+            : (['top', 'bottom'].includes(configPosition) ? configPosition : 'bottom');
+        const autoFlip = behaviorPosition === 'switch'
+            || Boolean(state.config && state.config.announcement_auto_flip);
+        const basePosition = behaviorPosition === 'top' ? 'top' : 'bottom';
+        const flipIntervalSource = state.apiAnnouncement && state.apiAnnouncement.flip_interval_seconds
+            ? state.apiAnnouncement.flip_interval_seconds
+            : (state.config ? state.config.announcement_flip_interval_seconds : null);
+        const flipIntervalSeconds = Math.max(60, Number.parseInt(flipIntervalSource, 10) || 1200);
+
+        return {
+            autoFlip: autoFlip,
+            basePosition: basePosition,
+            flipIntervalSeconds: flipIntervalSeconds
+        };
+    }
+
     function applyAnnouncementBar() {
         if (!announcementBarEl || !announcementTrackEl) {
             return;
@@ -250,15 +273,13 @@
         const speedSource = state.apiAnnouncement && state.apiAnnouncement.speed_seconds
             ? state.apiAnnouncement.speed_seconds
             : state.config.announcement_speed_seconds;
-        const positionSource = state.apiAnnouncement && state.apiAnnouncement.position
-            ? state.apiAnnouncement.position
-            : state.config.announcement_position;
         const heightSource = state.apiAnnouncement && state.apiAnnouncement.height_px
             ? state.apiAnnouncement.height_px
             : state.config.announcement_height_px;
         const speedSeconds = Math.max(10, Number.parseInt(speedSource, 10) || 28);
-        const basePosition = positionSource === 'top' ? 'top' : 'bottom';
-        const position = state.config && state.config.announcement_auto_flip
+        const behavior = resolveAnnouncementBehavior();
+        const basePosition = behavior.basePosition;
+        const position = behavior.autoFlip
             ? (state.announcementPositionOverride || basePosition)
             : basePosition;
         const heightPx = Math.max(40, Math.min(220, Number.parseInt(heightSource, 10) || 72));
@@ -316,10 +337,16 @@
         document.body.classList.add('has-announcement');
         document.body.classList.toggle('has-announcement-top', position === 'top');
         document.body.classList.toggle('has-announcement-bottom', position === 'bottom');
+        if (state.config) {
+            state.config.announcement_auto_flip = behavior.autoFlip;
+            state.config.announcement_flip_interval_seconds = behavior.flipIntervalSeconds;
+        }
         scheduleAnnouncementFlip(basePosition, true);
     }
 
     function appendAnnouncementContent(container, text) {
+        container.appendChild(createAnnouncementLiveMarker());
+
         const parts = String(text || '').split(ANNOUNCEMENT_LIVE_TOKEN);
 
         parts.forEach((part, index) => {
@@ -328,16 +355,21 @@
             }
 
             if (index < parts.length - 1) {
-                const liveMarker = document.createElement('span');
-                liveMarker.className = 'announcement-inline-live';
-
-                const liveDot = document.createElement('span');
-                liveDot.className = 'announcement-inline-live-dot';
-                liveMarker.appendChild(liveDot);
-                liveMarker.appendChild(document.createTextNode('Live'));
-                container.appendChild(liveMarker);
+                container.appendChild(createAnnouncementLiveMarker());
             }
         });
+    }
+
+    function createAnnouncementLiveMarker() {
+        const liveMarker = document.createElement('span');
+        liveMarker.className = 'announcement-inline-live';
+
+        const liveDot = document.createElement('span');
+        liveDot.className = 'announcement-inline-live-dot';
+        liveMarker.appendChild(liveDot);
+        liveMarker.appendChild(document.createTextNode('Live'));
+
+        return liveMarker;
     }
 
     function scheduleAnnouncementLayoutRefresh() {

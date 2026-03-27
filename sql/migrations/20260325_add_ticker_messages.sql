@@ -10,9 +10,10 @@ CREATE TABLE IF NOT EXISTS ticker_messages (
     end_time TIME NOT NULL DEFAULT '23:59:59',
     starts_at DATETIME NULL,
     ends_at DATETIME NULL,
-    position ENUM('top', 'bottom') NOT NULL DEFAULT 'bottom',
+    position ENUM('top', 'bottom', 'switch') NOT NULL DEFAULT 'bottom',
     height_px INT UNSIGNED NOT NULL DEFAULT 72,
     speed_seconds INT UNSIGNED NOT NULL DEFAULT 28,
+    flip_interval_seconds INT UNSIGNED NOT NULL DEFAULT 1200,
     priority INT UNSIGNED NOT NULL DEFAULT 1,
     active TINYINT(1) NOT NULL DEFAULT 1,
     applies_to_all_screens TINYINT(1) NOT NULL DEFAULT 0,
@@ -26,10 +27,16 @@ CREATE TABLE IF NOT EXISTS ticker_messages (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 ALTER TABLE ticker_messages
-    ADD COLUMN IF NOT EXISTS position ENUM('top', 'bottom') NOT NULL DEFAULT 'bottom' AFTER ends_at;
+    ADD COLUMN IF NOT EXISTS position ENUM('top', 'bottom', 'switch') NOT NULL DEFAULT 'bottom' AFTER ends_at;
 
 ALTER TABLE ticker_messages
     ADD COLUMN IF NOT EXISTS height_px INT UNSIGNED NOT NULL DEFAULT 72 AFTER position;
+
+ALTER TABLE ticker_messages
+    ADD COLUMN IF NOT EXISTS speed_seconds INT UNSIGNED NOT NULL DEFAULT 28 AFTER height_px;
+
+ALTER TABLE ticker_messages
+    ADD COLUMN IF NOT EXISTS flip_interval_seconds INT UNSIGNED NOT NULL DEFAULT 1200 AFTER speed_seconds;
 
 CREATE TABLE IF NOT EXISTS ticker_message_screens (
     ticker_message_id INT UNSIGNED NOT NULL,

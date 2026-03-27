@@ -8,6 +8,25 @@ $db = get_db();
 sync_screen_statuses($db);
 $adminId = current_admin_id();
 
+function normalize_ticker_position(string $value): string
+{
+    $value = strtolower(trim($value));
+    return in_array($value, ['top', 'bottom', 'switch'], true) ? $value : 'bottom';
+}
+
+function ticker_position_label(string $value): string
+{
+    $position = normalize_ticker_position($value);
+    if ($position === 'top') {
+        return 'Top';
+    }
+    if ($position === 'switch') {
+        return 'Switch';
+    }
+
+    return 'Bottom';
+}
+
 function admin_ticker_name_exists(mysqli $db, int $adminId, string $name, int $excludeId = 0): bool
 {
     $statement = $db->prepare("SELECT COUNT(*) AS total
@@ -194,9 +213,10 @@ if (is_post_request()) {
         $endTime = trim((string) ($_POST['end_time'] ?? '23:59'));
         $startsAt = trim((string) ($_POST['starts_at'] ?? ''));
         $endsAt = trim((string) ($_POST['ends_at'] ?? ''));
-        $position = (string) ($_POST['position'] ?? 'bottom') === 'top' ? 'top' : 'bottom';
+        $position = normalize_ticker_position((string) ($_POST['position'] ?? 'bottom'));
         $heightPx = max(40, min(220, normalize_int((string) ($_POST['height_px'] ?? '72'), 72)));
         $speedSeconds = max(10, normalize_int((string) ($_POST['speed_seconds'] ?? '28'), 28));
+        $flipIntervalSeconds = max(60, normalize_int((string) ($_POST['flip_interval_seconds'] ?? '1200'), 1200));
         $priority = max(1, normalize_int((string) ($_POST['priority'] ?? '1'), 1));
         $active = isset($_POST['active']) ? 1 : 0;
         $appliesToAllScreens = isset($_POST['applies_to_all_screens']) ? 1 : 0;
@@ -258,10 +278,10 @@ if (is_post_request()) {
 
         if ($action === 'create_ticker') {
             $statement = $db->prepare("INSERT INTO ticker_messages
-                (owner_admin_id, name, message_text, day_mask, start_time, end_time, starts_at, ends_at, position, height_px, speed_seconds, priority, active, applies_to_all_screens, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())");
+                (owner_admin_id, name, message_text, day_mask, start_time, end_time, starts_at, ends_at, position, height_px, speed_seconds, flip_interval_seconds, priority, active, applies_to_all_screens, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())");
             $statement->bind_param(
-                'ississsssiiiii',
+                'ississsssiiiiii',
                 $adminId,
                 $name,
                 $messageText,
@@ -273,6 +293,7 @@ if (is_post_request()) {
                 $position,
                 $heightPx,
                 $speedSeconds,
+                $flipIntervalSeconds,
                 $priority,
                 $active,
                 $appliesToAllScreens
@@ -293,10 +314,10 @@ if (is_post_request()) {
         }
 
         $statement = $db->prepare("UPDATE ticker_messages
-            SET name = ?, message_text = ?, day_mask = ?, start_time = ?, end_time = ?, starts_at = ?, ends_at = ?, position = ?, height_px = ?, speed_seconds = ?, priority = ?, active = ?, applies_to_all_screens = ?, updated_at = UTC_TIMESTAMP()
+            SET name = ?, message_text = ?, day_mask = ?, start_time = ?, end_time = ?, starts_at = ?, ends_at = ?, position = ?, height_px = ?, speed_seconds = ?, flip_interval_seconds = ?, priority = ?, active = ?, applies_to_all_screens = ?, updated_at = UTC_TIMESTAMP()
             WHERE id = ? AND owner_admin_id = ?");
         $statement->bind_param(
-            'ssisssssiiiiiii',
+            'ssisssssiiiiiiii',
             $name,
             $messageText,
             $dayMask,
@@ -307,6 +328,7 @@ if (is_post_request()) {
             $position,
             $heightPx,
             $speedSeconds,
+            $flipIntervalSeconds,
             $priority,
             $active,
             $appliesToAllScreens,
@@ -490,13 +512,18 @@ require_once __DIR__ . '/../includes/header.php';
                             <div class="ticker-span-4">
                                 <label class="form-label" for="ticker_position">Placement</label>
                                 <select class="form-select" id="ticker_position" name="position">
-                                    <option value="bottom" <?= (($selectedTicker['position'] ?? 'bottom') === 'bottom') ? 'selected' : '' ?>>Bottom</option>
-                                    <option value="top" <?= (($selectedTicker['position'] ?? 'bottom') === 'top') ? 'selected' : '' ?>>Top</option>
+                                    <option value="bottom" <?= (normalize_ticker_position((string) ($selectedTicker['position'] ?? 'bottom')) === 'bottom') ? 'selected' : '' ?>>Bottom</option>
+                                    <option value="top" <?= (normalize_ticker_position((string) ($selectedTicker['position'] ?? 'bottom')) === 'top') ? 'selected' : '' ?>>Top</option>
+                                    <option value="switch" <?= (normalize_ticker_position((string) ($selectedTicker['position'] ?? 'bottom')) === 'switch') ? 'selected' : '' ?>>Switch</option>
                                 </select>
                             </div>
                             <div class="ticker-span-4">
                                 <label class="form-label" for="ticker_speed_seconds">Scroll Speed Seconds</label>
                                 <input class="form-control" id="ticker_speed_seconds" name="speed_seconds" type="number" min="10" value="<?= (int) $selectedTicker['speed_seconds'] ?>" required>
+                            </div>
+                            <div class="ticker-span-4">
+                                <label class="form-label" for="ticker_flip_interval_seconds">Switch Interval (seconds)</label>
+                                <input class="form-control" id="ticker_flip_interval_seconds" name="flip_interval_seconds" type="number" min="60" value="<?= (int) ($selectedTicker['flip_interval_seconds'] ?? 1200) ?>" required>
                             </div>
                             <div class="ticker-span-4">
                                 <label class="form-label" for="ticker_height_px">Ticker Height (px)</label>
@@ -565,7 +592,8 @@ require_once __DIR__ . '/../includes/header.php';
                                     <div class="ticker-summary-card"><strong>Time Window</strong><span><?= e(schedule_time_label((string) $selectedTicker['start_time']) . ' - ' . schedule_time_label((string) $selectedTicker['end_time'])) ?></span></div>
                                     <div class="ticker-summary-card"><strong>Assignment</strong><span><?= (int) $selectedTicker['applies_to_all_screens'] === 1 ? 'All screens' : count($selectedTickerScreenIds) . ' selected screen(s)' ?></span></div>
                                     <div class="ticker-summary-card"><strong>Status</strong><span><?= (int) $selectedTicker['active'] === 1 ? 'Active' : 'Inactive' ?></span></div>
-                                    <div class="ticker-summary-card"><strong>Placement</strong><span><?= e(ucfirst((string) (($selectedTicker['position'] ?? 'bottom') === 'top' ? 'top' : 'bottom'))) ?></span></div>
+                                    <div class="ticker-summary-card"><strong>Placement</strong><span><?= e(ticker_position_label((string) ($selectedTicker['position'] ?? 'bottom'))) ?></span></div>
+                                    <div class="ticker-summary-card"><strong>Switch Interval</strong><span><?= (int) ($selectedTicker['flip_interval_seconds'] ?? 1200) ?>s</span></div>
                                     <div class="ticker-summary-card"><strong>Height</strong><span><?= (int) ($selectedTicker['height_px'] ?? 72) ?>px</span></div>
                                 </div>
                             </div>
@@ -621,11 +649,16 @@ require_once __DIR__ . '/../includes/header.php';
                             <select class="form-select" id="create_ticker_position" name="position">
                                 <option value="bottom" selected>Bottom</option>
                                 <option value="top">Top</option>
+                                <option value="switch">Switch</option>
                             </select>
                         </div>
                         <div class="ticker-span-4">
                             <label class="form-label" for="create_ticker_speed">Scroll Speed Seconds</label>
                             <input class="form-control" id="create_ticker_speed" name="speed_seconds" type="number" min="10" value="28" required>
+                        </div>
+                        <div class="ticker-span-4">
+                            <label class="form-label" for="create_ticker_flip_interval">Switch Interval (seconds)</label>
+                            <input class="form-control" id="create_ticker_flip_interval" name="flip_interval_seconds" type="number" min="60" value="1200" required>
                         </div>
                         <div class="ticker-span-4">
                             <label class="form-label" for="create_ticker_height">Ticker Height (px)</label>

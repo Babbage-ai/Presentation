@@ -889,11 +889,14 @@ function resolve_screen_ticker(mysqli $db, array $screen, ?DateTimeImmutable $no
         $row['owner_admin_id'] = (int) $row['owner_admin_id'];
         $row['day_mask'] = (int) $row['day_mask'];
         $row['speed_seconds'] = (int) $row['speed_seconds'];
+        $row['flip_interval_seconds'] = (int) ($row['flip_interval_seconds'] ?? 1200);
         $row['height_px'] = (int) ($row['height_px'] ?? 72);
         $row['priority'] = (int) $row['priority'];
         $row['active'] = (int) $row['active'];
         $row['applies_to_all_screens'] = (int) $row['applies_to_all_screens'];
-        $row['position'] = ($row['position'] ?? 'bottom') === 'top' ? 'top' : 'bottom';
+        $row['position'] = in_array(($row['position'] ?? 'bottom'), ['top', 'bottom', 'switch'], true)
+            ? (string) $row['position']
+            : 'bottom';
         $rows[] = $row;
     }
 
@@ -916,6 +919,7 @@ function resolve_screen_ticker(mysqli $db, array $screen, ?DateTimeImmutable $no
             'name' => (string) $row['name'],
             'message_text' => (string) $row['message_text'],
             'speed_seconds' => max(10, (int) $row['speed_seconds']),
+            'flip_interval_seconds' => max(60, (int) ($row['flip_interval_seconds'] ?? 1200)),
             'height_px' => max(40, min(220, (int) ($row['height_px'] ?? 72))),
             'priority' => (int) $row['priority'],
             'day_mask' => (int) $row['day_mask'],
@@ -925,7 +929,9 @@ function resolve_screen_ticker(mysqli $db, array $screen, ?DateTimeImmutable $no
             'time_range' => schedule_time_label((string) $row['start_time']) . ' - ' . schedule_time_label((string) $row['end_time']),
             'starts_at' => $row['starts_at'],
             'ends_at' => $row['ends_at'],
-            'position' => ($row['position'] ?? 'bottom') === 'top' ? 'top' : 'bottom',
+            'position' => in_array(($row['position'] ?? 'bottom'), ['top', 'bottom', 'switch'], true)
+                ? (string) $row['position']
+                : 'bottom',
             'applies_to_all_screens' => (int) $row['applies_to_all_screens'],
         ];
     }
