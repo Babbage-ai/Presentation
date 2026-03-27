@@ -33,8 +33,27 @@
         playlistBannerIdentity: null,
         playlistBannerTimer: null,
         apiAnnouncement: null,
-        announcementResizeTimer: null
+        announcementResizeTimer: null,
+        announcementFlipTimer: null,
+        announcementPositionOverride: null
     };
+
+    function parseBooleanFlag(value) {
+        const normalized = String(value || '').trim().toLowerCase();
+        if (normalized === '') {
+            return null;
+        }
+
+        if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+            return true;
+        }
+
+        if (['0', 'false', 'no', 'off'].includes(normalized)) {
+            return false;
+        }
+
+        return null;
+    }
 
     function setStatus(message, keepVisible = true) {
         statusEl.textContent = message;
@@ -81,6 +100,8 @@
         const announcementSpeedSeconds = Number.parseInt(params.get('announcement_speed_seconds') || '', 10);
         const announcementPosition = (params.get('announcement_position') || '').trim().toLowerCase();
         const announcementHeightPx = Number.parseInt(params.get('announcement_height_px') || '', 10);
+        const announcementAutoFlip = parseBooleanFlag(params.get('announcement_auto_flip'));
+        const announcementFlipInterval = Number.parseInt(params.get('announcement_flip_interval_seconds') || '', 10);
 
         return {
             api_base_url: apiBaseUrl || null,
@@ -91,7 +112,9 @@
             announcement_text: announcementText || null,
             announcement_speed_seconds: Number.isFinite(announcementSpeedSeconds) && announcementSpeedSeconds > 0 ? announcementSpeedSeconds : null,
             announcement_position: announcementPosition === 'top' ? 'top' : (announcementPosition === 'bottom' ? 'bottom' : null),
-            announcement_height_px: Number.isFinite(announcementHeightPx) && announcementHeightPx > 0 ? announcementHeightPx : null
+            announcement_height_px: Number.isFinite(announcementHeightPx) && announcementHeightPx > 0 ? announcementHeightPx : null,
+            announcement_auto_flip: announcementAutoFlip,
+            announcement_flip_interval_seconds: Number.isFinite(announcementFlipInterval) && announcementFlipInterval > 0 ? announcementFlipInterval : null
         };
     }
 
@@ -116,6 +139,8 @@
             announcement_speed_seconds: 28,
             announcement_position: 'bottom',
             announcement_height_px: 72,
+            announcement_auto_flip: false,
+            announcement_flip_interval_seconds: 1200,
             ...fileConfig
         };
 
@@ -149,12 +174,55 @@
         if (urlConfig.announcement_height_px) {
             config.announcement_height_px = urlConfig.announcement_height_px;
         }
+        if (urlConfig.announcement_auto_flip !== null) {
+            config.announcement_auto_flip = urlConfig.announcement_auto_flip;
+        }
+        if (urlConfig.announcement_flip_interval_seconds) {
+            config.announcement_flip_interval_seconds = urlConfig.announcement_flip_interval_seconds;
+        }
 
         if (!config.api_base_url || !config.screen_token) {
             throw new Error('Provide screen code and api_base_url in the URL or in config.json.');
         }
 
         return config;
+    }
+
+    function clearAnnouncementFlipTimer() {
+        if (!state.announcementFlipTimer) {
+            return;
+        }
+
+        window.clearTimeout(state.announcementFlipTimer);
+        state.announcementFlipTimer = null;
+    }
+
+    function nextAnnouncementPosition(position) {
+        return position === 'top' ? 'bottom' : 'top';
+    }
+
+    function scheduleAnnouncementFlip(basePosition, hasAnnouncementText) {
+        clearAnnouncementFlipTimer();
+
+        if (!hasAnnouncementText) {
+            state.announcementPositionOverride = null;
+            return;
+        }
+
+        if (!state.config || !state.config.announcement_auto_flip) {
+            state.announcementPositionOverride = null;
+            return;
+        }
+
+        const intervalSeconds = Math.max(60, Number.parseInt(state.config.announcement_flip_interval_seconds, 10) || 1200);
+        const activePosition = state.announcementPositionOverride || basePosition;
+        state.announcementPositionOverride = activePosition;
+
+        state.announcementFlipTimer = window.setTimeout(() => {
+            state.announcementFlipTimer = null;
+            state.announcementPositionOverride = nextAnnouncementPosition(activePosition);
+            applyAnnouncementBar();
+        }, intervalSeconds * 1000);
     }
 
     function applyAnnouncementBar() {
@@ -168,6 +236,8 @@
             : String(state.config.announcement_text || '').trim();
 
         if (announcementText === '') {
+            clearAnnouncementFlipTimer();
+            state.announcementPositionOverride = null;
             announcementBarEl.classList.add('hidden');
             announcementBarEl.setAttribute('aria-hidden', 'true');
             document.body.classList.remove('has-announcement');
@@ -187,7 +257,10 @@
             ? state.apiAnnouncement.height_px
             : state.config.announcement_height_px;
         const speedSeconds = Math.max(10, Number.parseInt(speedSource, 10) || 28);
-        const position = positionSource === 'top' ? 'top' : 'bottom';
+        const basePosition = positionSource === 'top' ? 'top' : 'bottom';
+        const position = state.config && state.config.announcement_auto_flip
+            ? (state.announcementPositionOverride || basePosition)
+            : basePosition;
         const heightPx = Math.max(40, Math.min(220, Number.parseInt(heightSource, 10) || 72));
         const fontSizePx = Math.max(18, Math.round(heightPx * 0.58));
         const chipHeightPx = Math.max(20, Math.round(heightPx * 0.36));
@@ -243,6 +316,7 @@
         document.body.classList.add('has-announcement');
         document.body.classList.toggle('has-announcement-top', position === 'top');
         document.body.classList.toggle('has-announcement-bottom', position === 'bottom');
+        scheduleAnnouncementFlip(basePosition, true);
     }
 
     function appendAnnouncementContent(container, text) {

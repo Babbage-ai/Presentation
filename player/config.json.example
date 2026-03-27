@@ -7,5 +7,7 @@
   "announcement_text": "",
   "announcement_speed_seconds": 28,
   "announcement_position": "bottom",
-  "announcement_height_px": 72
+  "announcement_height_px": 72,
+  "announcement_auto_flip": false,
+  "announcement_flip_interval_seconds": 1200
 }
