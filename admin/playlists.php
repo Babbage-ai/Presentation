@@ -617,12 +617,26 @@ require_once __DIR__ . '/../includes/header.php';
         .playlist-list-status { margin-top: 0.2rem; }
         .playlist-list-badge { min-width: 4.6rem; text-align: center; padding: 0.5rem 0.65rem; border-radius: 999px; }
         .playlist-item-table thead { display: none; }
+        .playlist-item-table th,
+        .playlist-item-table td,
+        .playlist-item-table th:nth-child(1),
+        .playlist-item-table td:nth-child(1),
+        .playlist-item-table th:nth-child(2),
+        .playlist-item-table td:nth-child(2),
+        .playlist-item-table th:nth-child(3),
+        .playlist-item-table td:nth-child(3),
+        .playlist-item-table th:nth-child(4),
+        .playlist-item-table td:nth-child(4),
+        .playlist-item-table th:nth-child(5),
+        .playlist-item-table td:nth-child(5),
+        .playlist-item-table th:nth-child(6),
+        .playlist-item-table td:nth-child(6) { width: auto !important; }
         .playlist-item-table,
         .playlist-item-table tbody,
         .playlist-item-table tr,
         .playlist-item-table td { display: block; width: 100%; }
         .playlist-item-table tbody { padding: 0.45rem; }
-        .playlist-item-table tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; margin-bottom: 0.6rem; padding: 0.82rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 1rem; background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08); }
+        .playlist-item-table tr { display: grid; grid-template-columns: 1fr; gap: 0.6rem; margin-bottom: 0.6rem; padding: 0.82rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 1rem; background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08); }
         .playlist-item-table tr:last-child { margin-bottom: 0; }
         .playlist-item-table td { border: 0; padding: 0.65rem 0.72rem; margin-top: 0; border-radius: 0.88rem; background: rgba(255, 255, 255, 0.82); border: 1px solid rgba(15, 23, 42, 0.06); }
         .playlist-item-table td::before { content: attr(data-label); display: block; margin-bottom: 0.28rem; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--admin-text-soft); }
@@ -642,6 +656,7 @@ require_once __DIR__ . '/../includes/header.php';
         .playlist-item-table .icon-actions .btn { width: 100%; justify-content: center; }
         .playlist-item-table .item-selector-form .form-select,
         .playlist-item-table input.form-control { min-height: 2.5rem; }
+        .playlist-item-table td.playlist-item-active .form-check-label { display: inline-block; margin-left: 0.35rem; }
         .playlist-edit-inline,
         .playlist-selected-item .playlist-edit-inline { grid-template-columns: 1fr; }
         .playlist-edit-inline { gap: 0.75rem; }
