@@ -622,20 +622,26 @@ require_once __DIR__ . '/../includes/header.php';
         .playlist-item-table tr,
         .playlist-item-table td { display: block; width: 100%; }
         .playlist-item-table tbody { padding: 0.45rem; }
-        .playlist-item-table tr { margin-bottom: 0.6rem; padding: 0.82rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 1rem; background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08); }
+        .playlist-item-table tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; margin-bottom: 0.6rem; padding: 0.82rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 1rem; background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08); }
         .playlist-item-table tr:last-child { margin-bottom: 0; }
-        .playlist-item-table td { border: 0; padding: 0; margin-top: 0.58rem; }
-        .playlist-item-table td:first-child { margin-top: 0; }
+        .playlist-item-table td { border: 0; padding: 0.65rem 0.72rem; margin-top: 0; border-radius: 0.88rem; background: rgba(255, 255, 255, 0.82); border: 1px solid rgba(15, 23, 42, 0.06); }
         .playlist-item-table td::before { content: attr(data-label); display: block; margin-bottom: 0.28rem; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--admin-text-soft); }
-        .playlist-item-table td[data-label="Item"]::before { display: none; }
-        .playlist-item-mobile-summary { display: grid; gap: 0.18rem; }
+        .playlist-item-table td.playlist-item-main { grid-column: 1 / -1; padding: 0.75rem; background: rgba(248, 250, 252, 0.92); }
+        .playlist-item-table td.playlist-item-main::before { display: none; }
+        .playlist-item-table td.playlist-item-actions { grid-column: 1 / -1; }
+        .playlist-item-mobile-summary { display: grid; gap: 0.22rem; }
         .playlist-item-meta { display: none; }
+        .playlist-item-main .muted-stack { gap: 0.24rem; }
+        .playlist-item-table td.playlist-item-main .small { color: var(--admin-text-soft); }
+        .playlist-item-table td.playlist-item-active .form-check { min-height: 2rem; display: flex; align-items: center; }
         .playlist-item-table .icon-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.45rem; }
         .playlist-item-table .item-selector-form .form-select,
         .playlist-item-table input.form-control,
         .playlist-item-table .icon-actions > form,
         .playlist-item-table .icon-actions > button { width: 100%; }
         .playlist-item-table .icon-actions .btn { width: 100%; justify-content: center; }
+        .playlist-item-table .item-selector-form .form-select,
+        .playlist-item-table input.form-control { min-height: 2.5rem; }
         .playlist-edit-inline,
         .playlist-selected-item .playlist-edit-inline { grid-template-columns: 1fr; }
         .playlist-edit-inline { gap: 0.75rem; }
@@ -839,7 +845,7 @@ require_once __DIR__ . '/../includes/header.php';
                                     <?php $formId = 'playlist-item-form-' . (int) $item['id']; ?>
                                     <?php $replaceFormId = 'playlist-item-replace-form-' . (int) $item['id']; ?>
                                     <tr id="playlist-item-row-<?= (int) $item['id'] ?>">
-                                        <td data-label="Item">
+                                        <td class="playlist-item-main" data-label="Item">
                                             <?php if ($item['item_type'] === 'quiz'): ?>
                                                 <div class="muted-stack">
                                                     <strong><?= $item['quiz_selection_mode'] === 'random' ? 'Random quiz marker' : e($item['question_text']) ?></strong>
@@ -870,10 +876,10 @@ require_once __DIR__ . '/../includes/header.php';
                                             <?php endif; ?>
                                         </td>
                                         <td data-label="Type"><?= e($item['item_type'] === 'quiz' ? 'quiz' : $item['media_type']) ?></td>
-                                        <td data-label="Order">
+                                        <td class="playlist-item-metric" data-label="Order">
                                             <input class="form-control form-control-sm" name="sort_order" type="number" min="1" value="<?= (int) $item['sort_order'] ?>" required form="<?= e($formId) ?>">
                                         </td>
-                                        <td data-label="Duration">
+                                        <td class="playlist-item-metric" data-label="Duration">
                                             <?php if ($item['item_type'] === 'quiz'): ?>
                                                 <?php if ($item['quiz_selection_mode'] === 'random'): ?>
                                                     <span class="small text-muted">Uses the selected quiz timing</span>
@@ -885,13 +891,13 @@ require_once __DIR__ . '/../includes/header.php';
                                                 <input class="form-control form-control-sm" name="image_duration" type="number" min="1" value="<?= (int) $item['image_duration'] ?>" required form="<?= e($formId) ?>">
                                             <?php endif; ?>
                                         </td>
-                                        <td data-label="Active">
+                                        <td class="playlist-item-active" data-label="Active">
                                             <div class="form-check">
                                                 <input class="form-check-input" id="active_item_<?= (int) $item['id'] ?>" name="active" type="checkbox" <?= (int) $item['active'] === 1 ? 'checked' : '' ?> form="<?= e($formId) ?>">
                                                 <label class="form-check-label small" for="active_item_<?= (int) $item['id'] ?>">Active</label>
                                             </div>
                                         </td>
-                                        <td data-label="Actions">
+                                        <td class="playlist-item-actions" data-label="Actions">
                                             <div class="icon-actions">
                                                 <form method="post" id="<?= e($formId) ?>" class="m-0">
                                                     <?= csrf_field() ?>
