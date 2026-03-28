@@ -298,7 +298,6 @@ require_once __DIR__ . '/../includes/header.php';
                             <tr>
                                 <th>Title</th>
                                 <th>Type</th>
-                                <th>Filename</th>
                                 <th>Size</th>
                                 <th>Created</th>
                                 <th>Status</th>
@@ -307,13 +306,12 @@ require_once __DIR__ . '/../includes/header.php';
                         </thead>
                         <tbody>
                         <?php if (!$mediaItems): ?>
-                            <tr><td colspan="7" class="text-center py-4 text-muted">No media uploaded yet.</td></tr>
+                            <tr><td colspan="6" class="text-center py-4 text-muted">No media uploaded yet.</td></tr>
                         <?php else: ?>
                             <?php foreach ($mediaItems as $item): ?>
                                 <tr>
                                     <td><?= e($item['title']) ?></td>
                                     <td><span class="badge text-bg-secondary"><?= e($item['media_type']) ?></span></td>
-                                    <td><?= e($item['filename']) ?></td>
                                     <td><?= e(format_bytes((int) $item['file_size'])) ?></td>
                                     <td><?= e(format_datetime($item['created_at'])) ?></td>
                                     <td>
