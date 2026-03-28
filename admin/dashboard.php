@@ -92,7 +92,45 @@ $statement->close();
 $pageTitle = 'Dashboard';
 require_once __DIR__ . '/../includes/header.php';
 ?>
-<div class="page-shell">
+<style>
+    .dashboard-admin-page { display: grid; gap: 0.75rem; }
+    .dashboard-admin-page .section-heading { margin-bottom: 0; }
+    .dashboard-admin-page .stat-card .card-body,
+    .dashboard-admin-page .card .card-body { padding: 0.82rem; }
+    .dashboard-admin-page .card .card-header { padding: 0.78rem 0.82rem; }
+    .dashboard-box-head h3 { margin: 0; font-size: 1rem; }
+    .dashboard-box-head p { margin: 0.2rem 0 0; color: var(--admin-text-soft); }
+    .attention-list { display: grid; gap: 0.6rem; }
+    .attention-item { padding: 0.85rem 0.9rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 0.95rem; background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)); }
+    .attention-item strong { display: block; margin-bottom: 0.18rem; color: var(--admin-text-strong); }
+    .attention-item span { display: block; color: var(--admin-text-soft); line-height: 1.3; }
+    .dashboard-screen-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.75rem; }
+    .dashboard-screen-card { border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 1rem; background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.96)); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05); overflow: hidden; }
+    .dashboard-screen-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; padding: 0.9rem 0.95rem 0.7rem; }
+    .dashboard-screen-head strong { display: block; color: var(--admin-text-strong); line-height: 1.25; }
+    .dashboard-screen-head span:not(.badge) { display: block; margin-top: 0.2rem; color: var(--admin-text-soft); font-size: 0.84rem; }
+    .dashboard-screen-body { padding: 0 0.95rem 0.95rem; }
+    .summary-list { display: grid; gap: 0.55rem; }
+    .summary-row { display: grid; gap: 0.14rem; }
+    .summary-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--admin-text-soft); }
+    .summary-value { color: var(--admin-text-strong); line-height: 1.3; }
+    @media (max-width: 767px) {
+        .dashboard-admin-page { gap: 0.6rem; }
+        .dashboard-admin-page .row.g-3 { --bs-gutter-x: 0.55rem; --bs-gutter-y: 0.55rem; }
+        .dashboard-admin-page .stat-card .card-body,
+        .dashboard-admin-page .card .card-body { padding: 0.78rem; }
+        .dashboard-admin-page .card .card-header { padding: 0.78rem 0.82rem; }
+        .dashboard-admin-page .section-heading { gap: 0.6rem; }
+        .dashboard-admin-page .section-heading.mb-0 { align-items: stretch; }
+        .dashboard-admin-page .section-heading .btn { width: 100%; justify-content: center; }
+        .attention-item { padding: 0.8rem 0.82rem; border-radius: 0.9rem; }
+        .dashboard-screen-grid { grid-template-columns: 1fr; gap: 0.6rem; }
+        .dashboard-screen-card { border-radius: 0.95rem; }
+        .dashboard-screen-head { padding: 0.82rem 0.85rem 0.68rem; }
+        .dashboard-screen-body { padding: 0 0.85rem 0.85rem; }
+    }
+</style>
+<div class="page-shell dashboard-admin-page">
 <div class="section-heading">
     <div>
         <h1 class="h3">Dashboard</h1>

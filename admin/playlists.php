@@ -572,7 +572,18 @@ require_once __DIR__ . '/../includes/header.php';
     .playlist-item-table .item-selector-form,
     .playlist-item-table .item-selector-form .form-select { width: 100%; }
     .playlist-item-table .icon-actions { flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+    .playlist-item-cell { display: grid; gap: 0.45rem; }
+    .playlist-item-mobile-summary { display: none; }
+    .playlist-item-title { font-size: 0.96rem; font-weight: 700; color: var(--admin-text-strong); line-height: 1.25; }
+    .playlist-item-meta { font-size: 0.78rem; color: var(--admin-text-soft); }
     .playlist-edit-inline { display: grid; grid-template-columns: minmax(12rem, 2fr) auto auto auto auto; gap: 0.55rem; align-items: end; }
+    .playlist-add-form .form-text { color: var(--admin-text-soft); }
+    .playlist-add-help { margin: 0; }
+    .playlist-list-link { display: block; text-decoration: none; }
+    .playlist-list-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; }
+    .playlist-list-name { font-size: 0.98rem; font-weight: 700; color: var(--admin-text-strong); line-height: 1.25; }
+    .playlist-list-status { font-size: 0.82rem; color: var(--admin-text-soft); }
+    .playlist-list-badge { white-space: nowrap; align-self: center; }
     .playlist-inline-group { min-width: 0; }
     .playlist-inline-group .summary-label { display: block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--admin-text-soft); margin-bottom: 0.25rem; }
     .playlist-inline-static { font-weight: 600; color: var(--admin-text-strong); white-space: nowrap; }
@@ -590,28 +601,61 @@ require_once __DIR__ . '/../includes/header.php';
     .playlist-selected-item .btn-outline-danger:focus { color: #fff; background: rgba(220, 38, 38, 0.85); border-color: rgba(220, 38, 38, 0.85); }
     @media (max-width: 991px) {
         .playlist-admin-page { gap: 0.6rem; }
+        .playlist-admin-page .section-heading { align-items: stretch; gap: 0.65rem; }
+        .playlist-admin-page .section-heading .btn { width: 100%; justify-content: center; }
         .playlist-admin-page .row.g-2 { --bs-gutter-x: 0.6rem; --bs-gutter-y: 0.6rem; }
+        .playlist-admin-page .stat-card .card-body,
+        .playlist-admin-page .section-card .card-body,
+        .playlist-admin-page .table-card .card-body,
+        .playlist-admin-page .list-card .card-body { padding: 0.78rem; }
+        .playlist-admin-page .card-header { padding: 0.78rem 0.82rem; }
         .playlist-admin-page .table-responsive { overflow: visible; }
+        .playlist-admin-page .list-group-item { padding: 0.82rem; }
+        .playlist-list-link { border-radius: 0.95rem; margin: 0.35rem; border: 1px solid rgba(15, 23, 42, 0.08); background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06); }
+        .playlist-list-row { align-items: center; }
+        .playlist-list-name { font-size: 0.95rem; }
+        .playlist-list-status { margin-top: 0.2rem; }
+        .playlist-list-badge { min-width: 4.6rem; text-align: center; padding: 0.5rem 0.65rem; border-radius: 999px; }
         .playlist-item-table thead { display: none; }
         .playlist-item-table,
         .playlist-item-table tbody,
         .playlist-item-table tr,
         .playlist-item-table td { display: block; width: 100%; }
-        .playlist-item-table tbody { padding: 0.55rem; }
-        .playlist-item-table tr { margin-bottom: 0.55rem; padding: 0.72rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 0.9rem; background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)); }
+        .playlist-item-table tbody { padding: 0.45rem; }
+        .playlist-item-table tr { margin-bottom: 0.6rem; padding: 0.82rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 1rem; background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08); }
         .playlist-item-table tr:last-child { margin-bottom: 0; }
-        .playlist-item-table td { border: 0; padding: 0; margin-top: 0.42rem; }
+        .playlist-item-table td { border: 0; padding: 0; margin-top: 0.58rem; }
         .playlist-item-table td:first-child { margin-top: 0; }
-        .playlist-item-table td::before { content: attr(data-label); display: block; margin-bottom: 0.14rem; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--admin-text-soft); }
-        .playlist-item-table .icon-actions { justify-content: flex-start; }
+        .playlist-item-table td::before { content: attr(data-label); display: block; margin-bottom: 0.28rem; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--admin-text-soft); }
+        .playlist-item-table td[data-label="Item"]::before { display: none; }
+        .playlist-item-mobile-summary { display: grid; gap: 0.18rem; }
+        .playlist-item-meta { display: none; }
+        .playlist-item-table .icon-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.45rem; }
         .playlist-item-table .item-selector-form .form-select,
         .playlist-item-table input.form-control,
         .playlist-item-table .icon-actions > form,
         .playlist-item-table .icon-actions > button { width: 100%; }
+        .playlist-item-table .icon-actions .btn { width: 100%; justify-content: center; }
         .playlist-edit-inline,
         .playlist-selected-item .playlist-edit-inline { grid-template-columns: 1fr; }
+        .playlist-edit-inline { gap: 0.75rem; }
         .playlist-edit-inline .form-check { margin-bottom: 0; }
+        .playlist-inline-group .summary-label { margin-bottom: 0.18rem; }
         .playlist-inline-static { white-space: normal; }
+        .playlist-selected-item { padding: 0.9rem; }
+        .playlist-selected-item .playlist-inline-group,
+        .playlist-selected-item .form-check { padding: 0.68rem 0.72rem; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 0.8rem; background: rgba(255, 255, 255, 0.06); }
+        .playlist-selected-item .playlist-inline-name { padding: 0; border: 0; background: transparent; }
+        .playlist-selected-item .form-check-input { margin-top: 0.2rem; }
+        .playlist-selected-item .btn-outline-danger { width: 100%; }
+        .playlist-add-form { gap: 0.82rem; }
+        .playlist-add-form > [class*="col-"] { width: 100%; }
+        .playlist-add-form .form-control,
+        .playlist-add-form .form-select,
+        .playlist-add-form .btn { min-height: 2.9rem; }
+        .playlist-add-form .btn { width: 100%; justify-content: center; }
+        .playlist-add-help { padding: 0.72rem 0.78rem; border-radius: 0.85rem; background: rgba(15, 23, 42, 0.05); }
+        .playlist-add-form .form-text.pt-4 { padding-top: 0 !important; }
     }
 </style>
 <div class="page-shell playlist-admin-page">
@@ -707,13 +751,13 @@ require_once __DIR__ . '/../includes/header.php';
                             </div>
                         </form>
                     <?php else: ?>
-                        <a class="list-group-item list-group-item-action" href="<?= e(app_path('/admin/playlists.php?playlist_id=' . (int) $playlist['id'])) ?>">
-                            <div class="d-flex justify-content-between align-items-start gap-2">
+                        <a class="list-group-item list-group-item-action playlist-list-link" href="<?= e(app_path('/admin/playlists.php?playlist_id=' . (int) $playlist['id'])) ?>">
+                            <div class="playlist-list-row">
                                 <div class="muted-stack">
-                                    <strong><?= e($playlist['name']) ?></strong>
-                                    <span class="small"><?= (int) $playlist['active'] === 1 ? 'Active playlist' : 'Inactive playlist' ?></span>
+                                    <div class="playlist-list-name"><?= e($playlist['name']) ?></div>
+                                    <span class="playlist-list-status"><?= (int) $playlist['active'] === 1 ? 'Active playlist' : 'Inactive playlist' ?></span>
                                 </div>
-                                <span class="badge <?= (int) $playlist['active'] === 1 ? 'text-bg-success' : 'text-bg-secondary' ?>"><?= (int) $playlist['item_count'] ?> items</span>
+                                <span class="badge playlist-list-badge <?= (int) $playlist['active'] === 1 ? 'text-bg-success' : 'text-bg-secondary' ?>"><?= (int) $playlist['item_count'] ?> items</span>
                             </div>
                         </a>
                     <?php endif; ?>
@@ -731,7 +775,7 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="card section-card">
                 <div class="card-header"><h2 class="h5 mb-0">Add Item To Playlist</h2></div>
                 <div class="card-body">
-                    <form method="post" class="row g-3 dense-form">
+                    <form method="post" class="row g-3 dense-form playlist-add-form">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="add_playlist_item">
                         <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
@@ -750,10 +794,10 @@ require_once __DIR__ . '/../includes/header.php';
                             <input class="form-control" id="image_duration" name="image_duration" type="number" min="1" value="10" required>
                         </div>
                         <div class="col-md-6">
-                            <div class="form-text pt-4">Added items go to the end of the playlist automatically.</div>
+                            <div class="form-text pt-4 playlist-add-help">New items are added to the end automatically.</div>
                         </div>
                         <div class="col-12">
-                            <div class="form-text">Image duration is used for media items. Random quiz questions use the quiz timing configured on the selected question.</div>
+                            <div class="form-text playlist-add-help">Image duration applies to media only. Random quizzes use their saved quiz timing.</div>
                         </div>
                         <div class="col-12">
                             <button class="btn btn-primary" type="submit">
@@ -804,19 +848,25 @@ require_once __DIR__ . '/../includes/header.php';
                                                     </span>
                                                 </div>
                                             <?php else: ?>
-                                                <form method="post" id="<?= e($replaceFormId) ?>" class="item-selector-form m-0">
-                                                    <?= csrf_field() ?>
-                                                    <input type="hidden" name="action" value="replace_playlist_media_item">
-                                                    <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
-                                                    <input type="hidden" name="item_id" value="<?= (int) $item['id'] ?>">
-                                                    <select class="form-select form-select-sm" name="media_id" aria-label="Replace media item" onchange="this.form.submit()">
-                                                        <?php foreach ($mediaOptions as $media): ?>
-                                                            <option value="<?= (int) $media['id'] ?>" <?= (int) $media['id'] === (int) $item['media_id'] ? 'selected' : '' ?>>
-                                                                <?= e($media['title']) ?>
-                                                            </option>
-                                                        <?php endforeach; ?>
-                                                    </select>
-                                                </form>
+                                                <div class="playlist-item-cell">
+                                                    <div class="playlist-item-mobile-summary">
+                                                        <div class="playlist-item-title"><?= e($item['media_title'] ?: 'Media item') ?></div>
+                                                        <div class="playlist-item-meta"><?= e($item['filename'] ?: '') ?></div>
+                                                    </div>
+                                                    <form method="post" id="<?= e($replaceFormId) ?>" class="item-selector-form m-0">
+                                                        <?= csrf_field() ?>
+                                                        <input type="hidden" name="action" value="replace_playlist_media_item">
+                                                        <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
+                                                        <input type="hidden" name="item_id" value="<?= (int) $item['id'] ?>">
+                                                        <select class="form-select form-select-sm" name="media_id" aria-label="Replace media item" onchange="this.form.submit()">
+                                                            <?php foreach ($mediaOptions as $media): ?>
+                                                                <option value="<?= (int) $media['id'] ?>" <?= (int) $media['id'] === (int) $item['media_id'] ? 'selected' : '' ?>>
+                                                                    <?= e($media['title']) ?>
+                                                                </option>
+                                                            <?php endforeach; ?>
+                                                        </select>
+                                                    </form>
+                                                </div>
                                             <?php endif; ?>
                                         </td>
                                         <td data-label="Type"><?= e($item['item_type'] === 'quiz' ? 'quiz' : $item['media_type']) ?></td>

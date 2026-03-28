@@ -414,18 +414,21 @@ require_once __DIR__ . '/../includes/header.php';
     .screen-row td[data-label="Last Seen"] { min-width: 8.5rem; }
     @media (max-width: 767px) {
         .screen-admin-page { gap: 0.48rem; }
+        .screen-admin-page .section-heading { align-items: stretch; gap: 0.6rem; }
+        .screen-admin-page .section-heading .btn { width: 100%; justify-content: center; }
         .screen-admin-page .section-subtitle { line-height: 1.2; }
         .screen-admin-page .row.g-3 { --bs-gutter-x: 0.5rem; --bs-gutter-y: 0.5rem; }
         .screen-admin-page .stat-card .card-body { padding: 0.56rem 0.62rem 0.58rem; }
+        .screen-admin-page .table-card .card-header { padding: 0.78rem 0.82rem; }
         .screen-admin-page .stat-label { font-size: 0.64rem; letter-spacing: 0.09em; }
         .screen-admin-page .stat-number-box { min-width: 3.5rem; padding: 0.28rem 0.62rem; margin-top: 0.22rem; }
         .screen-admin-page .stat-meta { font-size: 0.72rem; margin-top: 0.18rem; }
-        .screen-toolbar { align-items: center; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; gap: 0.45rem; padding: 0.42rem 0.5rem; }
-        .screen-filters { flex-wrap: nowrap; }
-        .screen-filter-summary { display: none; }
-        .screen-filter-group { gap: 0.28rem; }
+        .screen-toolbar { align-items: stretch; flex-direction: column; flex-wrap: nowrap; overflow: visible; gap: 0.55rem; padding: 0.62rem 0.62rem 0.58rem; }
+        .screen-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; width: 100%; }
+        .screen-filter-summary { display: block; white-space: normal; font-size: 0.74rem; }
+        .screen-filter-group { gap: 0.24rem; flex-direction: column; align-items: stretch; }
         .screen-filter-label { font-size: 0.64rem; }
-        .screen-filter-select { width: 5.6rem; min-width: 5.6rem; min-height: 1.72rem; font-size: 0.76rem; padding: 0.12rem 1.55rem 0.12rem 0.46rem; }
+        .screen-filter-select { width: 100%; min-width: 0; min-height: 2.35rem; font-size: 0.8rem; padding: 0.22rem 1.8rem 0.22rem 0.58rem; }
         .screen-admin-page .table-responsive { overflow: visible; }
         .screen-admin-table { min-width: 0; }
         .screen-admin-table thead { display: none; }
@@ -436,13 +439,13 @@ require_once __DIR__ . '/../includes/header.php';
         .screen-admin-table tr.screen-row {
             display: grid;
             grid-template-columns: minmax(0, 1fr) auto;
-            gap: 0.2rem 0.45rem;
-            margin-bottom: 0.55rem;
-            padding: 0.68rem;
+            gap: 0.35rem 0.55rem;
+            margin-bottom: 0.6rem;
+            padding: 0.82rem;
             border: 1px solid rgba(15, 23, 42, 0.08);
-            border-radius: 0.9rem;
+            border-radius: 1rem;
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
-            box-shadow: 0 0.25rem 0.8rem rgba(15, 23, 42, 0.05);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
         }
         .screen-admin-table tr.screen-row:last-child { margin-bottom: 0; }
         .screen-admin-table tbody td {
@@ -453,8 +456,8 @@ require_once __DIR__ . '/../includes/header.php';
         .screen-admin-table tbody td::before {
             content: attr(data-label);
             display: block;
-            margin-bottom: 0.12rem;
-            font-size: 0.68rem;
+            margin-bottom: 0.24rem;
+            font-size: 0.66rem;
             font-weight: 700;
             letter-spacing: 0.08em;
             text-transform: uppercase;
@@ -469,19 +472,20 @@ require_once __DIR__ . '/../includes/header.php';
         .screen-admin-table .form-control,
         .screen-admin-table .form-select { min-width: 0; width: 100%; }
         .screen-admin-table .form-control,
-        .screen-admin-table .form-select { min-height: 1.9rem; }
+        .screen-admin-table .form-select { min-height: 2.2rem; }
         .screen-save-note { min-height: 0; }
         .screen-inline-toggle { justify-content: flex-start; }
         .screen-last-seen { font-size: 0.74rem; line-height: 1.1; }
-        .screen-cell-stack { gap: 0.04rem; }
+        .screen-cell-stack { gap: 0.12rem; }
+        .screen-name-stack { gap: 0.4rem; }
         .screen-controls-cell {
             width: auto !important;
             display: block !important;
         }
         .screen-controls-cell::before { content: none !important; }
-        .screen-controls { width: auto; justify-content: flex-start; gap: 0.24rem; }
-        .screen-code-link { min-height: 1.7rem; min-width: 4.6rem; padding: 0.2rem 0.46rem; font-size: 0.72rem; }
-        .screen-controls .icon-btn-sm { width: 1.72rem; height: 1.72rem; }
+        .screen-controls { width: auto; justify-content: flex-start; gap: 0.3rem; align-items: center; }
+        .screen-code-link { min-height: 2rem; min-width: 5.25rem; padding: 0.28rem 0.58rem; font-size: 0.76rem; }
+        .screen-controls .icon-btn-sm { width: 1.95rem; height: 1.95rem; }
         #screensEmptyRow { padding: 0.8rem !important; border-radius: 0.8rem; background: rgba(248, 250, 252, 0.94); }
     }
 </style>
