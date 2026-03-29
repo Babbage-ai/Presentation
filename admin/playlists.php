@@ -602,12 +602,10 @@ require_once __DIR__ . '/../includes/header.php';
     }
     .playlist-list-main { min-width: 0; }
     .playlist-list-name { font-size: 0.92rem; font-weight: 700; color: var(--admin-text-strong); line-height: 1.2; }
-    .playlist-list-status { display: flex; align-items: center; gap: 0.32rem; font-size: 0.75rem; color: var(--admin-text-soft); }
+    .playlist-list-status { display: flex; align-items: center; font-size: 0.75rem; color: var(--admin-text-soft); }
     .playlist-list-side { display: flex; align-items: center; gap: 0.65rem; flex-shrink: 0; }
     .playlist-list-controls { display: flex; align-items: center; gap: 0.45rem; }
     .playlist-list-badge { white-space: nowrap; align-self: center; font-size: 0.72rem; padding: 0.28rem 0.48rem; }
-    .playlist-status-indicator { display: inline-flex; width: 0.55rem; height: 0.55rem; border-radius: 999px; background: #94a3b8; }
-    .playlist-status-indicator.is-active { background: #16a34a; }
     .playlist-list-toggle { display: inline-flex; align-items: center; gap: 0.35rem; margin: 0; font-size: 0.75rem; color: var(--admin-text-strong); }
     .playlist-list-toggle .form-check-input { margin: 0; cursor: pointer; }
     @media (max-width: 991px) {
@@ -793,7 +791,6 @@ require_once __DIR__ . '/../includes/header.php';
                                 <a class="playlist-list-link playlist-list-main" href="<?= e(app_path('/admin/playlists.php?playlist_id=' . $playlistId)) ?>">
                                     <div class="playlist-list-name"><?= e($playlist['name']) ?></div>
                                     <span class="playlist-list-status">
-                                        <span class="playlist-status-indicator <?= (int) $playlist['active'] === 1 ? 'is-active' : '' ?>" aria-hidden="true"></span>
                                         <span><?= (int) $playlist['active'] === 1 ? 'Active' : 'Inactive' ?></span>
                                     </span>
                                 </a>
