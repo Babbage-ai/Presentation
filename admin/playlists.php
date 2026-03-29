@@ -767,6 +767,7 @@ require_once __DIR__ . '/../includes/header.php';
             margin: 0;
         }
         .playlist-item-table .playlist-item-metric .small { display: block; text-align: center; font-size: 0.68rem !important; line-height: 1.2; }
+        .playlist-item-metric-stack { display: grid; gap: 0.12rem; justify-items: center; }
         .playlist-order-controls { justify-content: center; gap: 0.22rem; }
         .playlist-order-controls .btn { width: 1.85rem; min-height: 1.85rem; }
         .playlist-add-form .form-control,
@@ -895,7 +896,7 @@ require_once __DIR__ . '/../includes/header.php';
                             <thead>
                                 <tr>
                                     <th>Item</th>
-                                    <th>Duration</th>
+                                    <th>Duration and Frequency</th>
                                     <th>Active</th>
                                     <th>Actions</th>
                                 </tr>
@@ -956,18 +957,23 @@ require_once __DIR__ . '/../includes/header.php';
                                             <?php endif; ?>
                                             <input class="form-control form-control-sm playlist-order-input" name="sort_order" type="number" min="1" value="<?= (int) $item['sort_order'] ?>" required form="<?= e($formId) ?>">
                                         </td>
-                                        <td class="playlist-item-metric playlist-item-metric-duration" data-label="Duration">
+                                        <td class="playlist-item-metric playlist-item-metric-duration" data-label="Duration and Frequency">
                                             <?php if ($isQuizItem): ?>
+                                                <div class="playlist-item-metric-stack">
                                                 <?php if ($isRandomQuiz): ?>
                                                     <span class="small text-muted"><?= (int) $item['effective_duration_seconds'] ?>s total</span>
                                                 <?php else: ?>
                                                     <span class="small text-muted"><?= (int) $item['countdown_seconds'] + (int) $item['reveal_duration'] ?>s total</span>
                                                 <?php endif; ?>
                                                 <span class="small text-muted"><?= number_format((float) ($item['frequency_per_hour'] ?? 0), 1) ?>/hour</span>
+                                                </div>
                                                 <input type="hidden" name="image_duration" value="<?= (int) $item['image_duration'] ?>" form="<?= e($formId) ?>">
                                             <?php else: ?>
                                                 <input class="form-control form-control-sm" name="image_duration" type="number" min="1" value="<?= (int) $item['image_duration'] ?>" required form="<?= e($formId) ?>">
-                                                <span class="small text-muted"><?= number_format((float) ($item['frequency_per_hour'] ?? 0), 1) ?>/hour</span>
+                                                <div class="playlist-item-metric-stack">
+                                                    <span class="small text-muted"><?= (int) $item['image_duration'] ?>s</span>
+                                                    <span class="small text-muted"><?= number_format((float) ($item['frequency_per_hour'] ?? 0), 1) ?>/hour</span>
+                                                </div>
                                             <?php endif; ?>
                                         </td>
                                         <td class="playlist-item-active" data-label="Active">
