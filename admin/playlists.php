@@ -548,6 +548,35 @@ if ($selectedPlaylistId > 0) {
     }
 }
 
+$activePlaylistCycleSeconds = 0;
+
+foreach ($playlistItems as &$playlistItem) {
+    $itemDurationSeconds = (int) $playlistItem['image_duration'];
+
+    if (($playlistItem['item_type'] ?? 'media') === 'quiz') {
+        $quizDurationSeconds = (int) ($playlistItem['countdown_seconds'] ?? 0) + (int) ($playlistItem['reveal_duration'] ?? 0);
+        if ($quizDurationSeconds > 0) {
+            $itemDurationSeconds = $quizDurationSeconds;
+        }
+    }
+
+    $playlistItem['effective_duration_seconds'] = max(1, $itemDurationSeconds);
+
+    if ((int) ($playlistItem['active'] ?? 0) === 1) {
+        $activePlaylistCycleSeconds += (int) $playlistItem['effective_duration_seconds'];
+    }
+}
+unset($playlistItem);
+
+if ($activePlaylistCycleSeconds > 0) {
+    foreach ($playlistItems as &$playlistItem) {
+        $playlistItem['frequency_per_hour'] = (int) ($playlistItem['active'] ?? 0) === 1
+            ? round(3600 / $activePlaylistCycleSeconds, 1)
+            : 0.0;
+    }
+    unset($playlistItem);
+}
+
 $mediaOptions = [];
 $statement = $db->prepare("SELECT id, title, media_type, filename
     FROM media
@@ -679,16 +708,16 @@ require_once __DIR__ . '/../includes/header.php';
         .playlist-item-table,
         .playlist-item-table tbody,
         .playlist-item-table td { display: block; width: 100%; }
-        .playlist-item-table tbody { padding: 0.45rem; }
+        .playlist-item-table tbody { padding: 0.32rem; }
         .playlist-item-table tr {
             display: grid;
             grid-template-columns: minmax(0, 1fr) auto auto;
             grid-template-areas:
                 "main main main"
                 "duration active actions";
-            gap: 0.35rem;
-            margin-bottom: 0.6rem;
-            padding: 0.55rem;
+            gap: 0.28rem;
+            margin-bottom: 0.35rem;
+            padding: 0.42rem;
             border: 1px solid rgba(15, 23, 42, 0.08);
             border-radius: 0.85rem;
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
@@ -697,7 +726,7 @@ require_once __DIR__ . '/../includes/header.php';
         .playlist-item-table tr:last-child { margin-bottom: 0; }
         .playlist-item-table td {
             border: 0;
-            padding: 0.34rem 0.44rem;
+            padding: 0.28rem 0.36rem;
             margin-top: 0;
             border-radius: 0.7rem;
             background: rgba(255, 255, 255, 0.82);
@@ -706,11 +735,11 @@ require_once __DIR__ . '/../includes/header.php';
         .playlist-item-table td::before { content: attr(data-label); display: block; margin-bottom: 0.2rem; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--admin-text-soft); }
         .playlist-item-table td.playlist-item-main { grid-area: main; padding: 0.42rem 0.48rem; background: rgba(248, 250, 252, 0.92); }
         .playlist-item-table td.playlist-item-main::before { display: none; }
-        .playlist-item-table td.playlist-item-metric-duration { grid-area: duration; min-width: 5.2rem; }
+        .playlist-item-table td.playlist-item-metric-duration { grid-area: duration; min-width: 6.6rem; }
         .playlist-item-table td.playlist-item-active { grid-area: active; min-width: 4.2rem; }
         .playlist-item-table td.playlist-item-actions { grid-area: actions; align-self: center; padding: 0.38rem 0.42rem; }
         .playlist-item-main .muted-stack { gap: 0.18rem; }
-        .playlist-item-main .muted-stack strong { font-size: 0.88rem; line-height: 1.2; }
+        .playlist-item-main .muted-stack strong { font-size: 0.86rem; line-height: 1.15; }
         .playlist-item-table td.playlist-item-main .small { color: var(--admin-text-soft); font-size: 0.74rem !important; line-height: 1.3; }
         .playlist-item-table .playlist-item-cell { gap: 0.3rem; }
         .playlist-item-head { gap: 0.32rem; align-items: center; }
@@ -737,7 +766,7 @@ require_once __DIR__ . '/../includes/header.php';
             justify-content: center;
             margin: 0;
         }
-        .playlist-item-table .playlist-item-metric .small { display: block; text-align: center; font-size: 0.7rem !important; }
+        .playlist-item-table .playlist-item-metric .small { display: block; text-align: center; font-size: 0.68rem !important; line-height: 1.2; }
         .playlist-order-controls { justify-content: center; gap: 0.22rem; }
         .playlist-order-controls .btn { width: 1.85rem; min-height: 1.85rem; }
         .playlist-add-form .form-control,
@@ -930,13 +959,15 @@ require_once __DIR__ . '/../includes/header.php';
                                         <td class="playlist-item-metric playlist-item-metric-duration" data-label="Duration">
                                             <?php if ($isQuizItem): ?>
                                                 <?php if ($isRandomQuiz): ?>
-                                                    <span class="small text-muted">&nbsp;</span>
+                                                    <span class="small text-muted"><?= (int) $item['effective_duration_seconds'] ?>s total</span>
                                                 <?php else: ?>
                                                     <span class="small text-muted"><?= (int) $item['countdown_seconds'] + (int) $item['reveal_duration'] ?>s total</span>
                                                 <?php endif; ?>
+                                                <span class="small text-muted"><?= number_format((float) ($item['frequency_per_hour'] ?? 0), 1) ?>/hour</span>
                                                 <input type="hidden" name="image_duration" value="<?= (int) $item['image_duration'] ?>" form="<?= e($formId) ?>">
                                             <?php else: ?>
                                                 <input class="form-control form-control-sm" name="image_duration" type="number" min="1" value="<?= (int) $item['image_duration'] ?>" required form="<?= e($formId) ?>">
+                                                <span class="small text-muted"><?= number_format((float) ($item['frequency_per_hour'] ?? 0), 1) ?>/hour</span>
                                             <?php endif; ?>
                                         </td>
                                         <td class="playlist-item-active" data-label="Active">
@@ -1206,7 +1237,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const form = row.querySelector('form[id^="playlist-item-form-"]');
-            const sortOrderInput = form ? form.querySelector('input[name="sort_order"]') : null;
+            const sortOrderInput = form ? row.querySelector('input[name="sort_order"][form="' + form.id + '"]') : null;
             if (!form || !sortOrderInput) {
                 return;
             }
