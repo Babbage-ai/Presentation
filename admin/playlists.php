@@ -592,7 +592,7 @@ require_once __DIR__ . '/../includes/header.php';
         background: linear-gradient(180deg, rgba(239, 246, 255, 0.98), rgba(248, 250, 252, 0.98));
         box-shadow: 0 6px 16px rgba(13, 110, 253, 0.07);
     }
-    .playlist-list-row { display: flex; justify-content: space-between; align-items: center; gap: 0.65rem; padding: 0.55rem 0.7rem; }
+    .playlist-list-row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0.42rem 0.58rem; }
     .playlist-list-link {
         display: block;
         min-width: 0;
@@ -601,13 +601,13 @@ require_once __DIR__ . '/../includes/header.php';
         color: inherit;
     }
     .playlist-list-main { min-width: 0; }
-    .playlist-list-name { font-size: 0.92rem; font-weight: 700; color: var(--admin-text-strong); line-height: 1.2; }
-    .playlist-list-status { display: flex; align-items: center; font-size: 0.75rem; color: var(--admin-text-soft); }
-    .playlist-list-side { display: flex; align-items: center; gap: 0.65rem; flex-shrink: 0; }
-    .playlist-list-controls { display: flex; align-items: center; gap: 0.45rem; }
-    .playlist-list-badge { white-space: nowrap; align-self: center; font-size: 0.72rem; padding: 0.28rem 0.48rem; }
-    .playlist-list-toggle { display: inline-flex; align-items: center; gap: 0.35rem; margin: 0; font-size: 0.75rem; color: var(--admin-text-strong); }
+    .playlist-list-name { font-size: 0.89rem; font-weight: 700; color: var(--admin-text-strong); line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .playlist-list-side { display: flex; align-items: center; gap: 0.45rem; flex-shrink: 0; }
+    .playlist-list-controls { display: flex; align-items: center; gap: 0.32rem; }
+    .playlist-list-badge { white-space: nowrap; align-self: center; font-size: 0.69rem; padding: 0.2rem 0.42rem; line-height: 1.1; }
+    .playlist-list-toggle { display: inline-flex; align-items: center; margin: 0; }
     .playlist-list-toggle .form-check-input { margin: 0; cursor: pointer; }
+    .playlist-list-toggle .form-check-label { display: none; }
     @media (max-width: 991px) {
         .playlist-admin-page { gap: 0.6rem; }
         .playlist-admin-page .section-heading { align-items: stretch; gap: 0.65rem; }
@@ -620,14 +620,13 @@ require_once __DIR__ . '/../includes/header.php';
         .playlist-admin-page .card-header { padding: 0.78rem 0.82rem; }
         .playlist-admin-page .table-responsive { overflow: visible; }
         .playlist-admin-page .list-group-item { padding: 0; }
-        .playlist-list-row { align-items: stretch; flex-direction: column; }
+        .playlist-list-row { align-items: center; flex-direction: row; }
         .playlist-list-link,
-        .playlist-list-main { width: 100%; }
-        .playlist-list-name { font-size: 0.88rem; }
-        .playlist-list-status { margin-top: 0.2rem; }
-        .playlist-list-side { width: 100%; justify-content: space-between; }
-        .playlist-list-controls { justify-content: flex-end; }
-        .playlist-list-badge { min-width: 4rem; text-align: center; padding: 0.24rem 0.45rem; border-radius: 999px; }
+        .playlist-list-main { width: auto; min-width: 0; }
+        .playlist-list-name { font-size: 0.84rem; }
+        .playlist-list-side { width: auto; justify-content: flex-end; gap: 0.35rem; }
+        .playlist-list-controls { justify-content: flex-end; gap: 0.25rem; }
+        .playlist-list-badge { min-width: 0; text-align: center; padding: 0.18rem 0.38rem; border-radius: 999px; }
         .playlist-item-table thead { display: none; }
         .playlist-item-table th,
         .playlist-item-table td,
@@ -790,9 +789,6 @@ require_once __DIR__ . '/../includes/header.php';
                             <div class="playlist-list-row">
                                 <a class="playlist-list-link playlist-list-main" href="<?= e(app_path('/admin/playlists.php?playlist_id=' . $playlistId)) ?>">
                                     <div class="playlist-list-name"><?= e($playlist['name']) ?></div>
-                                    <span class="playlist-list-status">
-                                        <span><?= (int) $playlist['active'] === 1 ? 'Active' : 'Inactive' ?></span>
-                                    </span>
                                 </a>
                                 <div class="playlist-list-side">
                                     <span class="badge playlist-list-badge <?= (int) $playlist['active'] === 1 ? 'text-bg-success' : 'text-bg-secondary' ?>"><?= (int) $playlist['item_count'] ?> items</span>
@@ -802,7 +798,7 @@ require_once __DIR__ . '/../includes/header.php';
                                         </button>
                                         <div class="form-check form-switch playlist-list-toggle">
                                             <input class="form-check-input" id="playlist_active_<?= $playlistId ?>" name="active" type="checkbox" value="1" onchange="this.form.submit()" <?= (int) $playlist['active'] === 1 ? 'checked' : '' ?>>
-                                            <label class="form-check-label small" for="playlist_active_<?= $playlistId ?>">Active</label>
+                                            <label class="form-check-label small visually-hidden" for="playlist_active_<?= $playlistId ?>">Toggle active</label>
                                         </div>
                                     </div>
                                 </div>
