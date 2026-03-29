@@ -284,6 +284,7 @@ require_once __DIR__ . '/../includes/header.php';
     .schedule-list-link { display: grid; gap: 0.18rem; padding: 0.68rem 0.76rem; border-radius: 0.85rem; border: 1px solid rgba(15, 23, 42, 0.08); background: rgba(248, 250, 252, 0.92); color: inherit; text-decoration: none; }
     .schedule-list-link.is-active { background: #0f172a; color: #fff; }
     .schedule-list-link .small { opacity: 0.8; color: inherit; }
+    .schedule-list-link strong { line-height: 1.2; }
     .schedule-main-grid { display: grid; gap: 0.75rem; }
     .schedule-form-grid { display: grid; gap: 0.75rem; grid-template-columns: repeat(12, minmax(0, 1fr)); }
     .schedule-span-12 { grid-column: span 12; }
@@ -308,6 +309,7 @@ require_once __DIR__ . '/../includes/header.php';
     .schedule-rule-title { font-weight: 700; }
     .schedule-rule-meta { color: var(--admin-text-soft); font-size: 0.8rem; }
     .schedule-rule-actions { display: flex; align-items: center; gap: 0.4rem; }
+    .schedule-inline-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     @media (max-width: 991px) {
         .schedule-layout { grid-template-columns: 1fr; }
         .schedule-form-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
@@ -318,13 +320,31 @@ require_once __DIR__ . '/../includes/header.php';
     }
     @media (max-width: 767px) {
         .schedule-page { gap: 0.55rem; }
+        .schedule-layout { gap: 0.55rem; }
         .schedule-list-card .card-body,
         .schedule-main-card .card-body,
-        .schedule-rule-card { padding: 0.7rem; }
-        .schedule-form-grid { gap: 0.55rem; }
-        .schedule-summary-row { padding: 0.42rem 0.5rem; }
+        .schedule-rule-card { padding: 0.62rem; }
+        .schedule-list { gap: 0.35rem; }
+        .schedule-list-link { gap: 0.12rem; padding: 0.52rem 0.58rem; border-radius: 0.72rem; }
+        .schedule-list-link strong { font-size: 0.9rem; }
+        .schedule-list-link .small { font-size: 0.72rem; }
+        .schedule-main-grid { gap: 0.55rem; }
+        .schedule-form-grid { gap: 0.48rem; }
+        .schedule-summary { gap: 0.3rem; }
+        .schedule-summary-row { padding: 0.38rem 0.46rem; border-radius: 0.62rem; }
+        .schedule-summary-label { font-size: 0.68rem; }
+        .schedule-summary-value { font-size: 0.84rem; }
+        .schedule-screen-chips { gap: 0.28rem; }
+        .schedule-screen-chip { padding: 0.26rem 0.46rem; font-size: 0.74rem; }
+        .schedule-rules { gap: 0.45rem; }
         .schedule-rule-head { flex-direction: column; align-items: stretch; gap: 0.5rem; }
         .schedule-rule-actions { justify-content: flex-start; }
+        .schedule-rule-title { font-size: 0.92rem; line-height: 1.2; }
+        .schedule-rule-meta { font-size: 0.74rem; line-height: 1.25; }
+        .schedule-inline-actions { flex-direction: column; align-items: stretch; }
+        .schedule-inline-actions .btn { width: 100%; justify-content: center; }
+        .schedule-page .section-heading .btn { width: 100%; justify-content: center; }
+        .schedule-main-card .card-header { padding: 0.72rem 0.78rem; }
         .schedule-screen-chip { max-width: 100%; }
     }
 </style>
@@ -391,7 +411,7 @@ require_once __DIR__ . '/../includes/header.php';
                                         <label class="form-check-label" for="schedule_active">Schedule active</label>
                                     </div>
                                 </div>
-                                <div class="schedule-span-12 d-flex flex-wrap gap-2">
+                                <div class="schedule-span-12 schedule-inline-actions">
                                     <button class="btn btn-primary" type="submit"><i class="bi bi-check2"></i><span class="ms-1">Save Schedule</span></button>
                                 </div>
                             </form>
@@ -429,66 +449,18 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
 
                 <div class="card schedule-main-card">
-                    <div class="card-header"><h2 class="h5 mb-0">Add Rule</h2></div>
-                    <div class="card-body">
-                        <form class="schedule-form-grid" method="post">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="action" value="create_schedule_rule">
-                            <input type="hidden" name="schedule_id" value="<?= (int) $selectedSchedule['id'] ?>">
-                            <div class="schedule-span-8">
-                                <label class="form-label" for="schedule_playlist_id">Playlist</label>
-                                <select class="form-select" id="schedule_playlist_id" name="playlist_id" required>
-                                    <option value="">Select playlist</option>
-                                    <?php foreach ($playlists as $playlist): ?>
-                                        <option value="<?= (int) $playlist['id'] ?>"><?= e($playlist['name']) ?><?= (int) $playlist['active'] === 1 ? '' : ' (inactive)' ?></option>
-                                    <?php endforeach; ?>
-                                </select>
+                    <div class="card-header">
+                        <div class="section-heading mb-0">
+                            <div>
+                                <h2 class="h5 mb-0">Rules</h2>
+                                <div class="section-subtitle">Add, edit, and reorder when each playlist should run.</div>
                             </div>
-                            <div class="schedule-span-4">
-                                <label class="form-label" for="schedule_rule_label">Label</label>
-                                <input class="form-control" id="schedule_rule_label" name="label" type="text" placeholder="Breakfast, Evening, etc">
-                            </div>
-                            <div class="schedule-span-12">
-                                <label class="form-label">Days</label>
-                                <div class="schedule-days-grid">
-                                    <?php foreach (schedule_day_names() as $dayIndex => $dayLabel): ?>
-                                        <label class="schedule-day-chip">
-                                            <input type="checkbox" name="days[]" value="<?= $dayIndex ?>" checked>
-                                            <span><?= e($dayLabel) ?></span>
-                                        </label>
-                                    <?php endforeach; ?>
-                                </div>
-                            </div>
-                            <div class="schedule-span-4">
-                                <label class="form-label" for="schedule_start_time">Start</label>
-                                <input class="form-control" id="schedule_start_time" name="start_time" type="time" value="09:00" required>
-                            </div>
-                            <div class="schedule-span-4">
-                                <label class="form-label" for="schedule_end_time">End</label>
-                                <input class="form-control" id="schedule_end_time" name="end_time" type="time" value="17:00" required>
-                            </div>
-                            <div class="schedule-span-4">
-                                <label class="form-label" for="schedule_priority">Priority</label>
-                                <input class="form-control" id="schedule_priority" name="priority" type="number" min="1" value="1" required>
-                            </div>
-                            <div class="schedule-span-12">
-                                <div class="form-check">
-                                    <input class="form-check-input" id="schedule_rule_active" name="active" type="checkbox" checked>
-                                    <label class="form-check-label" for="schedule_rule_active">Rule active</label>
-                                </div>
-                            </div>
-                            <div class="schedule-span-12">
-                                <div class="form-text">Times use <?= e(app_timezone_name()) ?>. If end is earlier than start, the rule runs overnight.</div>
-                            </div>
-                            <div class="schedule-span-12">
-                                <button class="btn btn-primary" type="submit"><i class="bi bi-plus-circle"></i><span class="ms-1">Add Rule</span></button>
-                            </div>
-                        </form>
+                            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#createRuleModal">
+                                <i class="bi bi-plus-circle"></i>
+                                <span class="ms-1">Add Rule</span>
+                            </button>
+                        </div>
                     </div>
-                </div>
-
-                <div class="card schedule-main-card">
-                    <div class="card-header"><h2 class="h5 mb-0">Rules</h2></div>
                     <div class="card-body">
                         <?php if (!$selectedRules): ?>
                             <div class="text-muted">No rules yet. Screens using this schedule will fall back to their direct playlist.</div>
@@ -597,4 +569,71 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
     </div>
 </div>
+<?php if ($selectedSchedule): ?>
+<div class="modal fade" id="createRuleModal" tabindex="-1" aria-labelledby="createRuleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5 mb-0" id="createRuleModalLabel">Add Rule</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form class="schedule-form-grid" method="post">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="create_schedule_rule">
+                    <input type="hidden" name="schedule_id" value="<?= (int) $selectedSchedule['id'] ?>">
+                    <div class="schedule-span-8">
+                        <label class="form-label" for="schedule_playlist_id">Playlist</label>
+                        <select class="form-select" id="schedule_playlist_id" name="playlist_id" required>
+                            <option value="">Select playlist</option>
+                            <?php foreach ($playlists as $playlist): ?>
+                                <option value="<?= (int) $playlist['id'] ?>"><?= e($playlist['name']) ?><?= (int) $playlist['active'] === 1 ? '' : ' (inactive)' ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="schedule-span-4">
+                        <label class="form-label" for="schedule_rule_label">Label</label>
+                        <input class="form-control" id="schedule_rule_label" name="label" type="text" placeholder="Breakfast, Evening, etc">
+                    </div>
+                    <div class="schedule-span-12">
+                        <label class="form-label">Days</label>
+                        <div class="schedule-days-grid">
+                            <?php foreach (schedule_day_names() as $dayIndex => $dayLabel): ?>
+                                <label class="schedule-day-chip">
+                                    <input type="checkbox" name="days[]" value="<?= $dayIndex ?>" checked>
+                                    <span><?= e($dayLabel) ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <div class="schedule-span-4">
+                        <label class="form-label" for="schedule_start_time">Start</label>
+                        <input class="form-control" id="schedule_start_time" name="start_time" type="time" value="09:00" required>
+                    </div>
+                    <div class="schedule-span-4">
+                        <label class="form-label" for="schedule_end_time">End</label>
+                        <input class="form-control" id="schedule_end_time" name="end_time" type="time" value="17:00" required>
+                    </div>
+                    <div class="schedule-span-4">
+                        <label class="form-label" for="schedule_priority">Priority</label>
+                        <input class="form-control" id="schedule_priority" name="priority" type="number" min="1" value="1" required>
+                    </div>
+                    <div class="schedule-span-12">
+                        <div class="form-check">
+                            <input class="form-check-input" id="schedule_rule_active" name="active" type="checkbox" checked>
+                            <label class="form-check-label" for="schedule_rule_active">Rule active</label>
+                        </div>
+                    </div>
+                    <div class="schedule-span-12">
+                        <div class="form-text">Times use <?= e(app_timezone_name()) ?>. If end is earlier than start, the rule runs overnight.</div>
+                    </div>
+                    <div class="schedule-span-12">
+                        <button class="btn btn-primary w-100" type="submit"><i class="bi bi-plus-circle"></i><span class="ms-1">Add Rule</span></button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
