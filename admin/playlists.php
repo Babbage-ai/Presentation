@@ -600,14 +600,14 @@ require_once __DIR__ . '/../includes/header.php';
         padding: 0;
         color: inherit;
     }
-    .playlist-list-row { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 0.82rem 0.88rem; }
+    .playlist-list-row { display: grid; gap: 0.5rem; padding: 0.82rem 0.88rem; }
+    .playlist-list-head { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
+    .playlist-list-subrow { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
     .playlist-list-main { min-width: 0; flex: 1 1 auto; }
     .playlist-list-name { font-size: 0.98rem; font-weight: 700; color: var(--admin-text-strong); line-height: 1.25; }
     .playlist-list-name-input { min-height: 2.35rem; font-size: 0.98rem; font-weight: 700; }
     .playlist-list-status { display: flex; align-items: center; gap: 0.38rem; font-size: 0.82rem; color: var(--admin-text-soft); }
     .playlist-list-badge { white-space: nowrap; align-self: center; }
-    .playlist-status-indicator { display: inline-flex; width: 0.55rem; height: 0.55rem; border-radius: 999px; background: #94a3b8; }
-    .playlist-status-indicator.is-active { background: #16a34a; }
     .playlist-list-actions { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; flex-shrink: 0; }
     .playlist-list-toggle { display: inline-flex; align-items: center; gap: 0.45rem; margin: 0; }
     .playlist-list-toggle .form-check-input { margin: 0; cursor: pointer; }
@@ -623,11 +623,12 @@ require_once __DIR__ . '/../includes/header.php';
         .playlist-admin-page .card-header { padding: 0.78rem 0.82rem; }
         .playlist-admin-page .table-responsive { overflow: visible; }
         .playlist-admin-page .list-group-item { padding: 0.82rem; }
-        .playlist-list-row { align-items: stretch; flex-direction: column; }
+        .playlist-list-head,
+        .playlist-list-subrow { align-items: stretch; flex-direction: column; }
         .playlist-list-main { width: 100%; }
         .playlist-list-name { font-size: 0.95rem; }
         .playlist-list-status { margin-top: 0.2rem; }
-        .playlist-list-actions { width: 100%; justify-content: space-between; }
+        .playlist-list-actions { width: 100%; justify-content: flex-start; }
         .playlist-list-badge { min-width: 4.6rem; text-align: center; padding: 0.5rem 0.65rem; border-radius: 999px; }
         .playlist-item-table thead { display: none; }
         .playlist-item-table th,
@@ -786,15 +787,13 @@ require_once __DIR__ . '/../includes/header.php';
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="action" value="update_playlist">
                                 <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
-                                <div class="playlist-list-main">
-                                    <input class="form-control playlist-list-name-input" id="selected_playlist_name" name="name" type="text" value="<?= e($selectedPlaylist['name']) ?>" required>
-                                    <div class="playlist-list-status">
-                                        <span class="playlist-status-indicator <?= (int) $selectedPlaylist['active'] === 1 ? 'is-active' : '' ?>" aria-hidden="true"></span>
-                                        <span><?= (int) $selectedPlaylist['active'] === 1 ? 'Active' : 'Inactive' ?></span>
+                                <div class="playlist-list-head">
+                                    <div class="playlist-list-main">
+                                        <input class="form-control playlist-list-name-input" id="selected_playlist_name" name="name" type="text" value="<?= e($selectedPlaylist['name']) ?>" required>
                                     </div>
-                                </div>
-                                <div class="playlist-list-actions">
                                     <span class="badge playlist-list-badge <?= (int) $selectedPlaylist['active'] === 1 ? 'text-bg-success' : 'text-bg-secondary' ?>"><?= count($playlistItems) ?> items</span>
+                                </div>
+                                <div class="playlist-list-subrow">
                                     <div class="form-check form-switch playlist-list-toggle">
                                         <input class="form-check-input" id="selected_playlist_active" name="active" type="checkbox" <?= (int) $selectedPlaylist['active'] === 1 ? 'checked' : '' ?>>
                                         <label class="form-check-label small" for="selected_playlist_active">Active</label>
@@ -818,18 +817,19 @@ require_once __DIR__ . '/../includes/header.php';
                         </form>
                         <div class="list-group-item playlist-list-item">
                             <div class="playlist-list-row">
-                                <a class="playlist-list-link playlist-list-main" href="<?= e(app_path('/admin/playlists.php?playlist_id=' . (int) $playlist['id'])) ?>">
-                                    <div class="playlist-list-name"><?= e($playlist['name']) ?></div>
-                                    <span class="playlist-list-status">
-                                        <span class="playlist-status-indicator <?= (int) $playlist['active'] === 1 ? 'is-active' : '' ?>" aria-hidden="true"></span>
-                                        <span><?= (int) $playlist['active'] === 1 ? 'Active' : 'Inactive' ?></span>
-                                    </span>
-                                </a>
-                                <div class="playlist-list-actions">
+                                <div class="playlist-list-head">
+                                    <a class="playlist-list-link playlist-list-main" href="<?= e(app_path('/admin/playlists.php?playlist_id=' . (int) $playlist['id'])) ?>">
+                                        <div class="playlist-list-name"><?= e($playlist['name']) ?></div>
+                                    </a>
                                     <span class="badge playlist-list-badge <?= (int) $playlist['active'] === 1 ? 'text-bg-success' : 'text-bg-secondary' ?>"><?= (int) $playlist['item_count'] ?> items</span>
-                                    <button class="btn btn-outline-danger icon-btn icon-btn-sm" type="submit" form="playlist-delete-form-<?= (int) $playlist['id'] ?>" title="Delete playlist" aria-label="Delete playlist">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                </div>
+                                <div class="playlist-list-subrow">
+                                    <span class="playlist-list-status"><?= (int) $playlist['active'] === 1 ? 'Active' : 'Inactive' ?></span>
+                                    <div class="playlist-list-actions">
+                                        <button class="btn btn-outline-danger icon-btn icon-btn-sm" type="submit" form="playlist-delete-form-<?= (int) $playlist['id'] ?>" title="Delete playlist" aria-label="Delete playlist">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
