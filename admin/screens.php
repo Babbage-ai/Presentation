@@ -423,29 +423,29 @@ require_once __DIR__ . '/../includes/header.php';
         .screen-admin-page .stat-label { font-size: 0.64rem; letter-spacing: 0.09em; }
         .screen-admin-page .stat-number-box { min-width: 3.5rem; padding: 0.28rem 0.62rem; margin-top: 0.22rem; }
         .screen-admin-page .stat-meta { font-size: 0.72rem; margin-top: 0.18rem; }
-        .screen-toolbar { align-items: stretch; flex-direction: column; flex-wrap: nowrap; overflow: visible; gap: 0.55rem; padding: 0.62rem 0.62rem 0.58rem; }
+        .screen-toolbar { align-items: stretch; flex-direction: column; flex-wrap: nowrap; overflow: visible; gap: 0.42rem; padding: 0.52rem 0.56rem; }
         .screen-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; width: 100%; }
-        .screen-filter-summary { display: block; white-space: normal; font-size: 0.74rem; }
+        .screen-filter-summary { display: block; white-space: normal; font-size: 0.72rem; line-height: 1.2; }
         .screen-filter-group { gap: 0.24rem; flex-direction: column; align-items: stretch; }
         .screen-filter-label { font-size: 0.64rem; }
-        .screen-filter-select { width: 100%; min-width: 0; min-height: 2.35rem; font-size: 0.8rem; padding: 0.22rem 1.8rem 0.22rem 0.58rem; }
+        .screen-filter-select { width: 100%; min-width: 0; min-height: 2.15rem; font-size: 0.78rem; padding: 0.18rem 1.75rem 0.18rem 0.54rem; }
         .screen-admin-page .table-responsive { overflow: visible; }
         .screen-admin-table { min-width: 0; }
         .screen-admin-table thead { display: none; }
         .screen-admin-table,
         .screen-admin-table tbody,
         .screen-admin-table td { display: block; width: 100%; }
-        .screen-admin-table tbody { padding: 0.55rem; }
+        .screen-admin-table tbody { padding: 0.35rem; }
         .screen-admin-table tr.screen-row {
             display: grid;
             grid-template-columns: minmax(0, 1fr) auto;
             gap: 0.35rem 0.55rem;
-            margin-bottom: 0.6rem;
-            padding: 0.82rem;
+            margin-bottom: 0.42rem;
+            padding: 0.62rem;
             border: 1px solid rgba(15, 23, 42, 0.08);
-            border-radius: 1rem;
+            border-radius: 0.85rem;
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.07);
         }
         .screen-admin-table tr.screen-row:last-child { margin-bottom: 0; }
         .screen-admin-table tbody td {
@@ -456,8 +456,8 @@ require_once __DIR__ . '/../includes/header.php';
         .screen-admin-table tbody td::before {
             content: attr(data-label);
             display: block;
-            margin-bottom: 0.24rem;
-            font-size: 0.66rem;
+            margin-bottom: 0.18rem;
+            font-size: 0.62rem;
             font-weight: 700;
             letter-spacing: 0.08em;
             text-transform: uppercase;
@@ -466,27 +466,28 @@ require_once __DIR__ . '/../includes/header.php';
         }
         .screen-admin-table tbody td[data-label="Screen Name"],
         .screen-admin-table tbody td[data-label="Screen Location"],
-        .screen-admin-table tbody td[data-label="Assignment"] { grid-column: 1 / -1; }
+        .screen-admin-table tbody td[data-label="Assignment"],
+        .screen-admin-table tbody td[data-label="Ticker"] { grid-column: 1 / -1; }
         .screen-admin-table tbody td[data-label="Last Seen"] { grid-column: 1 / 2; }
         .screen-admin-table tbody td.screen-controls-cell { grid-column: 2 / 3; align-self: end; }
         .screen-admin-table .form-control,
         .screen-admin-table .form-select { min-width: 0; width: 100%; }
         .screen-admin-table .form-control,
-        .screen-admin-table .form-select { min-height: 2.2rem; }
+        .screen-admin-table .form-select { min-height: 2rem; font-size: 0.82rem; }
         .screen-save-note { min-height: 0; }
         .screen-inline-toggle { justify-content: flex-start; }
-        .screen-last-seen { font-size: 0.74rem; line-height: 1.1; }
-        .screen-cell-stack { gap: 0.12rem; }
-        .screen-name-stack { gap: 0.4rem; }
+        .screen-last-seen { font-size: 0.72rem; line-height: 1.1; }
+        .screen-cell-stack { gap: 0.1rem; }
+        .screen-name-stack { gap: 0.3rem; }
         .screen-controls-cell {
             width: auto !important;
             display: block !important;
         }
         .screen-controls-cell::before { content: none !important; }
-        .screen-controls { width: auto; justify-content: flex-start; gap: 0.3rem; align-items: center; }
-        .screen-code-link { min-height: 2rem; min-width: 5.25rem; padding: 0.28rem 0.58rem; font-size: 0.76rem; }
+        .screen-controls { width: auto; justify-content: flex-start; gap: 0.24rem; align-items: center; }
+        .screen-code-link { min-height: 1.8rem; min-width: 4.8rem; padding: 0.22rem 0.48rem; font-size: 0.72rem; border-radius: 0.68rem; }
         .screen-controls .icon-btn-sm { width: 1.95rem; height: 1.95rem; }
-        #screensEmptyRow { padding: 0.8rem !important; border-radius: 0.8rem; background: rgba(248, 250, 252, 0.94); }
+        #screensEmptyRow { padding: 0.65rem !important; border-radius: 0.72rem; background: rgba(248, 250, 252, 0.94); }
     }
 </style>
 
