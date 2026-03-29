@@ -571,8 +571,8 @@ unset($playlistItem);
 if ($activePlaylistCycleSeconds > 0) {
     foreach ($playlistItems as &$playlistItem) {
         $playlistItem['frequency_per_hour'] = (int) ($playlistItem['active'] ?? 0) === 1
-            ? round(3600 / $activePlaylistCycleSeconds, 1)
-            : 0.0;
+            ? max(0, (int) floor(3600 / $activePlaylistCycleSeconds))
+            : 0;
     }
     unset($playlistItem);
 }
@@ -972,7 +972,7 @@ require_once __DIR__ . '/../includes/header.php';
                                                     </div>
                                                     <div class="playlist-item-metric-cell">
                                                         <span class="playlist-item-metric-heading">Frequency</span>
-                                                        <span class="small text-muted"><?= number_format((float) ($item['frequency_per_hour'] ?? 0), 1) ?>/hour</span>
+                                                        <span class="small text-muted"><?= (int) ($item['frequency_per_hour'] ?? 0) ?>/hour</span>
                                                     </div>
                                                 </div>
                                                 <input type="hidden" name="image_duration" value="<?= (int) $item['image_duration'] ?>" form="<?= e($formId) ?>">
@@ -984,7 +984,7 @@ require_once __DIR__ . '/../includes/header.php';
                                                     </div>
                                                     <div class="playlist-item-metric-cell">
                                                         <span class="playlist-item-metric-heading">Frequency</span>
-                                                        <span class="small text-muted"><?= number_format((float) ($item['frequency_per_hour'] ?? 0), 1) ?>/hour</span>
+                                                        <span class="small text-muted"><?= (int) ($item['frequency_per_hour'] ?? 0) ?>/hour</span>
                                                     </div>
                                                 </div>
                                             <?php endif; ?>
