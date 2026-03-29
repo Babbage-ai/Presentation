@@ -963,7 +963,6 @@ require_once __DIR__ . '/../includes/header.php';
                                             <?php if ($isQuizItem): ?>
                                                 <div class="playlist-item-metric-grid">
                                                     <div class="playlist-item-metric-cell">
-                                                        <span class="playlist-item-metric-heading">Duration</span>
                                                         <?php if ($isRandomQuiz): ?>
                                                             <span class="small text-muted"><?= (int) $item['effective_duration_seconds'] ?>s total</span>
                                                         <?php else: ?>
@@ -979,7 +978,6 @@ require_once __DIR__ . '/../includes/header.php';
                                             <?php else: ?>
                                                 <div class="playlist-item-metric-grid">
                                                     <div class="playlist-item-metric-cell">
-                                                        <span class="playlist-item-metric-heading">Duration</span>
                                                         <input class="form-control form-control-sm" name="image_duration" type="number" min="1" value="<?= (int) $item['image_duration'] ?>" required form="<?= e($formId) ?>">
                                                     </div>
                                                     <div class="playlist-item-metric-cell">
