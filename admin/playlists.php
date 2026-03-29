@@ -558,23 +558,22 @@ require_once __DIR__ . '/../includes/header.php';
     .playlist-item-table td,
     .playlist-item-table th { vertical-align: top; }
     .playlist-item-table th:nth-child(1),
-    .playlist-item-table td:nth-child(1) { width: 34%; }
+    .playlist-item-table td:nth-child(1) { width: 39%; }
     .playlist-item-table th:nth-child(2),
     .playlist-item-table td:nth-child(2) { width: 10%; }
     .playlist-item-table th:nth-child(3),
-    .playlist-item-table td:nth-child(3) { width: 9%; }
+    .playlist-item-table td:nth-child(3) { width: 12%; }
     .playlist-item-table th:nth-child(4),
-    .playlist-item-table td:nth-child(4) { width: 12%; }
+    .playlist-item-table td:nth-child(4) { width: 11%; }
     .playlist-item-table th:nth-child(5),
-    .playlist-item-table td:nth-child(5) { width: 11%; }
-    .playlist-item-table th:nth-child(6),
-    .playlist-item-table td:nth-child(6) { width: 24%; }
+    .playlist-item-table td:nth-child(5) { width: 28%; }
     .playlist-item-table .item-selector-form,
     .playlist-item-table .item-selector-form .form-select { width: 100%; }
     .playlist-item-table .icon-actions { flex-wrap: wrap; align-items: center; gap: 0.35rem; }
     .playlist-item-cell { display: grid; gap: 0.45rem; }
-    .playlist-order-controls { display: inline-flex; align-items: center; gap: 0.35rem; }
-    .playlist-order-value { min-width: 2rem; text-align: center; font-size: 0.82rem; font-weight: 700; color: var(--admin-text-strong); }
+    .playlist-item-head { display: flex; align-items: flex-start; gap: 0.55rem; }
+    .playlist-item-body { min-width: 0; flex: 1 1 auto; }
+    .playlist-order-controls { display: inline-flex; align-items: center; gap: 0.28rem; flex-shrink: 0; }
     .playlist-order-input { display: none; }
     .playlist-item-type-badge { display: inline-flex; align-items: center; gap: 0.38rem; font-size: 0.82rem; font-weight: 600; color: #0f172a; }
     .playlist-item-type-badge i { color: #64748b; }
@@ -635,19 +634,17 @@ require_once __DIR__ . '/../includes/header.php';
         .playlist-item-table th:nth-child(4),
         .playlist-item-table td:nth-child(4),
         .playlist-item-table th:nth-child(5),
-        .playlist-item-table td:nth-child(5),
-        .playlist-item-table th:nth-child(6),
-        .playlist-item-table td:nth-child(6) { width: auto !important; }
+        .playlist-item-table td:nth-child(5) { width: auto !important; }
         .playlist-item-table,
         .playlist-item-table tbody,
         .playlist-item-table td { display: block; width: 100%; }
         .playlist-item-table tbody { padding: 0.45rem; }
         .playlist-item-table tr {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+            grid-template-columns: minmax(0, 1fr) auto auto auto;
             grid-template-areas:
-                "main main main main actions"
-                "type order duration active actions";
+                "main main main actions"
+                "type duration active actions";
             gap: 0.45rem;
             margin-bottom: 0.6rem;
             padding: 0.72rem;
@@ -669,7 +666,6 @@ require_once __DIR__ . '/../includes/header.php';
         .playlist-item-table td.playlist-item-main { grid-area: main; padding: 0.56rem 0.62rem; background: rgba(248, 250, 252, 0.92); }
         .playlist-item-table td.playlist-item-main::before { display: none; }
         .playlist-item-table td.playlist-item-type { grid-area: type; min-width: 4.2rem; }
-        .playlist-item-table td.playlist-item-metric-order { grid-area: order; min-width: 4.4rem; }
         .playlist-item-table td.playlist-item-metric-duration { grid-area: duration; min-width: 5.2rem; }
         .playlist-item-table td.playlist-item-active { grid-area: active; min-width: 4.2rem; }
         .playlist-item-table td.playlist-item-actions { grid-area: actions; align-self: center; padding: 0.38rem 0.42rem; }
@@ -677,6 +673,7 @@ require_once __DIR__ . '/../includes/header.php';
         .playlist-item-main .muted-stack strong { font-size: 0.92rem; line-height: 1.25; }
         .playlist-item-table td.playlist-item-main .small { color: var(--admin-text-soft); font-size: 0.74rem !important; line-height: 1.3; }
         .playlist-item-table .playlist-item-cell { gap: 0.3rem; }
+        .playlist-item-head { gap: 0.4rem; }
         .playlist-item-table .item-selector-form .form-select,
         .playlist-item-table input.form-control { min-height: 2.15rem; padding-top: 0.26rem; padding-bottom: 0.26rem; font-size: 0.84rem; }
         .playlist-item-table td.playlist-item-type::before,
@@ -705,9 +702,8 @@ require_once __DIR__ . '/../includes/header.php';
             margin: 0;
         }
         .playlist-item-table .playlist-item-metric .small { display: block; text-align: center; font-size: 0.72rem !important; }
-        .playlist-order-controls { width: 100%; justify-content: center; gap: 0.22rem; }
+        .playlist-order-controls { justify-content: center; gap: 0.22rem; }
         .playlist-order-controls .btn { width: 1.85rem; min-height: 1.85rem; }
-        .playlist-order-value { min-width: 1.5rem; font-size: 0.78rem; }
         .playlist-selected-form { padding: 0.72rem; }
         .playlist-selected-top { align-items: stretch; flex-direction: column; }
         .playlist-selected-actions { justify-content: flex-end; }
@@ -868,7 +864,6 @@ require_once __DIR__ . '/../includes/header.php';
                                 <tr>
                                     <th>Item</th>
                                     <th>Type</th>
-                                    <th>Order</th>
                                     <th>Duration</th>
                                     <th>Active</th>
                                     <th>Actions</th>
@@ -876,7 +871,7 @@ require_once __DIR__ . '/../includes/header.php';
                             </thead>
                             <tbody>
                             <?php if (!$playlistItems): ?>
-                                <tr><td colspan="6" class="text-center py-4 text-muted">No items in this playlist.</td></tr>
+                                <tr><td colspan="5" class="text-center py-4 text-muted">No items in this playlist.</td></tr>
                             <?php else: ?>
                                 <?php foreach ($playlistItems as $item): ?>
                                     <?php $formId = 'playlist-item-form-' . (int) $item['id']; ?>
@@ -890,29 +885,54 @@ require_once __DIR__ . '/../includes/header.php';
                                     <tr id="playlist-item-row-<?= (int) $item['id'] ?>">
                                         <td class="playlist-item-main" data-label="Item">
                                             <?php if ($isQuizItem): ?>
-                                                <div class="muted-stack">
-                                                    <strong><?= $isRandomQuiz ? 'Random quiz marker' : e($item['question_text']) ?></strong>
-                                                    <?php if (!$isRandomQuiz): ?>
-                                                        <span class="small">Correct answer <?= e($item['correct_option']) ?></span>
-                                                    <?php endif; ?>
+                                                <div class="playlist-item-head">
+                                                    <div class="playlist-item-body">
+                                                        <div class="muted-stack">
+                                                            <strong><?= $isRandomQuiz ? 'Random quiz marker' : e($item['question_text']) ?></strong>
+                                                            <?php if (!$isRandomQuiz): ?>
+                                                                <span class="small">Correct answer <?= e($item['correct_option']) ?></span>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    </div>
+                                                    <div class="playlist-order-controls">
+                                                        <button class="btn btn-sm btn-outline-secondary icon-btn icon-btn-sm js-move-playlist-item" type="button" data-direction="up" title="Move up" aria-label="Move up" <?= (int) $item['sort_order'] <= 1 ? 'disabled' : '' ?>>
+                                                            <i class="bi bi-chevron-up"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-secondary icon-btn icon-btn-sm js-move-playlist-item" type="button" data-direction="down" title="Move down" aria-label="Move down">
+                                                            <i class="bi bi-chevron-down"></i>
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             <?php else: ?>
                                                 <div class="playlist-item-cell">
-                                                    <form method="post" id="<?= e($replaceFormId) ?>" class="item-selector-form m-0">
-                                                        <?= csrf_field() ?>
-                                                        <input type="hidden" name="action" value="replace_playlist_media_item">
-                                                        <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
-                                                        <input type="hidden" name="item_id" value="<?= (int) $item['id'] ?>">
-                                                        <select class="form-select form-select-sm" name="media_id" aria-label="Replace media item" onchange="this.form.submit()">
-                                                            <?php foreach ($mediaOptions as $media): ?>
-                                                                <option value="<?= (int) $media['id'] ?>" <?= (int) $media['id'] === (int) $item['media_id'] ? 'selected' : '' ?>>
-                                                                    <?= e($media['title']) ?>
-                                                                </option>
-                                                            <?php endforeach; ?>
-                                                        </select>
-                                                    </form>
+                                                    <div class="playlist-item-head">
+                                                        <div class="playlist-item-body">
+                                                            <form method="post" id="<?= e($replaceFormId) ?>" class="item-selector-form m-0">
+                                                                <?= csrf_field() ?>
+                                                                <input type="hidden" name="action" value="replace_playlist_media_item">
+                                                                <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
+                                                                <input type="hidden" name="item_id" value="<?= (int) $item['id'] ?>">
+                                                                <select class="form-select form-select-sm" name="media_id" aria-label="Replace media item" onchange="this.form.submit()">
+                                                                    <?php foreach ($mediaOptions as $media): ?>
+                                                                        <option value="<?= (int) $media['id'] ?>" <?= (int) $media['id'] === (int) $item['media_id'] ? 'selected' : '' ?>>
+                                                                            <?= e($media['title']) ?>
+                                                                        </option>
+                                                                    <?php endforeach; ?>
+                                                                </select>
+                                                            </form>
+                                                        </div>
+                                                        <div class="playlist-order-controls">
+                                                            <button class="btn btn-sm btn-outline-secondary icon-btn icon-btn-sm js-move-playlist-item" type="button" data-direction="up" title="Move up" aria-label="Move up" <?= (int) $item['sort_order'] <= 1 ? 'disabled' : '' ?>>
+                                                                <i class="bi bi-chevron-up"></i>
+                                                            </button>
+                                                            <button class="btn btn-sm btn-outline-secondary icon-btn icon-btn-sm js-move-playlist-item" type="button" data-direction="down" title="Move down" aria-label="Move down">
+                                                                <i class="bi bi-chevron-down"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             <?php endif; ?>
+                                            <input class="form-control form-control-sm playlist-order-input" name="sort_order" type="number" min="1" value="<?= (int) $item['sort_order'] ?>" required form="<?= e($formId) ?>">
                                         </td>
                                         <td class="playlist-item-type" data-label="Type">
                                             <span class="playlist-item-type-badge" title="<?= e($itemTypeLabel) ?>" aria-label="<?= e($itemTypeLabel) ?>">
@@ -920,22 +940,10 @@ require_once __DIR__ . '/../includes/header.php';
                                                 <span><?= e($itemTypeLabel) ?></span>
                                             </span>
                                         </td>
-                                        <td class="playlist-item-metric playlist-item-metric-order" data-label="Order">
-                                            <div class="playlist-order-controls">
-                                                <button class="btn btn-sm btn-outline-secondary icon-btn icon-btn-sm js-move-playlist-item" type="button" data-direction="up" title="Move up" aria-label="Move up" <?= (int) $item['sort_order'] <= 1 ? 'disabled' : '' ?>>
-                                                    <i class="bi bi-chevron-up"></i>
-                                                </button>
-                                                <span class="playlist-order-value js-playlist-order-value"><?= (int) $item['sort_order'] ?></span>
-                                                <button class="btn btn-sm btn-outline-secondary icon-btn icon-btn-sm js-move-playlist-item" type="button" data-direction="down" title="Move down" aria-label="Move down">
-                                                    <i class="bi bi-chevron-down"></i>
-                                                </button>
-                                            </div>
-                                            <input class="form-control form-control-sm playlist-order-input" name="sort_order" type="number" min="1" value="<?= (int) $item['sort_order'] ?>" required form="<?= e($formId) ?>">
-                                        </td>
                                         <td class="playlist-item-metric playlist-item-metric-duration" data-label="Duration">
                                             <?php if ($isQuizItem): ?>
                                                 <?php if ($isRandomQuiz): ?>
-                                                    <span class="small text-muted">Uses the selected quiz timing</span>
+                                                    <span class="small text-muted">&nbsp;</span>
                                                 <?php else: ?>
                                                     <span class="small text-muted"><?= (int) $item['countdown_seconds'] + (int) $item['reveal_duration'] ?>s total</span>
                                                 <?php endif; ?>
@@ -1074,17 +1082,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         rows.forEach(function (row, index) {
             const sortOrderInput = row.querySelector('input[name="sort_order"]');
-            const orderValue = row.querySelector('.js-playlist-order-value');
             const upButton = row.querySelector('.js-move-playlist-item[data-direction="up"]');
             const downButton = row.querySelector('.js-move-playlist-item[data-direction="down"]');
             const orderNumber = index + 1;
 
             if (sortOrderInput) {
                 sortOrderInput.value = String(orderNumber);
-            }
-
-            if (orderValue) {
-                orderValue.textContent = String(orderNumber);
             }
 
             if (upButton) {
@@ -1181,24 +1184,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 const data = result.data || {};
                 const sortOrderInput = document.querySelector('input[name="sort_order"][form="' + form.id + '"]');
-                const orderValue = form.closest('tr') ? form.closest('tr').querySelector('.js-playlist-order-value') : null;
                 if (sortOrderInput && typeof data.sort_order !== 'undefined') {
                     sortOrderInput.value = data.sort_order;
-                    if (orderValue) {
-                        orderValue.textContent = String(data.sort_order);
-                    }
                 }
 
                 if (data.swapped_item_id) {
                     const swappedFormId = 'playlist-item-form-' + data.swapped_item_id;
                     const swappedSortOrderInput = document.querySelector('input[name="sort_order"][form="' + swappedFormId + '"]');
-                    const swappedRow = document.getElementById('playlist-item-row-' + data.swapped_item_id);
-                    const swappedOrderValue = swappedRow ? swappedRow.querySelector('.js-playlist-order-value') : null;
                     if (swappedSortOrderInput && typeof data.previous_sort_order !== 'undefined') {
                         swappedSortOrderInput.value = data.previous_sort_order;
-                        if (swappedOrderValue) {
-                            swappedOrderValue.textContent = String(data.previous_sort_order);
-                        }
                     }
                 }
 
