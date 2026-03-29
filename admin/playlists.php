@@ -576,6 +576,9 @@ require_once __DIR__ . '/../includes/header.php';
     .playlist-item-mobile-summary { display: none; }
     .playlist-item-title { font-size: 0.96rem; font-weight: 700; color: var(--admin-text-strong); line-height: 1.25; }
     .playlist-item-meta { font-size: 0.78rem; color: var(--admin-text-soft); }
+    .playlist-item-type-badge { display: inline-flex; align-items: center; gap: 0.38rem; font-size: 0.82rem; font-weight: 600; color: #0f172a; }
+    .playlist-item-type-badge i { color: #64748b; }
+    .playlist-item-quiz-copy { display: none; }
     .playlist-edit-inline { display: grid; grid-template-columns: minmax(12rem, 2fr) auto auto auto auto; gap: 0.55rem; align-items: end; }
     .playlist-add-form .form-text { color: var(--admin-text-soft); }
     .playlist-add-help { margin: 0; }
@@ -633,30 +636,77 @@ require_once __DIR__ . '/../includes/header.php';
         .playlist-item-table td:nth-child(6) { width: auto !important; }
         .playlist-item-table,
         .playlist-item-table tbody,
-        .playlist-item-table tr,
         .playlist-item-table td { display: block; width: 100%; }
         .playlist-item-table tbody { padding: 0.45rem; }
-        .playlist-item-table tr { display: grid; grid-template-columns: 1fr; gap: 0.6rem; margin-bottom: 0.6rem; padding: 0.82rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 1rem; background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08); }
+        .playlist-item-table tr {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+            grid-template-areas:
+                "main main main main actions"
+                "type order duration active actions";
+            gap: 0.45rem;
+            margin-bottom: 0.6rem;
+            padding: 0.72rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 1rem;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+        }
         .playlist-item-table tr:last-child { margin-bottom: 0; }
-        .playlist-item-table td { border: 0; padding: 0.65rem 0.72rem; margin-top: 0; border-radius: 0.88rem; background: rgba(255, 255, 255, 0.82); border: 1px solid rgba(15, 23, 42, 0.06); }
-        .playlist-item-table td::before { content: attr(data-label); display: block; margin-bottom: 0.28rem; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--admin-text-soft); }
-        .playlist-item-table td.playlist-item-main { grid-column: 1 / -1; padding: 0.75rem; background: rgba(248, 250, 252, 0.92); }
+        .playlist-item-table td {
+            border: 0;
+            padding: 0.48rem 0.58rem;
+            margin-top: 0;
+            border-radius: 0.82rem;
+            background: rgba(255, 255, 255, 0.82);
+            border: 1px solid rgba(15, 23, 42, 0.06);
+        }
+        .playlist-item-table td::before { content: attr(data-label); display: block; margin-bottom: 0.2rem; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--admin-text-soft); }
+        .playlist-item-table td.playlist-item-main { grid-area: main; padding: 0.56rem 0.62rem; background: rgba(248, 250, 252, 0.92); }
         .playlist-item-table td.playlist-item-main::before { display: none; }
-        .playlist-item-table td.playlist-item-actions { grid-column: 1 / -1; }
-        .playlist-item-mobile-summary { display: grid; gap: 0.22rem; }
-        .playlist-item-meta { display: none; }
-        .playlist-item-main .muted-stack { gap: 0.24rem; }
-        .playlist-item-table td.playlist-item-main .small { color: var(--admin-text-soft); }
-        .playlist-item-table td.playlist-item-active .form-check { min-height: 2rem; display: flex; align-items: center; }
-        .playlist-item-table .icon-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.45rem; }
+        .playlist-item-table td.playlist-item-type { grid-area: type; min-width: 4.2rem; }
+        .playlist-item-table td.playlist-item-metric-order { grid-area: order; min-width: 4.4rem; }
+        .playlist-item-table td.playlist-item-metric-duration { grid-area: duration; min-width: 5.2rem; }
+        .playlist-item-table td.playlist-item-active { grid-area: active; min-width: 4.2rem; }
+        .playlist-item-table td.playlist-item-actions { grid-area: actions; align-self: center; padding: 0.38rem 0.42rem; }
+        .playlist-item-mobile-summary { display: grid; gap: 0.18rem; }
+        .playlist-item-title { font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .playlist-item-meta { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.74rem; }
+        .playlist-item-main .muted-stack { gap: 0.18rem; }
+        .playlist-item-main .muted-stack strong,
+        .playlist-item-quiz-copy strong { font-size: 0.92rem; line-height: 1.25; }
+        .playlist-item-table td.playlist-item-main .small,
+        .playlist-item-quiz-copy .small { color: var(--admin-text-soft); font-size: 0.74rem !important; line-height: 1.3; }
+        .playlist-item-quiz-copy { display: grid; gap: 0.18rem; }
+        .playlist-item-table .playlist-item-cell { gap: 0.3rem; }
         .playlist-item-table .item-selector-form .form-select,
-        .playlist-item-table input.form-control,
+        .playlist-item-table input.form-control { min-height: 2.15rem; padding-top: 0.26rem; padding-bottom: 0.26rem; font-size: 0.84rem; }
+        .playlist-item-table td.playlist-item-type::before,
+        .playlist-item-table td.playlist-item-metric::before,
+        .playlist-item-table td.playlist-item-active::before { margin-bottom: 0.16rem; }
+        .playlist-item-table td.playlist-item-actions::before { display: none; }
+        .playlist-item-table td.playlist-item-type .playlist-item-type-badge { font-size: 0.75rem; gap: 0.22rem; }
+        .playlist-item-table td.playlist-item-type .playlist-item-type-badge span { display: none; }
+        .playlist-item-table td.playlist-item-type .playlist-item-type-badge i { font-size: 0.95rem; color: #0f172a; }
+        .playlist-item-table td.playlist-item-active .form-check {
+            min-height: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+        .playlist-item-table td.playlist-item-active .form-check-input { margin: 0; width: 2rem; height: 1.1rem; }
+        .playlist-item-table td.playlist-item-active .form-check-label { display: none; }
+        .playlist-item-table .icon-actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.28rem; flex-wrap: wrap; }
         .playlist-item-table .icon-actions > form,
-        .playlist-item-table .icon-actions > button { width: 100%; }
-        .playlist-item-table .icon-actions .btn { width: 100%; justify-content: center; }
-        .playlist-item-table .item-selector-form .form-select,
-        .playlist-item-table input.form-control { min-height: 2.5rem; }
-        .playlist-item-table td.playlist-item-active .form-check-label { display: inline-block; margin-left: 0.35rem; }
+        .playlist-item-table .icon-actions > button { width: auto; }
+        .playlist-item-table .icon-actions .btn {
+            width: 2rem;
+            min-height: 2rem;
+            justify-content: center;
+            margin: 0;
+        }
+        .playlist-item-table .playlist-item-metric .small { display: block; text-align: center; font-size: 0.72rem !important; }
         .playlist-edit-inline,
         .playlist-selected-item .playlist-edit-inline { grid-template-columns: 1fr; }
         .playlist-edit-inline { gap: 0.75rem; }
@@ -859,13 +909,25 @@ require_once __DIR__ . '/../includes/header.php';
                                 <?php foreach ($playlistItems as $item): ?>
                                     <?php $formId = 'playlist-item-form-' . (int) $item['id']; ?>
                                     <?php $replaceFormId = 'playlist-item-replace-form-' . (int) $item['id']; ?>
+                                    <?php
+                                    $isQuizItem = $item['item_type'] === 'quiz';
+                                    $isRandomQuiz = $isQuizItem && $item['quiz_selection_mode'] === 'random';
+                                    $itemTypeLabel = $isQuizItem ? 'Quiz' : ($item['media_type'] === 'video' ? 'Video' : 'Image');
+                                    $itemTypeIcon = $isQuizItem ? 'bi-patch-question' : ($item['media_type'] === 'video' ? 'bi-film' : 'bi-image');
+                                    ?>
                                     <tr id="playlist-item-row-<?= (int) $item['id'] ?>">
                                         <td class="playlist-item-main" data-label="Item">
-                                            <?php if ($item['item_type'] === 'quiz'): ?>
-                                                <div class="muted-stack">
-                                                    <strong><?= $item['quiz_selection_mode'] === 'random' ? 'Random quiz marker' : e($item['question_text']) ?></strong>
+                                            <?php if ($isQuizItem): ?>
+                                                <div class="muted-stack d-none d-md-grid">
+                                                    <strong><?= $isRandomQuiz ? 'Random quiz marker' : e($item['question_text']) ?></strong>
                                                     <span class="small">
-                                                        <?= $item['quiz_selection_mode'] === 'random' ? 'Pulls a random active quiz at sync time.' : 'Correct answer ' . e($item['correct_option']) ?>
+                                                        <?= $isRandomQuiz ? 'Pulls a random active quiz at sync time.' : 'Correct answer ' . e($item['correct_option']) ?>
+                                                    </span>
+                                                </div>
+                                                <div class="playlist-item-quiz-copy d-md-none">
+                                                    <strong><?= $isRandomQuiz ? 'Random quiz marker' : e($item['question_text']) ?></strong>
+                                                    <span class="small">
+                                                        <?= $isRandomQuiz ? 'Random active quiz' : 'Answer ' . e($item['correct_option']) ?>
                                                     </span>
                                                 </div>
                                             <?php else: ?>
@@ -890,13 +952,18 @@ require_once __DIR__ . '/../includes/header.php';
                                                 </div>
                                             <?php endif; ?>
                                         </td>
-                                        <td data-label="Type"><?= e($item['item_type'] === 'quiz' ? 'quiz' : $item['media_type']) ?></td>
-                                        <td class="playlist-item-metric" data-label="Order">
+                                        <td class="playlist-item-type" data-label="Type">
+                                            <span class="playlist-item-type-badge" title="<?= e($itemTypeLabel) ?>" aria-label="<?= e($itemTypeLabel) ?>">
+                                                <i class="bi <?= e($itemTypeIcon) ?>"></i>
+                                                <span><?= e($itemTypeLabel) ?></span>
+                                            </span>
+                                        </td>
+                                        <td class="playlist-item-metric playlist-item-metric-order" data-label="Order">
                                             <input class="form-control form-control-sm" name="sort_order" type="number" min="1" value="<?= (int) $item['sort_order'] ?>" required form="<?= e($formId) ?>">
                                         </td>
-                                        <td class="playlist-item-metric" data-label="Duration">
-                                            <?php if ($item['item_type'] === 'quiz'): ?>
-                                                <?php if ($item['quiz_selection_mode'] === 'random'): ?>
+                                        <td class="playlist-item-metric playlist-item-metric-duration" data-label="Duration">
+                                            <?php if ($isQuizItem): ?>
+                                                <?php if ($isRandomQuiz): ?>
                                                     <span class="small text-muted">Uses the selected quiz timing</span>
                                                 <?php else: ?>
                                                     <span class="small text-muted"><?= (int) $item['countdown_seconds'] + (int) $item['reveal_duration'] ?>s total</span>

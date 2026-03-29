@@ -299,17 +299,42 @@ require_once __DIR__ . '/../includes/header.php';
     .media-title-text { font-weight: 600; line-height: 1.35; }
     .media-inline-meta { margin-top: 0.18rem; color: var(--admin-text-soft); font-size: 0.78rem; }
     .media-inline-meta span + span::before { content: "\2022"; margin: 0 0.35rem; }
+    .media-usage-icon { color: #0d6efd; }
     .media-type-badge { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 999px; background: rgba(15, 23, 42, 0.08); color: #0f172a; }
     .media-status-stack { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; }
     .media-active-toggle { display: inline-flex; align-items: center; gap: 0.5rem; margin: 0; }
     .media-active-toggle .form-check-input { margin: 0; cursor: pointer; }
     .media-actions { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; }
+    .media-mobile-row { display: none; }
+    .media-mobile-controls { display: flex; align-items: center; gap: 0.45rem; flex-shrink: 0; }
+    .media-mobile-active .form-check-input { margin: 0; cursor: pointer; }
+    .media-library-tools { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.85rem 0.95rem; border-bottom: 1px solid var(--admin-border); background: rgba(248, 250, 252, 0.72); }
+    .media-library-tools-copy { color: var(--admin-text-soft); font-size: 0.8rem; }
+    .media-library-filters { display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; }
+    .media-library-search { min-width: min(100%, 18rem); }
+    .media-filter-select { min-width: 9rem; }
+    .media-filter-results { padding: 0.65rem 0.95rem 0; color: var(--admin-text-soft); font-size: 0.8rem; }
+    .media-filter-results strong { color: #0f172a; }
+    .media-empty-filter { display: none; }
     .media-modal-note { color: var(--admin-text-soft); font-size: 0.88rem; }
     .media-modal-current { margin-top: 0.45rem; color: var(--admin-text-soft); font-size: 0.84rem; }
     @media (max-width: 767px) {
         .media-toolbar { align-items: stretch; flex-direction: column; }
-        .media-title-cell { min-width: 11rem; }
-        .media-actions { justify-content: flex-end; }
+        .media-library-tools { align-items: stretch; flex-direction: column; }
+        .media-library-filters { align-items: stretch; }
+        .media-library-search,
+        .media-filter-select { min-width: 0; width: 100%; }
+        .media-title-cell { min-width: 16rem; }
+        .media-title-wrap { display: none; }
+        .media-mobile-row { display: flex; align-items: center; gap: 0.3rem; min-width: 0; }
+        .media-mobile-name { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 0.92rem; }
+        .media-mobile-controls { gap: 0.28rem; }
+        .media-mobile-controls .icon-btn-sm { width: 1.85rem; height: 1.85rem; }
+        .media-mobile-controls .media-type-icon { width: 1.8rem; height: 1.8rem; font-size: 0.9rem; }
+        .media-mobile-active .form-check-input { width: 2.15rem; height: 1.2rem; }
+        .media-mobile-controls form,
+        .media-mobile-controls button,
+        .media-mobile-controls span { flex-shrink: 0; }
     }
 </style>
 <div class="page-shell">
@@ -379,16 +404,38 @@ require_once __DIR__ . '/../includes/header.php';
                         <?= $missingMediaCount ?> media item(s) have a database record but the file is missing from `uploads/media`. Use Update Media to replace those files before using them in playlists.
                     </div>
                 <?php endif; ?>
+                <div class="media-library-tools">
+                    <div class="media-library-tools-copy">Search by title or filename, then narrow the list by type or library status.</div>
+                    <div class="media-library-filters">
+                        <input class="form-control media-library-search" id="mediaLibrarySearch" type="search" placeholder="Search media library" aria-label="Search media library">
+                        <select class="form-select media-filter-select" id="mediaTypeFilter" aria-label="Filter by media type">
+                            <option value="">All types</option>
+                            <option value="image">Images</option>
+                            <option value="video">Videos</option>
+                        </select>
+                        <select class="form-select media-filter-select" id="mediaStatusFilter" aria-label="Filter by media status">
+                            <option value="">All statuses</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="used">Used in playlists</option>
+                            <option value="unused">Not in playlists</option>
+                            <option value="missing">Missing file</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="media-filter-results" id="mediaFilterResults">
+                    <strong><?= count($mediaItems) ?></strong> item<?= count($mediaItems) === 1 ? '' : 's' ?> in view
+                </div>
                 <div class="table-responsive">
                     <table class="table table-sm page-table mb-0">
                         <thead>
                             <tr>
                                 <th>Title</th>
-                                <th class="media-type-col">Type</th>
+                                <th class="media-type-col d-none d-md-table-cell">Type</th>
                                 <th class="media-meta-col d-none d-md-table-cell">Size</th>
                                 <th class="media-meta-col d-none d-md-table-cell">Created</th>
-                                <th class="media-status-col">Status</th>
-                                <th class="media-actions-col">Actions</th>
+                                <th class="media-status-col d-none d-md-table-cell">Status</th>
+                                <th class="media-actions-col d-none d-md-table-cell">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -401,9 +448,89 @@ require_once __DIR__ . '/../includes/header.php';
                                 $isVideo = $item['media_type'] === 'video';
                                 $typeLabel = $isVideo ? 'Video' : 'Image';
                                 $typeIcon = $isVideo ? 'bi-film' : 'bi-image';
+                                $isUsedInPlaylist = (int) $item['usage_count'] > 0;
                                 ?>
-                                <tr>
+                                <tr
+                                    class="js-media-row"
+                                    data-title="<?= e(strtolower((string) $item['title'])) ?>"
+                                    data-filename="<?= e(strtolower((string) $item['filename'])) ?>"
+                                    data-type="<?= e((string) $item['media_type']) ?>"
+                                    data-active="<?= $isActive ? '1' : '0' ?>"
+                                    data-used="<?= $isUsedInPlaylist ? '1' : '0' ?>"
+                                    data-missing="<?= $item['file_exists'] ? '0' : '1' ?>"
+                                >
                                     <td class="media-title-cell">
+                                        <div class="media-mobile-row d-md-none">
+                                            <div class="media-mobile-name" title="<?= e($item['title']) ?>"><?= e($item['title']) ?></div>
+                                            <?php if ($isUsedInPlaylist): ?>
+                                                <span class="media-usage-icon" title="Used in playlist" aria-label="Used in playlist">
+                                                    <i class="bi bi-link-45deg"></i>
+                                                </span>
+                                            <?php endif; ?>
+                                            <?php if (!$item['file_exists']): ?>
+                                                <span class="badge text-bg-danger" title="File missing">!</span>
+                                            <?php endif; ?>
+                                            <div class="media-mobile-controls">
+                                                <span class="media-type-icon" title="<?= e($typeLabel) ?>" aria-label="<?= e($typeLabel) ?>">
+                                                    <i class="bi <?= $typeIcon ?>"></i>
+                                                </span>
+                                                <form method="post" class="m-0">
+                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="action" value="toggle_active">
+                                                    <input type="hidden" name="media_id" value="<?= (int) $item['id'] ?>">
+                                                    <div class="form-check form-switch media-mobile-active m-0">
+                                                        <input
+                                                            class="form-check-input"
+                                                            id="media-mobile-active-<?= (int) $item['id'] ?>"
+                                                            type="checkbox"
+                                                            name="active"
+                                                            value="1"
+                                                            <?= $isActive ? 'checked' : '' ?>
+                                                            onchange="this.form.submit()"
+                                                            aria-label="Active"
+                                                            title="Active"
+                                                        >
+                                                    </div>
+                                                </form>
+                                                <?php if ($item['file_exists']): ?>
+                                                    <button
+                                                        class="btn btn-sm btn-outline-secondary js-preview-media icon-btn icon-btn-sm"
+                                                        type="button"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#mediaPreviewModal"
+                                                        data-media-type="<?= e($item['media_type']) ?>"
+                                                        data-media-title="<?= e($item['title']) ?>"
+                                                        data-media-url="<?= e(media_file_url($item['filename'])) ?>"
+                                                        title="Preview media"
+                                                        aria-label="Preview media"
+                                                    >
+                                                        <i class="bi bi-eye"></i>
+                                                    </button>
+                                                <?php endif; ?>
+                                                <button
+                                                    class="btn btn-sm btn-outline-primary js-open-media-modal icon-btn icon-btn-sm"
+                                                    type="button"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#mediaEditorModal"
+                                                    data-mode="update"
+                                                    data-media-id="<?= (int) $item['id'] ?>"
+                                                    data-media-title="<?= e($item['title']) ?>"
+                                                    data-media-type="<?= e($item['media_type']) ?>"
+                                                    title="Update media"
+                                                    aria-label="Update media"
+                                                >
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <form method="post" class="m-0" onsubmit="return confirm('Delete this media item?');">
+                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="action" value="delete_media">
+                                                    <input type="hidden" name="media_id" value="<?= (int) $item['id'] ?>">
+                                                    <button class="btn btn-sm btn-outline-danger icon-btn icon-btn-sm" type="submit" <?= $isUsedInPlaylist ? 'disabled' : '' ?> title="Delete media" aria-label="Delete media">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
                                         <div class="media-title-wrap">
                                             <span class="media-type-icon d-md-none" title="<?= e($typeLabel) ?>" aria-hidden="true">
                                                 <i class="bi <?= $typeIcon ?>"></i>
@@ -412,8 +539,8 @@ require_once __DIR__ . '/../includes/header.php';
                                                 <div class="media-title-text"><?= e($item['title']) ?></div>
                                                 <div class="media-inline-meta">
                                                     <span><?= e($typeLabel) ?></span>
-                                                    <?php if ((int) $item['usage_count'] > 0): ?>
-                                                        <span>Used in playlist<?= (int) $item['usage_count'] === 1 ? '' : 's' ?></span>
+                                                    <?php if ($isUsedInPlaylist): ?>
+                                                        <span><i class="bi bi-link-45deg media-usage-icon"></i> Used in playlist<?= (int) $item['usage_count'] === 1 ? '' : 's' ?></span>
                                                     <?php endif; ?>
                                                     <?php if (!$item['file_exists']): ?>
                                                         <span class="text-danger">File missing</span>
@@ -429,7 +556,7 @@ require_once __DIR__ . '/../includes/header.php';
                                     </td>
                                     <td class="d-none d-md-table-cell"><?= e(format_bytes((int) $item['file_size'])) ?></td>
                                     <td class="d-none d-md-table-cell"><?= e(format_datetime($item['created_at'])) ?></td>
-                                    <td>
+                                    <td class="d-none d-md-table-cell">
                                         <div class="media-status-stack">
                                             <form method="post" class="m-0">
                                                 <?= csrf_field() ?>
@@ -453,7 +580,7 @@ require_once __DIR__ . '/../includes/header.php';
                                             <?php endif; ?>
                                         </div>
                                     </td>
-                                    <td>
+                                    <td class="d-none d-md-table-cell">
                                         <div class="media-actions">
                                             <?php if ($item['file_exists']): ?>
                                                 <button
@@ -471,7 +598,7 @@ require_once __DIR__ . '/../includes/header.php';
                                                 </button>
                                             <?php endif; ?>
                                             <button
-                                                class="btn btn-sm btn-outline-primary js-open-media-modal"
+                                                class="btn btn-sm btn-outline-primary js-open-media-modal icon-btn icon-btn-sm"
                                                 type="button"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#mediaEditorModal"
@@ -479,8 +606,10 @@ require_once __DIR__ . '/../includes/header.php';
                                                 data-media-id="<?= (int) $item['id'] ?>"
                                                 data-media-title="<?= e($item['title']) ?>"
                                                 data-media-type="<?= e($item['media_type']) ?>"
+                                                title="Update media"
+                                                aria-label="Update media"
                                             >
-                                                Update Media
+                                                <i class="bi bi-pencil"></i>
                                             </button>
                                             <form method="post" class="m-0" onsubmit="return confirm('Delete this media item?');">
                                                 <?= csrf_field() ?>
@@ -495,6 +624,9 @@ require_once __DIR__ . '/../includes/header.php';
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
+                            <tr class="media-empty-filter" id="mediaFilterEmptyRow">
+                                <td colspan="6" class="text-center py-4 text-muted">No media matches the current search or filters.</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -716,6 +848,65 @@ const previewEmpty = document.getElementById('mediaPreviewEmpty');
 const previewImage = document.getElementById('mediaPreviewImage');
 const previewVideo = document.getElementById('mediaPreviewVideo');
 const previewModal = document.getElementById('mediaPreviewModal');
+const mediaLibrarySearch = document.getElementById('mediaLibrarySearch');
+const mediaTypeFilter = document.getElementById('mediaTypeFilter');
+const mediaStatusFilter = document.getElementById('mediaStatusFilter');
+const mediaFilterResults = document.getElementById('mediaFilterResults');
+const mediaFilterEmptyRow = document.getElementById('mediaFilterEmptyRow');
+const mediaRows = Array.from(document.querySelectorAll('.js-media-row'));
+
+const updateMediaLibraryFilters = () => {
+    if (!mediaRows.length || !mediaLibrarySearch || !mediaTypeFilter || !mediaStatusFilter || !mediaFilterResults || !mediaFilterEmptyRow) {
+        return;
+    }
+
+    const searchValue = mediaLibrarySearch.value.trim().toLowerCase();
+    const typeValue = mediaTypeFilter.value;
+    const statusValue = mediaStatusFilter.value;
+    let visibleCount = 0;
+
+    for (const row of mediaRows) {
+        const title = row.dataset.title || '';
+        const filename = row.dataset.filename || '';
+        const mediaType = row.dataset.type || '';
+        const isActive = row.dataset.active === '1';
+        const isUsed = row.dataset.used === '1';
+        const isMissing = row.dataset.missing === '1';
+
+        const matchesSearch = searchValue === '' || title.includes(searchValue) || filename.includes(searchValue);
+        const matchesType = typeValue === '' || mediaType === typeValue;
+
+        let matchesStatus = true;
+        if (statusValue === 'active') {
+            matchesStatus = isActive;
+        } else if (statusValue === 'inactive') {
+            matchesStatus = !isActive;
+        } else if (statusValue === 'used') {
+            matchesStatus = isUsed;
+        } else if (statusValue === 'unused') {
+            matchesStatus = !isUsed;
+        } else if (statusValue === 'missing') {
+            matchesStatus = isMissing;
+        }
+
+        const showRow = matchesSearch && matchesType && matchesStatus;
+        row.classList.toggle('d-none', !showRow);
+
+        if (showRow) {
+            visibleCount++;
+        }
+    }
+
+    mediaFilterResults.innerHTML = '<strong>' + visibleCount + '</strong> item' + (visibleCount === 1 ? '' : 's') + ' in view';
+    mediaFilterEmptyRow.style.display = visibleCount === 0 ? '' : 'none';
+};
+
+if (mediaLibrarySearch && mediaTypeFilter && mediaStatusFilter) {
+    mediaLibrarySearch.addEventListener('input', updateMediaLibraryFilters);
+    mediaTypeFilter.addEventListener('change', updateMediaLibraryFilters);
+    mediaStatusFilter.addEventListener('change', updateMediaLibraryFilters);
+    updateMediaLibraryFilters();
+}
 
 const resetPreview = () => {
     previewEmpty.classList.remove('d-none');
