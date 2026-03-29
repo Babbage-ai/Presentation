@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE_PATH="${BASH_SOURCE[0]}"
+if command -v readlink >/dev/null 2>&1; then
+    RESOLVED_PATH="$(readlink -f "$SOURCE_PATH" 2>/dev/null || true)"
+    if [ -n "$RESOLVED_PATH" ]; then
+        SOURCE_PATH="$RESOLVED_PATH"
+    fi
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SOURCE_PATH")" && pwd)"
 # shellcheck source=displayflow-common.sh
 . "${SCRIPT_DIR}/displayflow-common.sh"
 
@@ -46,7 +53,7 @@ EOF
 wait_for_hotspot_ready() {
     local attempts
 
-    for attempts in $(seq 1 15); do
+    for attempts in $(seq 1 30); do
         if hotspot_is_ready; then
             return 0
         fi
@@ -110,7 +117,7 @@ start_ap() {
     if wait_for_hotspot_ready; then
         displayflow_state_merge "{\"setup_ssid\":$(displayflow_json_quote "$(displayflow_setup_ssid)"),\"mode\":\"setup\",\"setup_hotspot_ready\":true,\"last_error\":\"\",\"last_message\":\"Setup hotspot active.\"}"
     else
-        displayflow_state_merge '{"mode":"setup","setup_hotspot_ready":false,"last_error":"Setup hotspot did not become ready in time.","last_message":"Still starting the setup hotspot. Wait a moment and refresh if needed."}'
+        displayflow_state_merge "{\"setup_ssid\":$(displayflow_json_quote "$(displayflow_setup_ssid)"),\"mode\":\"setup\",\"setup_hotspot_ready\":false,\"last_error\":\"Setup hotspot did not become ready in time.\",\"last_message\":\"Still starting the setup hotspot. If the SSID is already visible, connect now and open http://${DISPLAYFLOW_AP_HOST}.\"}"
     fi
 
     displayflow_log "Setup hotspot started on ${DISPLAYFLOW_INTERFACE} as $(displayflow_setup_ssid)."

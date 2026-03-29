@@ -1,14 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE_PATH="${BASH_SOURCE[0]}"
+if command -v readlink >/dev/null 2>&1; then
+    RESOLVED_PATH="$(readlink -f "$SOURCE_PATH" 2>/dev/null || true)"
+    if [ -n "$RESOLVED_PATH" ]; then
+        SOURCE_PATH="$RESOLVED_PATH"
+    fi
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SOURCE_PATH")" && pwd)"
 # shellcheck source=displayflow-common.sh
 . "${SCRIPT_DIR}/displayflow-common.sh"
 
 CHROMIUM_CMD="${1:-chromium-browser}"
 PLAYER_URL="http://127.0.0.1:${DISPLAYFLOW_PLAYER_PORT}/player/player.html"
-SETUP_URL="http://${DISPLAYFLOW_AP_HOST}/screen"
+# The Pi's own Chromium should use localhost for the setup UI.
+# Phones and laptops still reach the same service via the hotspot address.
+SETUP_URL="http://127.0.0.1:${DISPLAYFLOW_SETUP_PORT}/screen"
 WAIT_SECONDS=30
+KIOSK_PROFILE_DIR="${HOME}/.config/displayflow-chromium"
 
 pick_url() {
     local state_mode=""
@@ -52,13 +62,26 @@ main() {
     sleep 8
     url="$(pick_url)"
     wait_for_url "$url" || true
+    mkdir -p "${KIOSK_PROFILE_DIR}/Default"
+
+    # Avoid restore prompts after power cuts or watchdog restarts by using a
+    # dedicated kiosk profile and clearing stale Chromium lock files.
+    rm -f \
+        "${KIOSK_PROFILE_DIR}/SingletonCookie" \
+        "${KIOSK_PROFILE_DIR}/SingletonLock" \
+        "${KIOSK_PROFILE_DIR}/SingletonSocket"
 
     exec "$CHROMIUM_CMD" \
+        --no-memcheck \
         --kiosk \
+        --user-data-dir="${KIOSK_PROFILE_DIR}" \
         --disable-infobars \
         --autoplay-policy=no-user-gesture-required \
         --overscroll-history-navigation=0 \
         --no-first-run \
+        --no-default-browser-check \
+        --noerrdialogs \
+        --enable-low-end-device-mode \
         --disable-session-crashed-bubble \
         "$url"
 }

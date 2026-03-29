@@ -18,7 +18,8 @@
     }
 
     function updateSetupState(state) {
-        const isReady = Boolean(state && state.setup_hotspot_ready);
+        const hasUsableSetupInfo = Boolean(state && state.setup_ssid);
+        const isReady = Boolean(state && (state.setup_hotspot_ready || hasUsableSetupInfo));
 
         waitingEl.hidden = isReady;
         instructionsEl.hidden = !isReady;

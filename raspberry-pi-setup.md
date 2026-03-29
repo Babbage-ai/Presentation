@@ -7,12 +7,14 @@
 - The player still reads `/home/pi/cloud-signage/player/config.json`, but that file is generated from the protected device config.
 - Setup mode starts a temporary Wi-Fi hotspot with `hostapd` + `dnsmasq` and serves a mobile setup UI at `http://192.168.4.1`.
 - Repeated Wi-Fi or backend failures automatically push the Pi back into setup mode.
+- The Pi image must already contain the DisplayFlow runtime and required OS packages before the customer ever powers it on.
 
-## 1. Install Raspberry Pi OS
+## 1. Prepare A Master Image
 
-1. Flash Raspberry Pi OS Lite or Desktop using Raspberry Pi Imager.
+1. Flash Raspberry Pi OS Desktop using Raspberry Pi Imager.
 2. Use Raspberry Pi Imager advanced options to pre-create a username and password.
-3. Boot the Pi and update packages:
+3. Boot the Pi on a bench network with temporary internet access.
+4. Update packages:
 
 ```bash
 sudo apt update
@@ -21,7 +23,7 @@ sudo apt upgrade -y
 
 ## 2. Install The DisplayFlow Pi Runtime
 
-From a checkout of this repository on the Pi:
+From a checkout of this repository on the staging Pi:
 
 ```bash
 sudo bash raspberry-pi/bin/install-displayflow-pi.sh
@@ -43,7 +45,23 @@ sudo nano /etc/default/displayflow
 
 Set `DISPLAYFLOW_API_BASE_URL` to the correct backend base URL.
 
-## 3. First Boot And Provisioning
+This installation step is part of image preparation, not customer first boot.
+
+## 3. Leave The Master Image Unprovisioned
+
+Do not pre-fill `/etc/displayflow/config.json` unless the destination venue Wi-Fi and screen code are already known.
+
+The normal shipping state is:
+
+- runtime installed
+- services enabled
+- Chromium kiosk autostart installed
+- no saved venue Wi-Fi
+- no saved screen code
+
+That state makes every cloned device boot into DisplayFlow setup mode automatically.
+
+## 4. Customer Boot And Provisioning
 
 On each boot, the Pi checks `/etc/displayflow/config.json` for:
 
@@ -63,7 +81,7 @@ From the installer’s phone:
 
 If the Wi-Fi or backend check fails, the Pi returns to setup mode and brings the hotspot back automatically.
 
-## 4. Services Installed
+## 5. Services Installed
 
 The runtime installs these services:
 
@@ -82,7 +100,7 @@ systemctl status displayflow-setup-web.service
 systemctl status cloud-signage-player.service
 ```
 
-## 5. Keep The Display Awake
+## 6. Keep The Display Awake
 
 The autostart file disables screen blanking and DPMS power saving. If HDMI still sleeps on some hardware, add this to `/boot/firmware/cmdline.txt` or `/boot/cmdline.txt`:
 
@@ -90,15 +108,16 @@ The autostart file disables screen blanking and DPMS power saving. If HDMI still
 consoleblank=0
 ```
 
-## 6. Operational Notes
+## 7. Operational Notes
 
 - Create one screen record per Pi in the admin panel.
 - Give the installer the matching screen code.
 - Heartbeats update the screen’s `last_seen`, resolution, IP, and player version.
 - Cached media remains available in Chromium’s local profile even if WAN access drops.
 - If Wi-Fi or backend verification fails repeatedly on future boots, the Pi falls back into setup mode automatically.
+- After you validate one master SD card, clone it for additional customer devices instead of relying on per-device first-boot installation.
 
-## 7. Manual Reset And Forced Setup Mode
+## 8. Manual Reset And Forced Setup Mode
 
 Wipe the saved Wi-Fi and pairing details completely:
 
@@ -119,7 +138,7 @@ If you still have access to the boot partition, either of these flag files also 
 - `/boot/displayflow-force-setup`
 - `/boot/displayflow-reset-provisioning`
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 Logs and state:
 
@@ -136,14 +155,20 @@ Common checks:
 - Verify `/etc/displayflow/config.json` contains the expected screen code.
 - Verify `wlan0` is the correct wireless interface on the Pi image.
 - Verify the screen code exists in the cloud admin.
+- Verify the SD card was cloned from a preinstalled master image rather than a stock Raspberry Pi OS image.
 
-## 9. Fresh SD Card Workflow
+## 10. Shipping Workflow
 
-If the Pi has not booted yet and the SD card is still in your PC, use the first-boot method documented in [`raspberry-pi-firstboot.md`](/workspaces/Presentation/raspberry-pi-firstboot.md).
+Recommended process:
 
-That workflow lets you place both the player files and the Pi runtime onto the boot partition so the Pi installs the full setup stack automatically during its initial boot.
+1. Build one master DisplayFlow SD card on a staging Pi with temporary internet access.
+2. Install and configure the runtime.
+3. Boot that card offline and confirm the setup hotspot appears.
+4. Clone the card for production/customer devices.
 
-## 10. Auto-Update Player On Boot And Daily
+The old boot-partition first-boot workflow in [`raspberry-pi-firstboot.md`](/workspaces/Presentation/raspberry-pi-firstboot.md) is deprecated because it cannot guarantee an offline setup hotspot on a fresh device.
+
+## 11. Auto-Update Player On Boot And Daily
 
 If you want each Pi to refresh its local player files from the live website before Chromium launches, and also check daily for player code updates:
 

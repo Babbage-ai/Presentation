@@ -169,7 +169,10 @@ sudo chmod -R 755 /path/to/project/uploads
 
 1. Create a screen in the admin panel.
 2. Copy the generated 6-character `screen code`.
-3. Install the Pi runtime with [`install-displayflow-pi.sh`](/workspaces/Presentation/raspberry-pi/bin/install-displayflow-pi.sh).
+3. Prepare a preinstalled DisplayFlow Pi image on a staging Pi with temporary internet access.
+4. Install the Pi runtime with [`install-displayflow-pi.sh`](/workspaces/Presentation/raspberry-pi/bin/install-displayflow-pi.sh).
+5. Clone that prepared SD card for customer devices.
+6. Ship devices with no saved venue Wi-Fi so they boot into setup mode automatically.
 4. If the Pi is unprovisioned, connect to the temporary `DisplayFlow-Setup-XXXX` hotspot and open `http://192.168.4.1`.
 5. Enter the venue Wi-Fi SSID, password, and screen code.
 6. The Pi saves the protected config to `/etc/displayflow/config.json`, verifies the backend, generates the player config, and boots into normal playback mode.
@@ -225,6 +228,17 @@ The Pi runtime adds:
 
 The player updater still refreshes only the player assets, so automatic updates do not wipe local provisioning data.
 
+## Raspberry Pi Deployment Model
+
+DisplayFlow now uses a preinstalled-image model for Raspberry Pi deployments.
+
+- Install the runtime on a staging Pi while that staging device has temporary internet access.
+- Do not rely on customer first boot to install OS packages or systemd units.
+- Leave `/etc/displayflow/config.json` empty on shipped devices so the Pi boots into setup mode automatically on-site.
+- After validation, clone the prepared SD card for production devices.
+
+The deprecated boot-partition first-boot installer scripts now exit with a warning because that design could not guarantee an offline setup hotspot on a fresh customer device.
+
 ## Raspberry Pi Install Commands
 
 From a checkout of this repo on the Pi:
@@ -252,9 +266,7 @@ sudo reboot
 
 For customer-device preparation, see [`raspberry-pi-shipping.md`](/workspaces/Presentation/raspberry-pi-shipping.md).
 
-To prepare a fresh SD card from a PC in one step, use [`raspberry-pi-prep-sd.sh`](/workspaces/Presentation/raspberry-pi-prep-sd.sh).
-
-If you are working from Codespaces and cannot access the SD card directly, build a downloadable boot payload zip with [`raspberry-pi-build-sd-bundle.sh`](/workspaces/Presentation/raspberry-pi-build-sd-bundle.sh).
+The old boot-partition helper scripts [`raspberry-pi-prep-sd.sh`](/workspaces/Presentation/raspberry-pi-prep-sd.sh), [`raspberry-pi-build-sd-bundle.sh`](/workspaces/Presentation/raspberry-pi-build-sd-bundle.sh), and [`raspberry-pi-firstboot.sh`](/workspaces/Presentation/raspberry-pi-firstboot.sh) are deprecated and intentionally no longer perform installation.
 
 ## Next-Phase Improvement Ideas
 

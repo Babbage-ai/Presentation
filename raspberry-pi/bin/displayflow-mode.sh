@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE_PATH="${BASH_SOURCE[0]}"
+if command -v readlink >/dev/null 2>&1; then
+    RESOLVED_PATH="$(readlink -f "$SOURCE_PATH" 2>/dev/null || true)"
+    if [ -n "$RESOLVED_PATH" ]; then
+        SOURCE_PATH="$RESOLVED_PATH"
+    fi
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SOURCE_PATH")" && pwd)"
 # shellcheck source=displayflow-common.sh
 . "${SCRIPT_DIR}/displayflow-common.sh"
 
@@ -64,18 +71,9 @@ boot_flow() {
     start_normal_mode
 
     if ! displayflow_wait_for_wifi; then
-        failures="$(displayflow_json_get "$DISPLAYFLOW_STATE_FILE" "consecutive_failures" 2>/dev/null || printf '0\n')"
-        failures=$((failures + 1))
         reason="Wi-Fi connection failed after ${DISPLAYFLOW_CONNECT_TIMEOUT} seconds."
-        displayflow_state_merge "{\"mode\":\"degraded\",\"provisioning_status\":\"provisioned\",\"consecutive_failures\":${failures},\"last_error\":$(displayflow_json_quote "$reason"),\"last_message\":$(displayflow_json_quote "$reason"),\"setup_hotspot_ready\":false}"
-
-        if [ "$failures" -ge "$DISPLAYFLOW_FAILURE_THRESHOLD" ]; then
-            enter_setup_mode "Wi-Fi failed repeatedly. Re-entering setup mode."
-            exit 0
-        fi
-
-        displayflow_log "${reason} Starting player in degraded mode."
-        systemctl start cloud-signage-player.service
+        displayflow_state_merge "{\"mode\":\"setup\",\"provisioning_status\":\"failed\",\"consecutive_failures\":0,\"last_error\":$(displayflow_json_quote "$reason"),\"last_message\":\"Venue Wi-Fi is unavailable. Reconnect to the DisplayFlow setup hotspot to update settings.\",\"setup_hotspot_ready\":false}"
+        enter_setup_mode "Wi-Fi failed on boot. Returning to setup mode."
         exit 0
     fi
 
