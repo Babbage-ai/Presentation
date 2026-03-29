@@ -588,9 +588,9 @@ require_once __DIR__ . '/../includes/header.php';
         box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
     }
     .playlist-list-item.is-selected {
-        border-color: rgba(13, 110, 253, 0.22);
-        background: linear-gradient(180deg, rgba(239, 246, 255, 0.98), rgba(248, 250, 252, 0.98));
-        box-shadow: 0 6px 16px rgba(13, 110, 253, 0.07);
+        border: 2px solid rgba(13, 110, 253, 0.5);
+        background: linear-gradient(180deg, rgba(219, 234, 254, 0.98), rgba(239, 246, 255, 0.98));
+        box-shadow: 0 10px 22px rgba(13, 110, 253, 0.14);
     }
     .playlist-list-row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0.42rem 0.58rem; }
     .playlist-list-link {
