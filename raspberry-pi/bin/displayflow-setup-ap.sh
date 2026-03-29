@@ -95,6 +95,8 @@ start_ap() {
 
     rfkill unblock wifi >/dev/null 2>&1 || true
 
+    systemctl stop NetworkManager.service >/dev/null 2>&1 || true
+    systemctl stop NetworkManager-wait-online.service >/dev/null 2>&1 || true
     systemctl stop wpa_supplicant.service >/dev/null 2>&1 || true
     systemctl stop "wpa_supplicant@${DISPLAYFLOW_INTERFACE}.service" >/dev/null 2>&1 || true
     systemctl stop dhcpcd.service >/dev/null 2>&1 || true
@@ -132,6 +134,8 @@ stop_ap() {
     ip addr flush dev "$DISPLAYFLOW_INTERFACE" >/dev/null 2>&1 || true
     ip link set "$DISPLAYFLOW_INTERFACE" up >/dev/null 2>&1 || true
 
+    systemctl start NetworkManager.service >/dev/null 2>&1 || true
+    systemctl start NetworkManager-wait-online.service >/dev/null 2>&1 || true
     systemctl restart wpa_supplicant.service >/dev/null 2>&1 || true
     systemctl restart "wpa_supplicant@${DISPLAYFLOW_INTERFACE}.service" >/dev/null 2>&1 || true
     systemctl restart dhcpcd.service >/dev/null 2>&1 || true

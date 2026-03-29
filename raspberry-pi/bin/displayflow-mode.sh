@@ -37,6 +37,8 @@ start_normal_mode() {
     rfkill unblock wifi >/dev/null 2>&1 || true
     ip addr flush dev "$DISPLAYFLOW_INTERFACE" >/dev/null 2>&1 || true
 
+    systemctl start NetworkManager.service >/dev/null 2>&1 || true
+    systemctl start NetworkManager-wait-online.service >/dev/null 2>&1 || true
     systemctl restart wpa_supplicant.service >/dev/null 2>&1 || true
     systemctl restart "wpa_supplicant@${DISPLAYFLOW_INTERFACE}.service" >/dev/null 2>&1 || true
     systemctl restart dhcpcd.service >/dev/null 2>&1 || true

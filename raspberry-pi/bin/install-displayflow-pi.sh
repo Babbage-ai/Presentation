@@ -161,6 +161,8 @@ chown -R "$PI_USER:$PI_USER" "$INSTALL_DIR" "$PI_HOME/.config"
 
 systemctl disable --now hostapd >/dev/null 2>&1 || true
 systemctl disable --now dnsmasq >/dev/null 2>&1 || true
+systemctl enable NetworkManager.service >/dev/null 2>&1 || true
+systemctl enable NetworkManager-wait-online.service >/dev/null 2>&1 || true
 
 systemctl daemon-reload
 systemctl enable displayflow-boot.service
