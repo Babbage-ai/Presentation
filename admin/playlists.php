@@ -573,6 +573,9 @@ require_once __DIR__ . '/../includes/header.php';
     .playlist-item-table .item-selector-form .form-select { width: 100%; }
     .playlist-item-table .icon-actions { flex-wrap: wrap; align-items: center; gap: 0.35rem; }
     .playlist-item-cell { display: grid; gap: 0.45rem; }
+    .playlist-order-controls { display: inline-flex; align-items: center; gap: 0.35rem; }
+    .playlist-order-value { min-width: 2rem; text-align: center; font-size: 0.82rem; font-weight: 700; color: var(--admin-text-strong); }
+    .playlist-order-input { display: none; }
     .playlist-item-type-badge { display: inline-flex; align-items: center; gap: 0.38rem; font-size: 0.82rem; font-weight: 600; color: #0f172a; }
     .playlist-item-type-badge i { color: #64748b; }
     .playlist-edit-inline { display: grid; grid-template-columns: minmax(12rem, 2fr) auto auto auto auto; gap: 0.55rem; align-items: end; }
@@ -702,6 +705,9 @@ require_once __DIR__ . '/../includes/header.php';
             margin: 0;
         }
         .playlist-item-table .playlist-item-metric .small { display: block; text-align: center; font-size: 0.72rem !important; }
+        .playlist-order-controls { width: 100%; justify-content: center; gap: 0.22rem; }
+        .playlist-order-controls .btn { width: 1.85rem; min-height: 1.85rem; }
+        .playlist-order-value { min-width: 1.5rem; font-size: 0.78rem; }
         .playlist-selected-form { padding: 0.72rem; }
         .playlist-selected-top { align-items: stretch; flex-direction: column; }
         .playlist-selected-actions { justify-content: flex-end; }
@@ -915,7 +921,16 @@ require_once __DIR__ . '/../includes/header.php';
                                             </span>
                                         </td>
                                         <td class="playlist-item-metric playlist-item-metric-order" data-label="Order">
-                                            <input class="form-control form-control-sm" name="sort_order" type="number" min="1" value="<?= (int) $item['sort_order'] ?>" required form="<?= e($formId) ?>">
+                                            <div class="playlist-order-controls">
+                                                <button class="btn btn-sm btn-outline-secondary icon-btn icon-btn-sm js-move-playlist-item" type="button" data-direction="up" title="Move up" aria-label="Move up" <?= (int) $item['sort_order'] <= 1 ? 'disabled' : '' ?>>
+                                                    <i class="bi bi-chevron-up"></i>
+                                                </button>
+                                                <span class="playlist-order-value js-playlist-order-value"><?= (int) $item['sort_order'] ?></span>
+                                                <button class="btn btn-sm btn-outline-secondary icon-btn icon-btn-sm js-move-playlist-item" type="button" data-direction="down" title="Move down" aria-label="Move down">
+                                                    <i class="bi bi-chevron-down"></i>
+                                                </button>
+                                            </div>
+                                            <input class="form-control form-control-sm playlist-order-input" name="sort_order" type="number" min="1" value="<?= (int) $item['sort_order'] ?>" required form="<?= e($formId) ?>">
                                         </td>
                                         <td class="playlist-item-metric playlist-item-metric-duration" data-label="Duration">
                                             <?php if ($isQuizItem): ?>
@@ -1047,6 +1062,40 @@ document.addEventListener('DOMContentLoaded', function () {
     const itemForms = document.querySelectorAll('form[id^="playlist-item-form-"]');
     const tableBody = document.querySelector('.table tbody');
     const playlistInlineForm = document.getElementById('playlist-inline-form');
+    const moveButtons = document.querySelectorAll('.js-move-playlist-item');
+
+    function syncOrderControls() {
+        if (!tableBody) {
+            return;
+        }
+
+        const rows = Array.from(tableBody.querySelectorAll('tr[id^="playlist-item-row-"]'));
+        const totalRows = rows.length;
+
+        rows.forEach(function (row, index) {
+            const sortOrderInput = row.querySelector('input[name="sort_order"]');
+            const orderValue = row.querySelector('.js-playlist-order-value');
+            const upButton = row.querySelector('.js-move-playlist-item[data-direction="up"]');
+            const downButton = row.querySelector('.js-move-playlist-item[data-direction="down"]');
+            const orderNumber = index + 1;
+
+            if (sortOrderInput) {
+                sortOrderInput.value = String(orderNumber);
+            }
+
+            if (orderValue) {
+                orderValue.textContent = String(orderNumber);
+            }
+
+            if (upButton) {
+                upButton.disabled = index === 0;
+            }
+
+            if (downButton) {
+                downButton.disabled = index === totalRows - 1;
+            }
+        });
+    }
 
     function reorderRows() {
         if (!tableBody) {
@@ -1071,6 +1120,8 @@ document.addEventListener('DOMContentLoaded', function () {
         rows.forEach(function (row) {
             tableBody.appendChild(row);
         });
+
+        syncOrderControls();
     }
 
     itemForms.forEach(function (form) {
@@ -1130,15 +1181,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 const data = result.data || {};
                 const sortOrderInput = document.querySelector('input[name="sort_order"][form="' + form.id + '"]');
+                const orderValue = form.closest('tr') ? form.closest('tr').querySelector('.js-playlist-order-value') : null;
                 if (sortOrderInput && typeof data.sort_order !== 'undefined') {
                     sortOrderInput.value = data.sort_order;
+                    if (orderValue) {
+                        orderValue.textContent = String(data.sort_order);
+                    }
                 }
 
                 if (data.swapped_item_id) {
                     const swappedFormId = 'playlist-item-form-' + data.swapped_item_id;
                     const swappedSortOrderInput = document.querySelector('input[name="sort_order"][form="' + swappedFormId + '"]');
+                    const swappedRow = document.getElementById('playlist-item-row-' + data.swapped_item_id);
+                    const swappedOrderValue = swappedRow ? swappedRow.querySelector('.js-playlist-order-value') : null;
                     if (swappedSortOrderInput && typeof data.previous_sort_order !== 'undefined') {
                         swappedSortOrderInput.value = data.previous_sort_order;
+                        if (swappedOrderValue) {
+                            swappedOrderValue.textContent = String(data.previous_sort_order);
+                        }
                     }
                 }
 
@@ -1159,6 +1219,34 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     });
+
+    moveButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            const row = button.closest('tr[id^="playlist-item-row-"]');
+            if (!row) {
+                return;
+            }
+
+            const form = row.querySelector('form[id^="playlist-item-form-"]');
+            const sortOrderInput = form ? form.querySelector('input[name="sort_order"]') : null;
+            if (!form || !sortOrderInput) {
+                return;
+            }
+
+            const currentOrder = Number.parseInt(sortOrderInput.value, 10) || 1;
+            const direction = button.dataset.direction === 'up' ? -1 : 1;
+            const nextOrder = Math.max(1, currentOrder + direction);
+
+            if (nextOrder === currentOrder) {
+                return;
+            }
+
+            sortOrderInput.value = String(nextOrder);
+            sortOrderInput.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    });
+
+    syncOrderControls();
 
     if (playlistInlineForm) {
         const playlistControls = Array.from(playlistInlineForm.elements).filter(function (control) {
