@@ -585,21 +585,24 @@ require_once __DIR__ . '/../includes/header.php';
     .playlist-list-badge { white-space: nowrap; align-self: center; }
     .playlist-status-indicator { display: inline-flex; width: 0.55rem; height: 0.55rem; border-radius: 999px; background: #94a3b8; }
     .playlist-status-indicator.is-active { background: #16a34a; }
-    .playlist-inline-group { min-width: 0; }
-    .playlist-inline-group .summary-label { display: block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--admin-text-soft); margin-bottom: 0.25rem; }
-    .playlist-inline-static { font-weight: 600; color: var(--admin-text-strong); white-space: nowrap; }
-    .playlist-inline-name { min-width: 0; }
-    .playlist-inline-name input { min-width: 0; }
-    .playlist-edit-inline .form-check { margin-bottom: 0.55rem; white-space: nowrap; }
-    .playlist-selected-item { padding: 0.85rem 1rem; background: #141d33; color: #fff; }
-    .playlist-selected-item .playlist-edit-inline { grid-template-columns: minmax(14rem, 2.2fr) auto auto auto auto; }
-    .playlist-selected-item .summary-label { color: rgba(226, 232, 240, 0.72); }
-    .playlist-selected-item .playlist-inline-static,
-    .playlist-selected-item .form-check-label { color: #fff; }
-    .playlist-selected-item .form-control { background: rgba(255, 255, 255, 0.96); border-color: rgba(255, 255, 255, 0.22); }
-    .playlist-selected-item .btn-outline-danger { border-color: rgba(248, 113, 113, 0.8); color: #fecaca; }
-    .playlist-selected-item .btn-outline-danger:hover,
-    .playlist-selected-item .btn-outline-danger:focus { color: #fff; background: rgba(220, 38, 38, 0.85); border-color: rgba(220, 38, 38, 0.85); }
+    .playlist-selected-item {
+        margin: 0.35rem;
+        border: 1px solid rgba(13, 110, 253, 0.22);
+        border-radius: 0.95rem;
+        background: linear-gradient(180deg, rgba(239, 246, 255, 0.98), rgba(248, 250, 252, 0.98));
+        box-shadow: 0 10px 24px rgba(13, 110, 253, 0.08);
+    }
+    .playlist-selected-form { padding: 0.72rem 0.82rem; display: grid; gap: 0.65rem; }
+    .playlist-selected-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
+    .playlist-selected-main { min-width: 0; flex: 1 1 auto; }
+    .playlist-selected-name { min-width: 0; font-size: 0.98rem; font-weight: 700; color: var(--admin-text-strong); line-height: 1.25; }
+    .playlist-selected-name input { min-width: 0; }
+    .playlist-selected-meta { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; color: var(--admin-text-soft); font-size: 0.82rem; }
+    .playlist-selected-actions { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+    .playlist-selected-stats { display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; }
+    .playlist-selected-stat { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.38rem 0.55rem; border-radius: 999px; background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(15, 23, 42, 0.08); font-size: 0.78rem; color: var(--admin-text-soft); }
+    .playlist-selected-toggle { display: inline-flex; align-items: center; gap: 0.45rem; margin: 0; padding: 0.3rem 0.1rem; }
+    .playlist-selected-toggle .form-check-input { margin: 0; cursor: pointer; }
     @media (max-width: 991px) {
         .playlist-admin-page { gap: 0.6rem; }
         .playlist-admin-page .section-heading { align-items: stretch; gap: 0.65rem; }
@@ -699,18 +702,11 @@ require_once __DIR__ . '/../includes/header.php';
             margin: 0;
         }
         .playlist-item-table .playlist-item-metric .small { display: block; text-align: center; font-size: 0.72rem !important; }
-        .playlist-edit-inline,
-        .playlist-selected-item .playlist-edit-inline { grid-template-columns: 1fr; }
-        .playlist-edit-inline { gap: 0.75rem; }
-        .playlist-edit-inline .form-check { margin-bottom: 0; }
-        .playlist-inline-group .summary-label { margin-bottom: 0.18rem; }
-        .playlist-inline-static { white-space: normal; }
-        .playlist-selected-item { padding: 0.9rem; }
-        .playlist-selected-item .playlist-inline-group,
-        .playlist-selected-item .form-check { padding: 0.68rem 0.72rem; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 0.8rem; background: rgba(255, 255, 255, 0.06); }
-        .playlist-selected-item .playlist-inline-name { padding: 0; border: 0; background: transparent; }
-        .playlist-selected-item .form-check-input { margin-top: 0.2rem; }
-        .playlist-selected-item .btn-outline-danger { width: 100%; }
+        .playlist-selected-form { padding: 0.72rem; }
+        .playlist-selected-top { align-items: stretch; flex-direction: column; }
+        .playlist-selected-actions { justify-content: flex-end; }
+        .playlist-selected-stats { gap: 0.45rem; }
+        .playlist-selected-stat { padding: 0.34rem 0.5rem; }
         .playlist-add-form .form-control,
         .playlist-add-form .form-select,
         .playlist-add-form .btn { min-height: 2.9rem; }
@@ -781,35 +777,46 @@ require_once __DIR__ . '/../includes/header.php';
                             <input type="hidden" name="action" value="delete_playlist">
                             <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
                         </form>
-                        <form class="list-group-item playlist-selected-item dense-form m-0" method="post" id="playlist-inline-form">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="action" value="update_playlist">
-                            <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
-                            <div class="playlist-edit-inline">
-                                <div class="playlist-inline-group playlist-inline-name">
-                                    <label class="summary-label" for="selected_playlist_name">Name</label>
-                                    <input class="form-control" id="selected_playlist_name" name="name" type="text" value="<?= e($selectedPlaylist['name']) ?>" required>
+                        <div class="list-group-item playlist-selected-item">
+                            <form class="playlist-selected-form dense-form m-0" method="post" id="playlist-inline-form">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="update_playlist">
+                                <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
+                                <div class="playlist-selected-top">
+                                    <div class="playlist-selected-main">
+                                        <div class="playlist-selected-name">
+                                            <input class="form-control" id="selected_playlist_name" name="name" type="text" value="<?= e($selectedPlaylist['name']) ?>" required>
+                                        </div>
+                                        <div class="playlist-selected-meta">
+                                            <span class="playlist-list-status">
+                                                <span class="playlist-status-indicator <?= (int) $selectedPlaylist['active'] === 1 ? 'is-active' : '' ?>" aria-hidden="true"></span>
+                                                <span><?= (int) $selectedPlaylist['active'] === 1 ? 'Active' : 'Inactive' ?></span>
+                                            </span>
+                                            <span id="selected-playlist-updated"><?= e(format_datetime($selectedPlaylist['updated_at'])) ?></span>
+                                        </div>
+                                    </div>
+                                    <div class="playlist-selected-actions">
+                                        <button class="btn btn-outline-primary icon-btn icon-btn-sm" type="submit" title="Save playlist" aria-label="Save playlist">
+                                            <i class="bi bi-check2"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger icon-btn icon-btn-sm" type="submit" form="playlist-inline-delete-form" title="Delete playlist" aria-label="Delete playlist">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="playlist-inline-group">
-                                    <span class="summary-label">Updated</span>
-                                    <div class="playlist-inline-static" id="selected-playlist-updated"><?= e(format_datetime($selectedPlaylist['updated_at'])) ?></div>
-                                </div>
-                                <div class="playlist-inline-group">
-                                    <span class="summary-label">Items</span>
-                                    <div class="playlist-inline-static"><?= count($playlistItems) ?></div>
-                                </div>
-                                <div class="form-check playlist-inline-group">
-                                    <input class="form-check-input" id="selected_playlist_active" name="active" type="checkbox" <?= (int) $selectedPlaylist['active'] === 1 ? 'checked' : '' ?>>
-                                    <label class="form-check-label" for="selected_playlist_active">Active</label>
-                                </div>
-                                <div class="playlist-inline-group">
-                                    <span class="summary-label">Delete</span>
-                                    <button class="btn btn-outline-danger" type="submit" form="playlist-inline-delete-form">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                <div class="playlist-selected-stats">
+                                    <span class="playlist-selected-stat">
+                                        <i class="bi bi-collection-play"></i>
+                                        <span><?= count($playlistItems) ?> items</span>
+                                    </span>
+                                    <div class="form-check form-switch playlist-selected-toggle">
+                                        <input class="form-check-input" id="selected_playlist_active" name="active" type="checkbox" <?= (int) $selectedPlaylist['active'] === 1 ? 'checked' : '' ?>>
+                                        <label class="form-check-label small" for="selected_playlist_active">Active</label>
+                                    </div>
                                 </div>
                             </div>
-                        </form>
+                            </form>
+                        </div>
                     <?php else: ?>
                         <a class="list-group-item list-group-item-action playlist-list-link" href="<?= e(app_path('/admin/playlists.php?playlist_id=' . (int) $playlist['id'])) ?>">
                             <div class="playlist-list-row">
@@ -879,9 +886,9 @@ require_once __DIR__ . '/../includes/header.php';
                                             <?php if ($isQuizItem): ?>
                                                 <div class="muted-stack">
                                                     <strong><?= $isRandomQuiz ? 'Random quiz marker' : e($item['question_text']) ?></strong>
-                                                    <span class="small">
-                                                        <?= $isRandomQuiz ? 'Pulls a random active quiz at sync time.' : 'Correct answer ' . e($item['correct_option']) ?>
-                                                    </span>
+                                                    <?php if (!$isRandomQuiz): ?>
+                                                        <span class="small">Correct answer <?= e($item['correct_option']) ?></span>
+                                                    <?php endif; ?>
                                                 </div>
                                             <?php else: ?>
                                                 <div class="playlist-item-cell">
