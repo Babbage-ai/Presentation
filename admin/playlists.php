@@ -573,20 +573,18 @@ require_once __DIR__ . '/../includes/header.php';
     .playlist-item-table .item-selector-form .form-select { width: 100%; }
     .playlist-item-table .icon-actions { flex-wrap: wrap; align-items: center; gap: 0.35rem; }
     .playlist-item-cell { display: grid; gap: 0.45rem; }
-    .playlist-item-mobile-summary { display: none; }
-    .playlist-item-title { font-size: 0.96rem; font-weight: 700; color: var(--admin-text-strong); line-height: 1.25; }
-    .playlist-item-meta { font-size: 0.78rem; color: var(--admin-text-soft); }
     .playlist-item-type-badge { display: inline-flex; align-items: center; gap: 0.38rem; font-size: 0.82rem; font-weight: 600; color: #0f172a; }
     .playlist-item-type-badge i { color: #64748b; }
-    .playlist-item-quiz-copy { display: none; }
     .playlist-edit-inline { display: grid; grid-template-columns: minmax(12rem, 2fr) auto auto auto auto; gap: 0.55rem; align-items: end; }
     .playlist-add-form .form-text { color: var(--admin-text-soft); }
     .playlist-add-help { margin: 0; }
     .playlist-list-link { display: block; text-decoration: none; }
     .playlist-list-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; }
     .playlist-list-name { font-size: 0.98rem; font-weight: 700; color: var(--admin-text-strong); line-height: 1.25; }
-    .playlist-list-status { font-size: 0.82rem; color: var(--admin-text-soft); }
+    .playlist-list-status { display: flex; align-items: center; gap: 0.38rem; font-size: 0.82rem; color: var(--admin-text-soft); }
     .playlist-list-badge { white-space: nowrap; align-self: center; }
+    .playlist-status-indicator { display: inline-flex; width: 0.55rem; height: 0.55rem; border-radius: 999px; background: #94a3b8; }
+    .playlist-status-indicator.is-active { background: #16a34a; }
     .playlist-inline-group { min-width: 0; }
     .playlist-inline-group .summary-label { display: block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--admin-text-soft); margin-bottom: 0.25rem; }
     .playlist-inline-static { font-weight: 600; color: var(--admin-text-strong); white-space: nowrap; }
@@ -669,15 +667,9 @@ require_once __DIR__ . '/../includes/header.php';
         .playlist-item-table td.playlist-item-metric-duration { grid-area: duration; min-width: 5.2rem; }
         .playlist-item-table td.playlist-item-active { grid-area: active; min-width: 4.2rem; }
         .playlist-item-table td.playlist-item-actions { grid-area: actions; align-self: center; padding: 0.38rem 0.42rem; }
-        .playlist-item-mobile-summary { display: grid; gap: 0.18rem; }
-        .playlist-item-title { font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .playlist-item-meta { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.74rem; }
         .playlist-item-main .muted-stack { gap: 0.18rem; }
-        .playlist-item-main .muted-stack strong,
-        .playlist-item-quiz-copy strong { font-size: 0.92rem; line-height: 1.25; }
-        .playlist-item-table td.playlist-item-main .small,
-        .playlist-item-quiz-copy .small { color: var(--admin-text-soft); font-size: 0.74rem !important; line-height: 1.3; }
-        .playlist-item-quiz-copy { display: grid; gap: 0.18rem; }
+        .playlist-item-main .muted-stack strong { font-size: 0.92rem; line-height: 1.25; }
+        .playlist-item-table td.playlist-item-main .small { color: var(--admin-text-soft); font-size: 0.74rem !important; line-height: 1.3; }
         .playlist-item-table .playlist-item-cell { gap: 0.3rem; }
         .playlist-item-table .item-selector-form .form-select,
         .playlist-item-table input.form-control { min-height: 2.15rem; padding-top: 0.26rem; padding-bottom: 0.26rem; font-size: 0.84rem; }
@@ -719,12 +711,9 @@ require_once __DIR__ . '/../includes/header.php';
         .playlist-selected-item .playlist-inline-name { padding: 0; border: 0; background: transparent; }
         .playlist-selected-item .form-check-input { margin-top: 0.2rem; }
         .playlist-selected-item .btn-outline-danger { width: 100%; }
-        .playlist-add-form { gap: 0.82rem; }
-        .playlist-add-form > [class*="col-"] { width: 100%; }
         .playlist-add-form .form-control,
         .playlist-add-form .form-select,
         .playlist-add-form .btn { min-height: 2.9rem; }
-        .playlist-add-form .btn { width: 100%; justify-content: center; }
         .playlist-add-help { padding: 0.72rem 0.78rem; border-radius: 0.85rem; background: rgba(15, 23, 42, 0.05); }
         .playlist-add-form .form-text.pt-4 { padding-top: 0 !important; }
     }
@@ -826,7 +815,10 @@ require_once __DIR__ . '/../includes/header.php';
                             <div class="playlist-list-row">
                                 <div class="muted-stack">
                                     <div class="playlist-list-name"><?= e($playlist['name']) ?></div>
-                                    <span class="playlist-list-status"><?= (int) $playlist['active'] === 1 ? 'Active playlist' : 'Inactive playlist' ?></span>
+                                    <span class="playlist-list-status">
+                                        <span class="playlist-status-indicator <?= (int) $playlist['active'] === 1 ? 'is-active' : '' ?>" aria-hidden="true"></span>
+                                        <span><?= (int) $playlist['active'] === 1 ? 'Active' : 'Inactive' ?></span>
+                                    </span>
                                 </div>
                                 <span class="badge playlist-list-badge <?= (int) $playlist['active'] === 1 ? 'text-bg-success' : 'text-bg-secondary' ?>"><?= (int) $playlist['item_count'] ?> items</span>
                             </div>
@@ -843,43 +835,6 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card-body text-muted">Select a playlist to edit settings and manage its items.</div>
     </div>
 <?php else: ?>
-            <div class="card section-card">
-                <div class="card-header"><h2 class="h5 mb-0">Add Item To Playlist</h2></div>
-                <div class="card-body">
-                    <form method="post" class="row g-3 dense-form playlist-add-form">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="action" value="add_playlist_item">
-                        <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
-                        <div class="col-12">
-                            <label class="form-label" for="item_selection">Item</label>
-                            <select class="form-select" id="item_selection" name="item_selection" required>
-                                <option value="">Select media item or random quiz question</option>
-                                <option value="random_quiz">Random quiz question</option>
-                                <?php foreach ($mediaOptions as $media): ?>
-                                    <option value="media:<?= (int) $media['id'] ?>"><?= e($media['title']) ?> (<?= e($media['media_type']) ?>)</option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="image_duration">Image Duration</label>
-                            <input class="form-control" id="image_duration" name="image_duration" type="number" min="1" value="10" required>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-text pt-4 playlist-add-help">New items are added to the end automatically.</div>
-                        </div>
-                        <div class="col-12">
-                            <div class="form-text playlist-add-help">Image duration applies to media only. Random quizzes use their saved quiz timing.</div>
-                        </div>
-                        <div class="col-12">
-                            <button class="btn btn-primary" type="submit">
-                                <i class="bi bi-plus-circle"></i>
-                                <span class="ms-1">Add Item</span>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
             <div class="card table-card">
                 <div class="card-header">
                     <div class="section-heading mb-0">
@@ -887,6 +842,10 @@ require_once __DIR__ . '/../includes/header.php';
                             <h2 class="h5 mb-0">Playlist Items</h2>
                             <div class="section-subtitle">Reorder, enable, duplicate, or remove items inline.</div>
                         </div>
+                        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addPlaylistItemModal">
+                            <i class="bi bi-plus-circle"></i>
+                            <span class="ms-1">Add Item</span>
+                        </button>
                     </div>
                 </div>
                 <div class="card-body p-0">
@@ -918,24 +877,14 @@ require_once __DIR__ . '/../includes/header.php';
                                     <tr id="playlist-item-row-<?= (int) $item['id'] ?>">
                                         <td class="playlist-item-main" data-label="Item">
                                             <?php if ($isQuizItem): ?>
-                                                <div class="muted-stack d-none d-md-grid">
+                                                <div class="muted-stack">
                                                     <strong><?= $isRandomQuiz ? 'Random quiz marker' : e($item['question_text']) ?></strong>
                                                     <span class="small">
                                                         <?= $isRandomQuiz ? 'Pulls a random active quiz at sync time.' : 'Correct answer ' . e($item['correct_option']) ?>
                                                     </span>
                                                 </div>
-                                                <div class="playlist-item-quiz-copy d-md-none">
-                                                    <strong><?= $isRandomQuiz ? 'Random quiz marker' : e($item['question_text']) ?></strong>
-                                                    <span class="small">
-                                                        <?= $isRandomQuiz ? 'Random active quiz' : 'Answer ' . e($item['correct_option']) ?>
-                                                    </span>
-                                                </div>
                                             <?php else: ?>
                                                 <div class="playlist-item-cell">
-                                                    <div class="playlist-item-mobile-summary">
-                                                        <div class="playlist-item-title"><?= e($item['media_title'] ?: 'Media item') ?></div>
-                                                        <div class="playlist-item-meta"><?= e($item['filename'] ?: '') ?></div>
-                                                    </div>
                                                     <form method="post" id="<?= e($replaceFormId) ?>" class="item-selector-form m-0">
                                                         <?= csrf_field() ?>
                                                         <input type="hidden" name="action" value="replace_playlist_media_item">
@@ -1048,6 +997,44 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
     </div>
 </div>
+<?php if ($selectedPlaylist): ?>
+<div class="modal fade" id="addPlaylistItemModal" tabindex="-1" aria-labelledby="addPlaylistItemModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5 mb-0" id="addPlaylistItemModalLabel">Add Item To Playlist</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" class="dense-form playlist-add-form">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="add_playlist_item">
+                    <input type="hidden" name="playlist_id" value="<?= (int) $selectedPlaylist['id'] ?>">
+                    <div class="mb-3">
+                        <label class="form-label" for="modal_item_selection">Item</label>
+                        <select class="form-select" id="modal_item_selection" name="item_selection" required>
+                            <option value="">Select media item or random quiz question</option>
+                            <option value="random_quiz">Random quiz question</option>
+                            <?php foreach ($mediaOptions as $media): ?>
+                                <option value="media:<?= (int) $media['id'] ?>"><?= e($media['title']) ?> (<?= e($media['media_type']) ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="modal_image_duration">Image Duration</label>
+                        <input class="form-control" id="modal_image_duration" name="image_duration" type="number" min="1" value="10" required>
+                    </div>
+                    <div class="form-text playlist-add-help mb-3">New items are added to the end automatically. Image duration applies to media only. Random quizzes use their saved quiz timing.</div>
+                    <button class="btn btn-primary w-100" type="submit">
+                        <i class="bi bi-plus-circle"></i>
+                        <span class="ms-1">Add Item</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const itemForms = document.querySelectorAll('form[id^="playlist-item-form-"]');
